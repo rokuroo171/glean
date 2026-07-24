@@ -1,0 +1,13 @@
+/glean
+/glean.exe
+*.tmp
+frontend/node_modules/
+frontend/dist/
+.DS_Store
+refs
+.
+build
+build/bin/
+build/windows/icon.ico
+.inst
+refs/
