@@ -50,7 +50,7 @@ jobs:
         if: matrix.target == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.0-dev libgtk-3-dev
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev
 
       # Windows: WebView2 (pre-installed on GitHub runners)
       # No extra steps needed Windows runners include WebView2 headers.
@@ -90,7 +90,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: glean-macos-amd64
-          path: build/bin/glean
+          path: build/bin/glean.app
           if-no-files-found: error
 
       - name: Upload macOS ARM64 binary
@@ -98,5 +98,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: glean-macos-arm64
-          path: build/bin/glean
+          path: build/bin/glean.app
           if-no-files-found: error
