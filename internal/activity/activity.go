@@ -37,22 +37,14 @@ type Store struct {
 	data Activity
 }
 
-// ConfigPath returns the path to activity.json respecting XDG_CONFIG_HOME.
-func ConfigPath() (string, error) {
-	configHome := os.Getenv("XDG_CONFIG_HOME")
-	if configHome == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return "", fmt.Errorf("resolve home dir: %w", err)
-		}
-		configHome = filepath.Join(home, ".config")
-	}
-	return filepath.Join(configHome, "glean", "activity.json"), nil
+// ConfigPath returns the stats path inside the sky sidecar.
+func ConfigPath(skyDir string) (string, error) {
+	return filepath.Join(skyDir, ".glean", "stats.json"), nil
 }
 
-// Open loads activity.json, creating it if missing.
-func Open() (*Store, error) {
-	path, err := ConfigPath()
+// Open loads stats.json from the sky sidecar, creating it if missing.
+func Open(skyDir string) (*Store, error) {
+	path, err := ConfigPath(skyDir)
 	if err != nil {
 		return nil, err
 	}

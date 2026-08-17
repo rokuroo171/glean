@@ -105,3 +105,18 @@ func TestCreateSkyIdempotent(t *testing.T) {
 		t.Fatalf("second CreateSky failed: %v", err)
 	}
 }
+
+func TestResolveSky(t *testing.T) {
+	setTestConfigDir(t)
+	if _, ok, err := ResolveSky(); err != nil || ok {
+		t.Fatalf("ResolveSky() = %v, %v", ok, err)
+	}
+	dir := t.TempDir()
+	if err := SavePointer(SkyPointer{SkyPath: dir}); err != nil {
+		t.Fatal(err)
+	}
+	got, ok, err := ResolveSky()
+	if err != nil || !ok || got != dir {
+		t.Fatalf("ResolveSky() = %q, %v, %v", got, ok, err)
+	}
+}

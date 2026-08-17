@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"hash/fnv"
+	"path/filepath"
 	"time"
 
 	"github.com/glean/glean/internal/activity"
@@ -25,14 +26,44 @@ type App struct {
 }
 
 // NewApp creates the application with all stores loaded.
+// Transitional: adjacency and activity already live in the sky sidecar;
+// the note store is rewired in the md model milestone.
 func NewApp() (*App, error) {
+	skyDir, err := resolveSkyDir()
+	if err != nil {
+		return nil, err
+	}
 	s, err := store.Open()
 	if err != nil {
 		return nil, err
 	}
-	adj, _ := adjacency.Open()
-	act, _ := activity.Open()
+	adj, _ := adjacency.Open(skyDir)
+	act, _ := activity.Open(skyDir)
 	return &App{store: s, adjacency: adj, activity: act}, nil
+}
+
+// resolveSkyDir returns the configured sky, bootstrapping a default one
+// when no pointer exists. Transitional until the wizard milestone lands.
+func resolveSkyDir() (string, error) {
+	skyDir, ok, err := store.ResolveSky()
+	if err != nil {
+		return "", err
+	}
+	if ok {
+		return skyDir, nil
+	}
+	dir, err := store.AppConfigDir()
+	if err != nil {
+		return "", err
+	}
+	skyDir = filepath.Join(dir, "sky")
+	if err := store.CreateSky(skyDir, "My Sky"); err != nil {
+		return "", err
+	}
+	if err := store.SavePointer(store.SkyPointer{SkyPath: skyDir}); err != nil {
+		return "", err
+	}
+	return skyDir, nil
 }
 
 // NoteView is the JSON-safe note representation sent to the frontend.

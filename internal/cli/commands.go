@@ -193,7 +193,11 @@ func sanitizeFilename(title string) string {
 }
 
 func recordActivity(s *store.Store) {
-	a, err := activity.Open()
+	skyDir, ok, err := store.ResolveSky()
+	if err != nil || !ok {
+		return
+	}
+	a, err := activity.Open(skyDir)
 	if err != nil {
 		return
 	}

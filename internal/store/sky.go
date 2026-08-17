@@ -84,6 +84,18 @@ func SavePointer(p SkyPointer) error {
 	return nil
 }
 
+// ResolveSky returns the configured sky folder and whether one exists.
+func ResolveSky() (string, bool, error) {
+	p, ok, err := LoadPointer()
+	if err != nil || !ok {
+		return "", ok, err
+	}
+	if p.SkyPath == "" {
+		return "", false, nil
+	}
+	return p.SkyPath, true, nil
+}
+
 // SidecarDir returns the hidden sidecar folder inside a Sky folder.
 func SidecarDir(skyDir string) string {
 	return filepath.Join(skyDir, ".glean")
