@@ -83,3 +83,45 @@ func SavePointer(p SkyPointer) error {
 	}
 	return nil
 }
+
+// SidecarDir returns the hidden sidecar folder inside a Sky folder.
+func SidecarDir(skyDir string) string {
+	return filepath.Join(skyDir, ".glean")
+}
+
+type skyMeta struct {
+	Name string `json:"name"`
+}
+
+// CreateSky creates the Sky folder and its sidecar, writing the sky name.
+func CreateSky(dir, name string) error {
+	if err := os.MkdirAll(SidecarDir(dir), 0o755); err != nil {
+		return fmt.Errorf("create sky folder: %w", err)
+	}
+	raw, err := json.MarshalIndent(skyMeta{Name: name}, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal sky meta: %w", err)
+	}
+	path := filepath.Join(SidecarDir(dir), "sky.json")
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, raw, 0o644); err != nil {
+		return fmt.Errorf("write sky meta: %w", err)
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		return fmt.Errorf("rename sky meta: %w", err)
+	}
+	return nil
+}
+
+// LoadSkyName reads the sky name from the sidecar.
+func LoadSkyName(skyDir string) (string, error) {
+	raw, err := os.ReadFile(filepath.Join(SidecarDir(skyDir), "sky.json"))
+	if err != nil {
+		return "", fmt.Errorf("read sky meta: %w", err)
+	}
+	var m skyMeta
+	if err := json.Unmarshal(raw, &m); err != nil {
+		return "", fmt.Errorf("parse sky meta: %w", err)
+	}
+	return m.Name, nil
+}

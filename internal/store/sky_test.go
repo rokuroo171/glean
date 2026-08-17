@@ -76,3 +76,32 @@ func mustPointerPath(t *testing.T) string {
 	}
 	return p
 }
+
+func TestCreateSkyWritesName(t *testing.T) {
+	dir := t.TempDir()
+	skyDir := filepath.Join(dir, "My Sky")
+	if err := CreateSky(skyDir, "My Sky"); err != nil {
+		t.Fatal(err)
+	}
+	name, err := LoadSkyName(skyDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if name != "My Sky" {
+		t.Fatalf("LoadSkyName() = %q, want %q", name, "My Sky")
+	}
+	if _, err := os.Stat(filepath.Join(skyDir, ".glean", "sky.json")); err != nil {
+		t.Fatalf("sky.json missing: %v", err)
+	}
+}
+
+func TestCreateSkyIdempotent(t *testing.T) {
+	dir := t.TempDir()
+	skyDir := filepath.Join(dir, "sky")
+	if err := CreateSky(skyDir, "sky"); err != nil {
+		t.Fatal(err)
+	}
+	if err := CreateSky(skyDir, "sky"); err != nil {
+		t.Fatalf("second CreateSky failed: %v", err)
+	}
+}
