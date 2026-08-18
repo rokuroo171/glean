@@ -13,7 +13,7 @@ func TestWorkspaceStateRoundTrip(t *testing.T) {
 	if got := ws.State(); got.ActiveID != "" || len(got.OpenIDs) != 0 {
 		t.Fatalf("fresh state = %+v", got)
 	}
-	st := WorkspaceState{OpenIDs: []string{"a", "b"}, ActiveID: "b"}
+	st := WorkspaceState{OpenIDs: []string{"a", "b"}, ActiveID: "b", SkyCollapsed: true}
 	if err := ws.Set(st); err != nil {
 		t.Fatal(err)
 	}
@@ -22,7 +22,7 @@ func TestWorkspaceStateRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := ws2.State()
-	if got.ActiveID != "b" || len(got.OpenIDs) != 2 || got.OpenIDs[0] != "a" {
+	if got.ActiveID != "b" || len(got.OpenIDs) != 2 || got.OpenIDs[0] != "a" || !got.SkyCollapsed {
 		t.Fatalf("persisted state = %+v", got)
 	}
 }
