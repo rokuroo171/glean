@@ -10,11 +10,13 @@ export default function Workspace({
   onOpenNote, onNewNote, onOpenStats,
   fetchWorkspaceState, saveWorkspaceState,
   noteBodies, // map id -> body, filled by App via OpenNote
-  onBodyChange, onSaveNow,
+  onBodyChange, onSaveNow, onRefreshNote,
 }) {
   const [openIds, setOpenIds] = useState([])
   const [activeId, setActiveId] = useState(null)
   const [dirty, setDirty] = useState(false)
+  const [externalChanged, setExternalChanged] = useState(false)
+  const [externalBody, setExternalBody] = useState(null)
 
   // Restore tabs once at mount.
   useEffect(() => {
@@ -56,6 +58,31 @@ export default function Workspace({
     persist(next, active)
   }
 
+  // When the window regains focus, compare the disk body with what the
+  // editor holds. A mismatch means the file changed outside glean.
+  useEffect(() => {
+    const onFocus = async () => {
+      if (!activeId || dirty) return
+      const note = await onRefreshNote(activeId)
+      if (!note) return
+      const current = noteBodies[activeId] || ''
+      if (note.body !== current) {
+        setExternalBody(note.body)
+        setExternalChanged(true)
+      }
+    }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [activeId, dirty, noteBodies, onRefreshNote])
+
+  function reloadFromDisk() {
+    if (externalBody !== null && activeId) {
+      onBodyChange(activeId, externalBody)
+    }
+    setExternalChanged(false)
+    setExternalBody(null)
+  }
+
   const activeNote = notes.find(n => n.id === activeId) || null
   const body = activeNote ? (noteBodies[activeNote.id] || '') : ''
 
@@ -64,6 +91,19 @@ export default function Workspace({
       display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <TabBar tabs={tabs} activeId={activeId}
         onSelect={openNote} onClose={closeTab} onNew={onNewNote} onSettings={() => {}} />
+      {externalChanged && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: space[2], padding: '6px 12px',
+          background: 'rgba(180,140,80,0.15)', borderBottom: `1px solid ${colors.border}`,
+          fontSize: 12, color: '#c0a060' }}>
+          <span style={{ flex: 1 }}>File changed on disk</span>
+          <button type="button" onClick={reloadFromDisk}
+            style={{ background: 'none', border: `1px solid ${colors.border}`, color: colors.text,
+              borderRadius: 4, padding: '3px 10px', cursor: 'pointer' }}>Reload</button>
+          <button type="button" onClick={() => setExternalChanged(false)}
+            style={{ background: 'none', border: 'none', color: colors.textMuted,
+              cursor: 'pointer', fontSize: 12 }}>Keep mine</button>
+        </div>
+      )}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         {/* Left panel: SkyPanel lands in Task 5. Placeholder keeps layout. */}
         <div style={{ width: 264, borderRight: `1px solid ${colors.border}` }} />

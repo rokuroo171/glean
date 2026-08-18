@@ -1,12 +1,26 @@
-import { useEffect, useRef, useState } from 'react'
-import { colors, space } from '../lib/theme'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { colors, space, typography } from '../lib/theme'
 import { renderMarkdown } from '../lib/markdown'
 
 const AUTOSAVE_DELAY = 1500
+const LINE_HEIGHT = 22
+
+export function parseHeadings(markdown) {
+  const out = []
+  let offset = 0
+  for (const line of markdown.split('\n')) {
+    const m = line.match(/^(#{1,6})\s+(.+)/)
+    if (m) out.push({ level: m[1].length, text: m[2], offset })
+    offset += line.length + 1
+  }
+  return out
+}
 
 export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty, setDirty }) {
   const [mode, setMode] = useState('edit') // edit | preview
+  const [currentHeading, setCurrentHeading] = useState(0)
   const debounceRef = useRef(null)
+  const taRef = useRef(null)
   // Always points at the current save closure so the mount-once
   // keydown and blur listeners never go stale across tab switches.
   const flushRef = useRef(null)
@@ -16,6 +30,8 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     onSaveNow()
   }
 
+  const headings = useMemo(() => parseHeadings(body), [body])
+
   function handleChange(newBody) {
     onBodyChange(newBody)
     setDirty(true)
@@ -23,6 +39,29 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     debounceRef.current = setTimeout(() => {
       flushRef.current()
     }, AUTOSAVE_DELAY)
+  }
+
+  function jumpTo(offset, index) {
+    const ta = taRef.current
+    if (!ta) return
+    const before = body.slice(0, offset)
+    const lineIndex = before.split('\n').length - 1
+    ta.focus()
+    ta.selectionStart = ta.selectionEnd = offset
+    ta.scrollTop = Math.max(0, lineIndex * LINE_HEIGHT - 40)
+    setCurrentHeading(index)
+  }
+
+  function onScroll() {
+    const ta = taRef.current
+    if (!ta) return
+    const lineIndex = Math.floor(ta.scrollTop / LINE_HEIGHT)
+    let current = 0
+    for (let i = 0; i < headings.length; i++) {
+      const hLine = body.slice(0, headings[i].offset).split('\n').length - 1
+      if (hLine <= lineIndex) current = i
+    }
+    setCurrentHeading(current)
   }
 
   useEffect(() => {
@@ -48,20 +87,37 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
           ))}
         </div>
       </div>
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: space[3] }}>
-        {mode === 'preview' ? (
-          <div style={{ color: colors.text, lineHeight: 1.6 }}>{renderMarkdown(body)}</div>
-        ) : (
-          <textarea
-            value={body}
-            onChange={(e) => handleChange(e.target.value)}
-            placeholder="Write, the night holds what you seek."
-            style={{ width: '100%', height: '100%', resize: 'none', outline: 'none',
-              background: 'transparent', border: 'none', color: '#d0e0d0',
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-              fontSize: 14, lineHeight: 1.6 }}
-          />
+      <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+        {mode === 'edit' && headings.length >= 3 && (
+          <div style={{ width: 180, borderRight: `1px solid ${colors.border}`,
+            overflow: 'auto', padding: space[2], flexShrink: 0 }}>
+            <div style={{ ...typography.sectionLabel, color: colors.textMuted, marginBottom: 6 }}>Outline</div>
+            {headings.map((h, i) => (
+              <button key={i} type="button" onClick={() => jumpTo(h.offset, i)}
+                style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none',
+                  border: 'none', color: i === currentHeading ? colors.accent : colors.textMuted,
+                  fontSize: 12, padding: '3px 6px', cursor: 'pointer',
+                  paddingLeft: 6 + (h.level - 1) * 10 }}>{h.text}</button>
+            ))}
+          </div>
         )}
+        <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: space[3] }}>
+          {mode === 'preview' ? (
+            <div style={{ color: colors.text, lineHeight: 1.6 }}>{renderMarkdown(body)}</div>
+          ) : (
+            <textarea
+              ref={taRef}
+              value={body}
+              onChange={(e) => handleChange(e.target.value)}
+              onScroll={onScroll}
+              placeholder="Write, the night holds what you seek."
+              style={{ width: '100%', height: '100%', resize: 'none', outline: 'none',
+                background: 'transparent', border: 'none', color: '#d0e0d0',
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+                fontSize: 14, lineHeight: 1.6 }}
+            />
+          )}
+        </div>
       </div>
     </div>
   )
