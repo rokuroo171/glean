@@ -417,6 +417,11 @@ func (a *App) GetSkyName() string {
 	return name
 }
 
+// GetSkyPath returns the configured sky folder path.
+func (a *App) GetSkyPath() string {
+	return a.skyDir
+}
+
 // GetPalette returns the ambient color palette based on current time-of-day and season.
 func (a *App) GetPalette() PaletteView {
 	p := ambient.Palette(time.Now())

@@ -6,15 +6,18 @@ import Home from './Home'
 import EditorPane from './EditorPane'
 import SkyPanel from './SkyPanel'
 import DetailsPanel from './DetailsPanel'
+import StatsOverlay from './StatsOverlay'
+import SettingsPane from './SettingsPane'
 
 export default function Workspace({
-  notes, trails, stats, skyName, version,
+  notes, trails, stats, skyName, skyPath, version,
   onOpenNote, onNewNote, onOpenStats,
   fetchWorkspaceState, saveWorkspaceState,
   noteBodies, // map id -> body, filled by App via OpenNote
   onBodyChange, onSaveNow, onRefreshNote,
   onWish, onDelete,
 }) {
+  const [pseudoTab, setPseudoTab] = useState(null) // null | 'stats' | 'settings'
   const [openIds, setOpenIds] = useState([])
   const [activeId, setActiveId] = useState(null)
   const [dirty, setDirty] = useState(false)
@@ -40,6 +43,7 @@ export default function Workspace({
     .map(n => ({ id: n.id, title: n.title, species: n.species, dirty: false })), [openIds, notes])
 
   function openNote(id) {
+    setPseudoTab(null)
     if (openIds.includes(id)) {
       setActiveId(id)
       persist(openIds, id)
@@ -103,7 +107,9 @@ export default function Workspace({
     <div style={{ width: '100vw', height: '100vh', background: colors.bg,
       display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <TabBar tabs={tabs} activeId={activeId}
-        onSelect={openNote} onClose={closeTab} onNew={onNewNote} onSettings={() => {}} />
+        onSelect={openNote} onClose={closeTab} onNew={onNewNote}
+        onSettings={() => setPseudoTab('settings')}
+        pseudoTab={pseudoTab} onClosePseudo={() => setPseudoTab(null)} />
       {externalChanged && (
         <div style={{ display: 'flex', alignItems: 'center', gap: space[2], padding: '6px 12px',
           background: 'rgba(180,140,80,0.15)', borderBottom: `1px solid ${colors.border}`,
@@ -122,10 +128,18 @@ export default function Workspace({
           <SkyPanel notes={notes} trails={trails} activeId={activeId} onOpenNote={openNote} />
         </div>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-          {!activeNote ? (
+          {!activeNote && pseudoTab === 'stats' ? (
+            <div style={{ flex: 1, overflow: 'auto' }}>
+              <StatsOverlay stats={stats} />
+            </div>
+          ) : !activeNote && pseudoTab === 'settings' ? (
+            <div style={{ flex: 1, overflow: 'auto' }}>
+              <SettingsPane skyName={skyName} skyPath={skyPath} version={version} />
+            </div>
+          ) : !activeNote ? (
             <div style={{ flex: 1, overflow: 'auto', padding: space[4] }}>
               <Home notes={notes} stats={stats} onNoteClick={openNote}
-                onOpenStats={onOpenStats} onNewNote={onNewNote} />
+                onOpenStats={() => { setPseudoTab('stats'); onOpenStats() }} onNewNote={onNewNote} />
             </div>
           ) : (
             <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
