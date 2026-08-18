@@ -9,16 +9,18 @@ import DetailsPanel from './DetailsPanel'
 import StatsOverlay from './StatsOverlay'
 import SettingsPane from './SettingsPane'
 import FullSky from './FullSky'
+import CommandCenter from './CommandCenter'
 
 export default function Workspace({
   notes, trails, stats, skyName, skyPath, version,
-  onOpenNote, onNewNote, onOpenStats,
+  onOpenNote, onNewNote, onOpenStats, onCreateNote,
   fetchWorkspaceState, saveWorkspaceState,
   noteBodies, // map id -> body, filled by App via OpenNote
   onBodyChange, onSaveNow, onRefreshNote,
   onWish, onDelete,
 }) {
   const [pseudoTab, setPseudoTab] = useState(null) // null | 'stats' | 'settings'
+  const [commandOpen, setCommandOpen] = useState(false)
   const [fullSky, setFullSky] = useState(false)
   const [openIds, setOpenIds] = useState([])
   const [activeId, setActiveId] = useState(null)
@@ -67,6 +69,24 @@ export default function Workspace({
     persist(next, active)
   }
 
+  async function createAndOpen(title) {
+    const note = await onCreateNote(title)
+    if (note) openNote(note.id)
+  }
+
+  // The command center opens from the title bar pill, or with the
+  // shortcuts both references use: Ctrl+K and Ctrl+O.
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K' || e.key === 'o' || e.key === 'O')) {
+        e.preventDefault()
+        setCommandOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   // When the window regains focus, compare the disk body with what the
   // editor holds. A mismatch means the file changed outside glean.
   useEffect(() => {
@@ -111,6 +131,7 @@ export default function Workspace({
       <TabBar tabs={tabs} activeId={activeId}
         onSelect={openNote} onClose={closeTab} onNew={onNewNote}
         onSettings={() => setPseudoTab('settings')}
+        onCommand={() => setCommandOpen(true)}
         pseudoTab={pseudoTab} onClosePseudo={() => setPseudoTab(null)} />
       {externalChanged && (
         <div style={{ display: 'flex', alignItems: 'center', gap: space[2], padding: '6px 12px',
@@ -173,6 +194,10 @@ export default function Workspace({
       {fullSky && (
         <FullSky notes={notes} trails={trails} onNoteClick={openNote}
           onClose={() => setFullSky(false)} />
+      )}
+      {commandOpen && (
+        <CommandCenter notes={notes} onOpen={openNote} onCreate={createAndOpen}
+          onClose={() => setCommandOpen(false)} />
       )}
     </div>
   )

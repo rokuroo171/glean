@@ -181,6 +181,7 @@ export default function App() {
         onOpenNote={handleOpenNote}
         onNewNote={handleNewNote}
         onOpenStats={handleOpenStats}
+        onCreateNote={handleCreate}
         fetchWorkspaceState={async () => (wails ? wails.App.GetWorkspaceState() : { open_ids: [], active_id: '' })}
         saveWorkspaceState={async (st) => { if (wails) await wails.App.SaveWorkspaceState(st) }}
         noteBodies={noteBodies}
