@@ -21,6 +21,7 @@ export default function Wizard({ onComplete }) {
   const [path, setPath] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  const [report, setReport] = useState(null)
 
   const cleaned = validSkyName(name)
 
@@ -99,6 +100,59 @@ export default function Wizard({ onComplete }) {
         <p style={{ ...typography.tagline, color: colors.textMuted, margin: 0 }}>
           The first star is yours to place.
         </p>
+      </motion.div>
+    )
+  }
+
+  if (mode === 'offer') {
+    return (
+      <motion.div initial={safeMotion.initial} animate={safeMotion.animate} exit={safeMotion.exit}
+        style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', background: colors.bg, zIndex: 30 }}>
+        <div style={{ ...typography.greeting, color: colors.text, margin: 0, maxWidth: 460, textAlign: 'center' }}>
+          Found notes from an older glean.
+        </div>
+        <p style={{ ...typography.tagline, color: colors.textMuted, maxWidth: 420, textAlign: 'center' }}>
+          Import them into this Sky? Your old files stay untouched either way.
+        </p>
+        <div style={{ display: 'flex', gap: space[3], marginTop: space[4] }}>
+          <motion.button whileTap={{ scale: 0.97 }} disabled={busy} onClick={async () => {
+            setBusy(true)
+            try {
+              const r = await wails.App.MigrateSky()
+              setBusy(false)
+              setReport(r)
+            } catch (e) {
+              setBusy(false)
+              setError('Migration failed. ' + String(e))
+            }
+          }} style={{ background: colors.accent, color: '#0B0F19', border: 'none',
+            borderRadius: 8, padding: '10px 26px', fontSize: 14, cursor: 'pointer' }}>
+            {busy ? 'importing...' : 'Import'}
+          </motion.button>
+          <button type="button" disabled={busy} onClick={async () => {
+            if (wails?.App.SkipMigration) await wails.App.SkipMigration()
+            setMode('ready')
+            setTimeout(() => onComplete(), 1200)
+          }} style={{ background: 'none', border: `1px solid ${colors.border}`, color: colors.textMuted,
+            borderRadius: 8, padding: '10px 26px', fontSize: 14, cursor: 'pointer' }}>
+            Skip
+          </button>
+        </div>
+        {report && (
+          <div style={{ marginTop: space[3], fontSize: 13, color: colors.text }}>
+            {report.failures && report.failures.length > 0
+              ? `Imported ${report.imported} of ${report.imported + report.failures.length}. Failed: ${report.failures.join(', ')}`
+              : `Imported ${report.imported}.`}
+          </div>
+        )}
+        {report && (
+          <motion.button whileTap={{ scale: 0.97 }} onClick={() => { setMode('ready'); setTimeout(() => onComplete(), 1200) }}
+            style={{ marginTop: space[3], background: colors.accent, color: '#0B0F19', border: 'none',
+              borderRadius: 8, padding: '10px 26px', fontSize: 14, cursor: 'pointer' }}>
+            Continue
+          </motion.button>
+        )}
       </motion.div>
     )
   }
