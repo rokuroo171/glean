@@ -12,12 +12,13 @@ import (
 // SkyStateView is what the frontend uses to decide wizard, recovery, or
 // workspace.
 type SkyStateView struct {
-	Configured    bool   `json:"configured"`
-	SkyMissing    bool   `json:"sky_missing"`
-	SkyName       string `json:"sky_name"`
-	SkyPath       string `json:"sky_path"`
-	HasLegacy     bool   `json:"has_legacy"`
-	RegistryEmpty bool   `json:"registry_empty"`
+	Configured       bool   `json:"configured"`
+	SkyMissing       bool   `json:"sky_missing"`
+	SkyName          string `json:"sky_name"`
+	SkyPath          string `json:"sky_path"`
+	HasLegacy        bool   `json:"has_legacy"`
+	RegistryEmpty    bool   `json:"registry_empty"`
+	MigrationSkipped bool   `json:"migration_skipped"`
 }
 
 // SkyState reports the current setup state.
@@ -39,9 +40,11 @@ func (a *App) SkyState() SkyStateView {
 	if a.store != nil {
 		empty = len(a.store.All()) == 0
 	}
+	p, _, _ := store.LoadPointer()
 	return SkyStateView{
 		Configured: true, SkyName: name, SkyPath: skyDir,
 		HasLegacy: hasLegacy, RegistryEmpty: empty,
+		MigrationSkipped: p.MigrationSkipped,
 	}
 }
 
