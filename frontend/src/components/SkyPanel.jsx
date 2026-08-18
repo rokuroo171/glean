@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Stage, Layer, Circle, Line } from 'react-konva'
 import { colors, space, typography } from '../lib/theme'
+import Icon from './Icon'
 
 const SPECIES = { warm: colors.starWarm, cool: colors.starCool, hot: colors.starHot, neutral: colors.starNeutral }
 
@@ -35,9 +36,9 @@ export default function SkyPanel({ notes, trails, activeId, onOpenNote, onExpand
       <div style={{ padding: space[2] }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <div style={{ ...typography.sectionLabel, color: colors.textMuted }}>{skyName || 'Sky'}</div>
-          <button type="button" onClick={onExpand} aria-label="expand sky"
+          <button type="button" onClick={onExpand} aria-label="expand sky" title="Full sky"
             style={{ background: 'none', border: 'none', color: colors.textMuted,
-              fontSize: 12, cursor: 'pointer', padding: '0 2px' }}>expand</button>
+              cursor: 'pointer', padding: 2 }}><Icon name="maximize" size={13} /></button>
         </div>
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search stars..."
           style={{ width: '100%', background: colors.bg, color: colors.text,

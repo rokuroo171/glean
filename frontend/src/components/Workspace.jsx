@@ -10,6 +10,7 @@ import StatsOverlay from './StatsOverlay'
 import SettingsPane from './SettingsPane'
 import FullSky from './FullSky'
 import CommandCenter from './CommandCenter'
+import Icon from './Icon'
 
 export default function Workspace({
   notes, trails, stats, skyName, skyPath, version,
@@ -169,16 +170,11 @@ export default function Workspace({
             display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: space[2], gap: space[2] }}>
             <button type="button" onClick={toggleSky} aria-label="show sky panel" title="Show sky panel"
               style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', padding: 4 }}>
-              <svg width={12} height={12} viewBox="0 0 12 12" fill="none">
-                <rect x={6} y={2} width={5} height={8} rx={1} stroke="currentColor" strokeWidth={1} />
-                <path d="M4 4.5L6 6l-2 1.5" stroke="currentColor" strokeWidth={1} />
-              </svg>
+              <Icon name="panel-right" size={14} />
             </button>
             <button type="button" onClick={() => setFullSky(true)} aria-label="full sky" title="Full sky"
               style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', padding: 4 }}>
-              <svg width={12} height={12} viewBox="0 0 12 12" fill="none">
-                <path d="M5 2H2v3M7 2h3v3M5 10H2V7M7 10h3V7" stroke="currentColor" strokeWidth={1} />
-              </svg>
+              <Icon name="maximize" size={14} />
             </button>
           </div>
         ) : (
