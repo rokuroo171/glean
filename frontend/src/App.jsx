@@ -89,6 +89,15 @@ export default function App() {
     setNoteBodies(prev => ({ ...prev, [id]: newBody }))
   }, [])
 
+  const handleRefreshNote = useCallback(async (id) => {
+    if (wails) {
+      const note = await wails.App.GetNote(id)
+      // Wails may wrap multi-return methods in an array.
+      return Array.isArray(note) ? note[0] : note
+    }
+    return notes.find(n => n.id === id) || null
+  }, [notes])
+
   const handleSaveNow = useCallback(async (id) => {
     const note = notes.find(n => n.id === id)
     if (!note) return
@@ -157,6 +166,7 @@ export default function App() {
         noteBodies={noteBodies}
         onBodyChange={handleBodyChange}
         onSaveNow={handleSaveNow}
+        onRefreshNote={handleRefreshNote}
       />
 
       {showNewPrompt && (
