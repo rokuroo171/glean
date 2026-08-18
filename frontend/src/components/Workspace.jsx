@@ -5,6 +5,7 @@ import StatusBar from './StatusBar'
 import Home from './Home'
 import EditorPane from './EditorPane'
 import SkyPanel from './SkyPanel'
+import DetailsPanel from './DetailsPanel'
 
 export default function Workspace({
   notes, trails, stats, skyName, version,
@@ -12,6 +13,7 @@ export default function Workspace({
   fetchWorkspaceState, saveWorkspaceState,
   noteBodies, // map id -> body, filled by App via OpenNote
   onBodyChange, onSaveNow, onRefreshNote,
+  onWish, onDelete,
 }) {
   const [openIds, setOpenIds] = useState([])
   const [activeId, setActiveId] = useState(null)
@@ -87,6 +89,16 @@ export default function Workspace({
   const activeNote = notes.find(n => n.id === activeId) || null
   const body = activeNote ? (noteBodies[activeNote.id] || '') : ''
 
+  const linked = useMemo(() => {
+    if (!activeNote) return []
+    const ids = new Set()
+    for (const t of trails) {
+      if (t.note_a === activeNote.id) ids.add(t.note_b)
+      if (t.note_b === activeNote.id) ids.add(t.note_a)
+    }
+    return notes.filter(n => ids.has(n.id))
+  }, [activeNote, trails, notes])
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: colors.bg,
       display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -130,8 +142,14 @@ export default function Workspace({
           <StatusBar words={body.trim() ? body.trim().split(/\s+/).length : 0}
             saveState={dirty ? 'unsaved' : 'saved'} skyName={skyName} version={version} />
         </div>
-        {/* Right panel: DetailsPanel lands in Task 6. */}
-        <div style={{ width: 220, borderLeft: `1px solid ${colors.border}` }} />
+        <div style={{ width: 220, borderLeft: `1px solid ${colors.border}`, overflow: 'auto' }}>
+          {activeNote && (
+            <DetailsPanel note={activeNote} linked={linked}
+              onWish={onWish}
+              onDelete={(id) => { onDelete(id); closeTab(id) }}
+              onOpenNote={openNote} />
+          )}
+        </div>
       </div>
     </div>
   )
