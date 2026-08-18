@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"hash/fnv"
 	"os"
 	"path/filepath"
@@ -27,47 +28,21 @@ type App struct {
 	lastNoteOpen time.Time
 }
 
-// NewApp creates the application with all stores loaded from the sky.
+// NewApp wires the sky-based stores when a sky is configured. Without a
+// pointer the stores stay nil and the frontend shows the wizard.
 func NewApp() (*App, error) {
-	skyDir, err := resolveSkyDir()
-	if err != nil {
-		return nil, err
-	}
-	reg, err := store.OpenRegistry(skyDir)
-	if err != nil {
-		return nil, err
-	}
-	adj, _ := adjacency.Open(skyDir)
-	act, _ := activity.Open(skyDir)
-	ws, err := store.OpenWorkspace(skyDir)
-	if err != nil {
-		return nil, err
-	}
-	return &App{store: reg, skyDir: skyDir, adjacency: adj, activity: act, workspace: ws}, nil
-}
-
-// resolveSkyDir returns the configured sky, bootstrapping a default one
-// when no pointer exists. Transitional until the wizard milestone lands.
-func resolveSkyDir() (string, error) {
 	skyDir, ok, err := store.ResolveSky()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	if ok {
-		return skyDir, nil
+	if !ok {
+		return &App{}, nil
 	}
-	dir, err := store.AppConfigDir()
-	if err != nil {
-		return "", err
+	a := &App{}
+	if err := a.openSkyAt(skyDir); err != nil {
+		return nil, err
 	}
-	skyDir = filepath.Join(dir, "sky")
-	if err := store.CreateSky(skyDir, "My Sky"); err != nil {
-		return "", err
-	}
-	if err := store.SavePointer(store.SkyPointer{SkyPath: skyDir}); err != nil {
-		return "", err
-	}
-	return skyDir, nil
+	return a, nil
 }
 
 // NoteView is the JSON-safe note representation sent to the frontend.
@@ -137,6 +112,9 @@ func fnvHash(s string) uint64 {
 // GetNotes returns all notes as views for the sky canvas. Bodies stay
 // empty here; they load on open.
 func (a *App) GetNotes() []NoteView {
+	if a.store == nil {
+		return nil
+	}
 	notes := a.store.All()
 	views := make([]NoteView, len(notes))
 	for i, n := range notes {
@@ -156,6 +134,9 @@ func (a *App) notePath(n note.Note) (string, error) {
 // GetNote returns a single note by ID, loading its body from the md file
 // without recording a visit.
 func (a *App) GetNote(id string) (NoteView, bool) {
+	if a.store == nil {
+		return NoteView{}, false
+	}
 	n, ok := a.store.Get(id)
 	if !ok {
 		return NoteView{}, false
@@ -174,6 +155,9 @@ func (a *App) GetNote(id string) (NoteView, bool) {
 
 // CreateNote creates a new note with a title and returns it.
 func (a *App) CreateNote(title string, contextID string) (NoteView, error) {
+	if a.store == nil {
+		return NoteView{}, fmt.Errorf("no sky configured")
+	}
 	if title == "" {
 		title = "Untitled"
 	}
@@ -206,6 +190,9 @@ func (a *App) CreateNote(title string, contextID string) (NoteView, error) {
 
 // SaveNote writes the md file, renames on title change, updates the registry.
 func (a *App) SaveNote(id, title, body string) error {
+	if a.store == nil {
+		return fmt.Errorf("no sky configured")
+	}
 	n, ok := a.store.Get(id)
 	if !ok {
 		return nil
@@ -237,6 +224,9 @@ func (a *App) SaveNote(id, title, body string) error {
 
 // DeleteNote removes the registry entry and the md file.
 func (a *App) DeleteNote(id string) error {
+	if a.store == nil {
+		return fmt.Errorf("no sky configured")
+	}
 	n, ok := a.store.Get(id)
 	if !ok {
 		return nil
@@ -255,6 +245,9 @@ func (a *App) DeleteNote(id string) error {
 
 // WaterNote performs a manual wish on a note (once per day).
 func (a *App) WaterNote(id string) (bool, error) {
+	if a.store == nil {
+		return false, nil
+	}
 	n, ok := a.store.Get(id)
 	if !ok {
 		return false, nil
@@ -275,6 +268,9 @@ func (a *App) WaterNote(id string) (bool, error) {
 // its body from the md file. Also records adjacency transitions for
 // constellation line rendering.
 func (a *App) OpenNote(id string) (NoteView, error) {
+	if a.store == nil {
+		return NoteView{}, fmt.Errorf("no sky configured")
+	}
 	n, ok := a.store.Get(id)
 	if !ok {
 		return NoteView{}, nil
@@ -309,7 +305,7 @@ func (a *App) OpenNote(id string) (NoteView, error) {
 	}
 	a.recordActivity()
 	return noteToView(n), nil
-}// TrailView is the JSON-safe trail representation for the frontend.
+} // TrailView is the JSON-safe trail representation for the frontend.
 // Wails auto-serializes return values, so we return this directly.
 type TrailView struct {
 	NoteA  string `json:"note_a"`
@@ -332,7 +328,7 @@ func (a *App) GetTrails() []TrailView {
 		dimmed := adjacency.IsDimmed(pair, now)
 		views = append(views, TrailView{
 			NoteA:  pair.NoteA,
-			NoteB: pair.NoteB,
+			NoteB:  pair.NoteB,
 			Dimmed: dimmed,
 		})
 	}
@@ -341,13 +337,13 @@ func (a *App) GetTrails() []TrailView {
 
 // StatsView is the JSON-safe stats representation for the frontend.
 type StatsView struct {
-	TotalNotes    int            `json:"total_notes"`
-	StageCounts   map[string]int `json:"stage_counts"`
-	CurrentStreak int            `json:"current_streak"`
-	LongestStreak int            `json:"longest_streak"`
-	LastActiveDate string        `json:"last_active_date"`
-	Milestones    MilestonesView `json:"milestones"`
-	DailyCounts   map[string]int `json:"daily_counts"`
+	TotalNotes     int            `json:"total_notes"`
+	StageCounts    map[string]int `json:"stage_counts"`
+	CurrentStreak  int            `json:"current_streak"`
+	LongestStreak  int            `json:"longest_streak"`
+	LastActiveDate string         `json:"last_active_date"`
+	Milestones     MilestonesView `json:"milestones"`
+	DailyCounts    map[string]int `json:"daily_counts"`
 }
 
 // MilestonesView mirrors activity.Milestones for JSON serialization.
@@ -360,6 +356,9 @@ type MilestonesView struct {
 
 // GetStats returns sky stats: stage counts, streaks, milestones, daily activity.
 func (a *App) GetStats() StatsView {
+	if a.store == nil {
+		return StatsView{}
+	}
 	notes := a.store.All()
 	stageCounts := map[string]int{}
 	for _, n := range notes {
@@ -367,9 +366,9 @@ func (a *App) GetStats() StatsView {
 	}
 
 	view := StatsView{
-		TotalNotes:   len(notes),
-		StageCounts:   stageCounts,
-		DailyCounts:   map[string]int{},
+		TotalNotes:  len(notes),
+		StageCounts: stageCounts,
+		DailyCounts: map[string]int{},
 	}
 
 	if a.activity != nil {
