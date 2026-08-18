@@ -120,3 +120,43 @@ func TestResolveSky(t *testing.T) {
 		t.Fatalf("ResolveSky() = %q, %v, %v", got, ok, err)
 	}
 }
+
+func TestSanitizeSkyName(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"My Sky", "My Sky"},
+		{`Weird: "name" / with? *stars*`, "Weird name  with stars"},
+		{"  padded  ", "padded"},
+		{"CON", "_CON"},
+	}
+	for _, c := range cases {
+		got, err := SanitizeSkyName(c.in)
+		if err != nil {
+			t.Fatalf("SanitizeSkyName(%q) errored: %v", c.in, err)
+		}
+		if got != c.want {
+			t.Errorf("SanitizeSkyName(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}
+
+func TestSanitizeSkyNameRejectsEmpty(t *testing.T) {
+	for _, in := range []string{"", "   ", "***"} {
+		if _, err := SanitizeSkyName(in); err == nil {
+			t.Errorf("SanitizeSkyName(%q) should error", in)
+		}
+	}
+}
+
+func TestSanitizeSkyNameCapsAt60(t *testing.T) {
+	long := ""
+	for i := 0; i < 70; i++ {
+		long += "a"
+	}
+	got, err := SanitizeSkyName(long)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 60 {
+		t.Fatalf("len = %d, want 60", len(got))
+	}
+}

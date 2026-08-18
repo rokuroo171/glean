@@ -137,3 +137,16 @@ func LoadSkyName(skyDir string) (string, error) {
 	}
 	return m.Name, nil
 }
+
+// SanitizeSkyName makes a sky name safe as a folder name and caps it.
+// Errors when nothing survives sanitizing.
+func SanitizeSkyName(name string) (string, error) {
+	out := SanitizeTitle(name)
+	if len(out) > 60 {
+		out = out[:60]
+	}
+	if out == "" {
+		return "", fmt.Errorf("sky name is empty after sanitizing")
+	}
+	return out, nil
+}
