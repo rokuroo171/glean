@@ -1,9 +1,27 @@
 import { useState, useEffect, useCallback } from 'react'
 import Workspace from './components/Workspace'
 import NewNotePrompt from './components/NewNotePrompt'
+import Wizard from './components/Wizard'
+import Recovery from './components/Recovery'
 import { colors } from './lib/theme'
 
 const wails = window.go?.main
+
+// Mock mode defaults to the workspace; #wizard=1 and #recovery=1 force the
+// other gates so the screens can be reached from the browser dev server.
+function mockSkyState() {
+  const params = new URLSearchParams(window.location.hash.slice(1))
+  if (params.get('wizard') === '1') {
+    return { configured: false, sky_missing: false, sky_name: '', sky_path: '',
+      has_legacy: false, registry_empty: true, migration_skipped: false }
+  }
+  if (params.get('recovery') === '1') {
+    return { configured: true, sky_missing: true, sky_name: 'My Sky', sky_path: '',
+      has_legacy: false, registry_empty: true, migration_skipped: false }
+  }
+  return { configured: true, sky_missing: false, sky_name: 'My Sky', sky_path: '',
+    has_legacy: false, registry_empty: true, migration_skipped: false }
+}
 
 const MOCK_NOTES = [
   { id: '1', title: 'First spark', body: 'Notes on tools and configs.', created_at: new Date(Date.now() - 120000).toISOString(), last_visited: new Date(Date.now() - 120000).toISOString(), visit_count: 1, last_manual_water: null, world_x: 0, world_y: 0, positioned: true, stage: 'faintspeck', species: 'warm' },
@@ -52,6 +70,8 @@ async function getSkyPath() {
 }
 
 export default function App() {
+  const [setup, setSetup] = useState('loading') // loading | wizard | recovery | workspace
+  const [skyState, setSkyState] = useState(null)
   const [notes, setNotes] = useState([])
   const [trails, setTrails] = useState([])
   const [stats, setStats] = useState(null)
@@ -61,11 +81,16 @@ export default function App() {
   const [showNewPrompt, setShowNewPrompt] = useState(false)
   const [newNoteTitle, setNewNoteTitle] = useState('')
 
+  // The pointer gate: wizard for a new user, recovery for a missing sky,
+  // workspace for everyone else.
   useEffect(() => {
-    loadSky()
-    loadStats()
-    getSkyName().then(setSkyName)
-    getSkyPath().then(setSkyPath)
+    (async () => {
+      const st = wails ? await wails.App.SkyState() : mockSkyState()
+      setSkyState(st)
+      if (!st.configured) setSetup('wizard')
+      else if (st.sky_missing) setSetup('recovery')
+      else setSetup('workspace')
+    })()
   }, [])
 
   const loadSky = useCallback(async () => {
@@ -78,6 +103,16 @@ export default function App() {
     const s = await getStats()
     setStats(s)
   }, [])
+
+  // Sky data loads only once the workspace is the active gate, so a fresh
+  // setup gets its scan results instead of the empty pre-wizard state.
+  useEffect(() => {
+    if (setup !== 'workspace') return
+    loadSky()
+    loadStats()
+    getSkyName().then(setSkyName)
+    getSkyPath().then(setSkyPath)
+  }, [setup, loadSky, loadStats])
 
   const handleOpenNote = useCallback(async (id) => {
     if (wails) {
@@ -168,6 +203,19 @@ export default function App() {
   const handleOpenStats = useCallback(async () => {
     await loadStats()
   }, [loadStats])
+
+  if (setup === 'loading') return <div style={{ width: '100vw', height: '100vh', background: colors.bg }} />
+  if (setup === 'wizard') return (
+    <Wizard onComplete={async () => {
+      const st = await (wails ? wails.App.SkyState() : mockSkyState())
+      setSkyState(st)
+      setSetup(st.sky_missing ? 'recovery' : 'workspace')
+    }} />
+  )
+  if (setup === 'recovery') return (
+    <Recovery onCreateNew={() => setSetup('wizard')}
+      onComplete={() => { setSkyState(null); setSetup('workspace') }} />
+  )
 
   return (
     <div style={{ width: '100vw', height: '100vh', background: colors.bg, position: 'relative', overflow: 'hidden' }}>
