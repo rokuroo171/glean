@@ -4,7 +4,7 @@ import TabBar from './TabBar'
 import StatusBar from './StatusBar'
 import Home from './Home'
 import EditorPane from './EditorPane'
-import SkyPanel from './SkyPanel'
+import FileExplorer from './FileExplorer'
 import DetailsPanel from './DetailsPanel'
 import StatsOverlay from './StatsOverlay'
 import SettingsPane from './SettingsPane'
@@ -168,7 +168,7 @@ export default function Workspace({
         {skyCollapsed ? (
           <div style={{ width: 44, borderRight: `1px solid ${colors.border}`, flexShrink: 0,
             display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: space[2], gap: space[2] }}>
-            <button type="button" onClick={toggleSky} aria-label="show sky panel" title="Show sky panel"
+            <button type="button" onClick={toggleSky} aria-label="show explorer" title="Show explorer"
               style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', padding: 4 }}>
               <Icon name="panel-right" size={14} />
             </button>
@@ -179,7 +179,7 @@ export default function Workspace({
           </div>
         ) : (
           <div style={{ width: 264, borderRight: `1px solid ${colors.border}`, display: 'flex', minHeight: 0 }}>
-            <SkyPanel notes={notes} trails={trails} activeId={activeId} skyName={skyName}
+            <FileExplorer notes={notes} activeId={activeId} skyName={skyName}
               onOpenNote={openNote} onExpand={() => setFullSky(true)} />
           </div>
         )}
