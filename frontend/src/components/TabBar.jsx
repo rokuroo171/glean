@@ -6,7 +6,7 @@ const runtime = window.runtime
 
 const noDrag = { WebkitAppRegion: 'no-drag' }
 
-export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSettings, onCommand, pseudoTab, onClosePseudo }) {
+export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSettings, onCommand, skyCollapsed, onToggleSky, pseudoTab, onClosePseudo }) {
   return (
     <div
       style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 0 0 10px', height: 38,
@@ -16,6 +16,22 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
       // Linux webkit2gtk ignores CSS drag regions; hand the drag to the runtime there.
       onPointerDown={() => { if (runtime?.WindowStartDragging) runtime.WindowStartDragging() }}
     >
+      <button type="button" onClick={onToggleSky} aria-label={skyCollapsed ? 'show sky panel' : 'hide sky panel'}
+        title={skyCollapsed ? 'Show sky panel' : 'Hide sky panel'}
+        style={{ flexShrink: 0, background: 'none', border: 'none', color: colors.textMuted,
+          cursor: 'pointer', padding: 4, borderRadius: 4, display: 'flex', ...noDrag }}>
+        {skyCollapsed ? (
+          <svg width={12} height={12} viewBox="0 0 12 12" fill="none">
+            <rect x={6} y={2} width={5} height={8} rx={1} stroke="currentColor" strokeWidth={1} />
+            <path d="M4 4.5L6 6l-2 1.5" stroke="currentColor" strokeWidth={1} />
+          </svg>
+        ) : (
+          <svg width={12} height={12} viewBox="0 0 12 12" fill="none">
+            <rect x={1} y={2} width={5} height={8} rx={1} stroke="currentColor" strokeWidth={1} />
+            <path d="M8 4.5L6 6l2 1.5" stroke="currentColor" strokeWidth={1} />
+          </svg>
+        )}
+      </button>
       <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: colors.text,
         fontSize: 13, fontWeight: 600, marginRight: 8 }}>
         <StarIcon species="warm" size="sm" />

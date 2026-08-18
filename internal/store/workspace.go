@@ -8,10 +8,11 @@ import (
 	"sync"
 )
 
-// WorkspaceState is the persisted tab state of the workspace.
+// WorkspaceState is the persisted state of the workspace.
 type WorkspaceState struct {
-	OpenIDs  []string `json:"open_ids"`
-	ActiveID string   `json:"active_id"`
+	OpenIDs      []string `json:"open_ids"`
+	ActiveID     string   `json:"active_id"`
+	SkyCollapsed bool     `json:"sky_collapsed"`
 }
 
 // WorkspaceStore persists WorkspaceState as .glean/workspace.json.
@@ -46,11 +47,11 @@ func OpenWorkspace(skyDir string) (*WorkspaceStore, error) {
 	return s, nil
 }
 
-// State returns a copy of the tab state.
+// State returns a copy of the persisted state.
 func (s *WorkspaceStore) State() WorkspaceState {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	out := WorkspaceState{OpenIDs: append([]string{}, s.data.OpenIDs...), ActiveID: s.data.ActiveID}
+	out := WorkspaceState{OpenIDs: append([]string{}, s.data.OpenIDs...), ActiveID: s.data.ActiveID, SkyCollapsed: s.data.SkyCollapsed}
 	return out
 }
 

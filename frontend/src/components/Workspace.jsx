@@ -22,6 +22,7 @@ export default function Workspace({
   const [pseudoTab, setPseudoTab] = useState(null) // null | 'stats' | 'settings'
   const [commandOpen, setCommandOpen] = useState(false)
   const [fullSky, setFullSky] = useState(false)
+  const [skyCollapsed, setSkyCollapsed] = useState(false)
   const [openIds, setOpenIds] = useState([])
   const [activeId, setActiveId] = useState(null)
   const [dirty, setDirty] = useState(false)
@@ -36,6 +37,7 @@ export default function Workspace({
         setOpenIds(st.open_ids)
         setActiveId(st.active_id || st.open_ids[0])
       }
+      setSkyCollapsed(!!st?.sky_collapsed)
     })()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -72,6 +74,12 @@ export default function Workspace({
   async function createAndOpen(title) {
     const note = await onCreateNote(title)
     if (note) openNote(note.id)
+  }
+
+  function toggleSky() {
+    const next = !skyCollapsed
+    setSkyCollapsed(next)
+    saveWorkspaceState({ open_ids: openIds, active_id: activeId, sky_collapsed: next })
   }
 
   // The command center opens from the title bar pill, or with the
@@ -132,6 +140,7 @@ export default function Workspace({
         onSelect={openNote} onClose={closeTab} onNew={onNewNote}
         onSettings={() => setPseudoTab('settings')}
         onCommand={() => setCommandOpen(true)}
+        skyCollapsed={skyCollapsed} onToggleSky={toggleSky}
         pseudoTab={pseudoTab} onClosePseudo={() => setPseudoTab(null)} />
       {externalChanged && (
         <div style={{ display: 'flex', alignItems: 'center', gap: space[2], padding: '6px 12px',
@@ -147,10 +156,29 @@ export default function Workspace({
         </div>
       )}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-        <div style={{ width: 264, borderRight: `1px solid ${colors.border}`, display: 'flex', minHeight: 0 }}>
-          <SkyPanel notes={notes} trails={trails} activeId={activeId} skyName={skyName}
-            onOpenNote={openNote} onExpand={() => setFullSky(true)} />
-        </div>
+        {skyCollapsed ? (
+          <div style={{ width: 44, borderRight: `1px solid ${colors.border}`, flexShrink: 0,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: space[2], gap: space[2] }}>
+            <button type="button" onClick={toggleSky} aria-label="show sky panel" title="Show sky panel"
+              style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', padding: 4 }}>
+              <svg width={12} height={12} viewBox="0 0 12 12" fill="none">
+                <rect x={6} y={2} width={5} height={8} rx={1} stroke="currentColor" strokeWidth={1} />
+                <path d="M4 4.5L6 6l-2 1.5" stroke="currentColor" strokeWidth={1} />
+              </svg>
+            </button>
+            <button type="button" onClick={() => setFullSky(true)} aria-label="full sky" title="Full sky"
+              style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', padding: 4 }}>
+              <svg width={12} height={12} viewBox="0 0 12 12" fill="none">
+                <path d="M5 2H2v3M7 2h3v3M5 10H2V7M7 10h3V7" stroke="currentColor" strokeWidth={1} />
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <div style={{ width: 264, borderRight: `1px solid ${colors.border}`, display: 'flex', minHeight: 0 }}>
+            <SkyPanel notes={notes} trails={trails} activeId={activeId} skyName={skyName}
+              onOpenNote={openNote} onExpand={() => setFullSky(true)} />
+          </div>
+        )}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           {!activeNote && pseudoTab === 'stats' ? (
             <div style={{ flex: 1, overflow: 'auto' }}>
