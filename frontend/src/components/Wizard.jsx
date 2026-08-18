@@ -31,8 +31,10 @@ export default function Wizard({ onComplete }) {
       if (!dir) return null
       return dir
     }
-    // Mock fallback: browser devs type a path.
-    return path || null
+    // Browser/mock fallback: prompt for a path so the wizard is testable
+    // in the dev server without a native dialog.
+    const entered = prompt('Enter a folder path for your Sky:')
+    return entered && entered.trim() ? entered.trim() : null
   }
 
   async function chooseExisting() {
@@ -42,6 +44,7 @@ export default function Wizard({ onComplete }) {
     const base = dir.split(/[\\/]/).pop() || ''
     setName(base)
     setMode('folder')
+    setError(null)
   }
 
   async function submit() {
@@ -49,12 +52,20 @@ export default function Wizard({ onComplete }) {
     setError(null)
     try {
       const dir = mode === 'folder' ? path : path || await defaultPath()
-      const state = mode === 'folder'
-        ? await wails.App.OpenSky(dir)
-        : await wails.App.SetupSky(cleaned, dir)
+      let state
+      if (wails) {
+        state = mode === 'folder'
+          ? await wails.App.OpenSky(dir)
+          : await wails.App.SetupSky(cleaned, dir)
+      } else {
+        // Browser/mock mode: fake the state so the wizard completes.
+        state = { configured: true, sky_missing: false, sky_name: cleaned || 'My Sky',
+          sky_path: dir || 'local', has_legacy: false, registry_empty: true,
+          migration_skipped: false }
+      }
       setBusy(false)
       if (state.registry_empty && state.has_legacy && !state.migration_skipped) {
-        setMode('offer') // completed in Task 4
+        setMode('offer')
         return
       }
       setMode('ready')
@@ -71,6 +82,9 @@ export default function Wizard({ onComplete }) {
     }
     return ''
   }
+
+  // Show the folder path once a location is picked, in both modes.
+  const showPath = isFolderMode || (!isFolderMode && path)
 
   if (mode === 'brand') {
     return (
