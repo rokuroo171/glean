@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { colors, space, typography } from '../lib/theme'
 import { renderMarkdown } from '../lib/markdown'
 import StarIcon from './StarIcon'
+import Icon from './Icon'
 
 const AUTOSAVE_DELAY = 1500
 const LINE_HEIGHT = 22
@@ -80,11 +81,11 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
         <h2 style={{ margin: 0, fontSize: 16, fontWeight: 500, color: colors.text, flex: 1, minWidth: 0,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{note.title}</h2>
         <div style={{ display: 'flex', border: `1px solid ${colors.border}`, borderRadius: 6, overflow: 'hidden' }}>
-          {['edit', 'preview'].map(m => (
-            <button key={m} type="button" onClick={() => setMode(m)}
+          {[['edit', 'pencil'], ['preview', 'eye']].map(([m, icon]) => (
+            <button key={m} type="button" onClick={() => setMode(m)} title={m}
               style={{ background: mode === m ? colors.bgElevated : 'none', border: 'none',
-                color: mode === m ? colors.text : colors.textMuted, fontSize: 11,
-                padding: '4px 12px', cursor: 'pointer' }}>{m}</button>
+                color: mode === m ? colors.text : colors.textMuted,
+                padding: '5px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Icon name={icon} size={14} /></button>
           ))}
         </div>
       </div>
