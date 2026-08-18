@@ -106,6 +106,25 @@ export default function App() {
     loadSky()
   }, [notes, noteBodies, loadSky])
 
+  const handleWish = useCallback(async (id) => {
+    if (!wails) return false
+    let ok = false
+    try { ok = await wails.App.WaterNote(id) } catch { return false }
+    if (!ok) return false
+    loadSky()
+    return true
+  }, [loadSky])
+
+  const handleDelete = useCallback(async (id) => {
+    if (wails) {
+      await wails.App.DeleteNote(id)
+    } else {
+      mockCreated = mockCreated.filter(n => n.id !== id)
+      setNotes(prev => prev.filter(n => n.id !== id))
+    }
+    loadSky()
+  }, [loadSky])
+
   const handleCreate = useCallback(async (title, contextId) => {
     let note
     if (wails) {
@@ -167,6 +186,8 @@ export default function App() {
         onBodyChange={handleBodyChange}
         onSaveNow={handleSaveNow}
         onRefreshNote={handleRefreshNote}
+        onWish={handleWish}
+        onDelete={handleDelete}
       />
 
       {showNewPrompt && (
