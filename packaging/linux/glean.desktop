@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=glean
+Comment=The night holds what you seek
+Exec=glean
+Icon=glean
+Terminal=false
+Type=Application
+Categories=Office;Utility;
+StartupNotify=true
