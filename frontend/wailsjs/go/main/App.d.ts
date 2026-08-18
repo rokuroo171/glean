@@ -35,6 +35,8 @@ export function SaveNote(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function SaveWorkspaceState(arg1:store.WorkspaceState):Promise<void>;
 
+export function ScanSky():Promise<Array<main.NoteView>>;
+
 export function SetupSky(arg1:string,arg2:string):Promise<main.SkyStateView>;
 
 export function SkipMigration():Promise<void>;
