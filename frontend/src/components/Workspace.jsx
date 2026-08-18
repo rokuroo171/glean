@@ -3,16 +3,18 @@ import { colors, space } from '../lib/theme'
 import TabBar from './TabBar'
 import StatusBar from './StatusBar'
 import Home from './Home'
-import { renderMarkdown } from '../lib/markdown'
+import EditorPane from './EditorPane'
 
 export default function Workspace({
   notes, trails, stats, skyName, version,
   onOpenNote, onNewNote, onOpenStats,
   fetchWorkspaceState, saveWorkspaceState,
   noteBodies, // map id -> body, filled by App via OpenNote
+  onBodyChange, onSaveNow,
 }) {
   const [openIds, setOpenIds] = useState([])
   const [activeId, setActiveId] = useState(null)
+  const [dirty, setDirty] = useState(false)
 
   // Restore tabs once at mount.
   useEffect(() => {
@@ -46,6 +48,7 @@ export default function Workspace({
   }
 
   function closeTab(id) {
+    if (id === activeId && dirty) onSaveNow(id)
     const next = openIds.filter(x => x !== id)
     setOpenIds(next)
     const active = activeId === id ? (next[next.length - 1] || null) : activeId
@@ -65,19 +68,25 @@ export default function Workspace({
         {/* Left panel: SkyPanel lands in Task 5. Placeholder keeps layout. */}
         <div style={{ width: 264, borderRight: `1px solid ${colors.border}` }} />
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ flex: 1, overflow: 'auto', padding: space[4] }}>
-            {!activeNote ? (
+          {!activeNote ? (
+            <div style={{ flex: 1, overflow: 'auto', padding: space[4] }}>
               <Home notes={notes} stats={stats} onNoteClick={openNote}
                 onOpenStats={onOpenStats} onNewNote={onNewNote} />
-            ) : (
-              <div>
-                <h2 style={{ color: colors.text, fontSize: 20, margin: '0 0 12px' }}>{activeNote.title}</h2>
-                <div style={{ color: colors.text, lineHeight: 1.6 }}>{renderMarkdown(body)}</div>
-              </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+              <EditorPane
+                note={activeNote}
+                body={body}
+                onBodyChange={(newBody) => onBodyChange(activeNote.id, newBody)}
+                onSaveNow={() => onSaveNow(activeNote.id)}
+                dirty={dirty}
+                setDirty={setDirty}
+              />
+            </div>
+          )}
           <StatusBar words={body.trim() ? body.trim().split(/\s+/).length : 0}
-            saveState="saved" skyName={skyName} version={version} />
+            saveState={dirty ? 'unsaved' : 'saved'} skyName={skyName} version={version} />
         </div>
         {/* Right panel: DetailsPanel lands in Task 6. */}
         <div style={{ width: 220, borderLeft: `1px solid ${colors.border}` }} />
