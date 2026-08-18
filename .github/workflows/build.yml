@@ -62,6 +62,13 @@ jobs:
       - name: Install Wails
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
+      # Stage the app icon where wails expects it, build/appicon.png.
+      # Wails derives icon.ico and icon.icns from it at build time.
+      - name: Stage app icon
+        run: |
+          mkdir -p build
+          cp packaging/appicon.png build/appicon.png
+
       # Build
       # wails build handles: go mod tidy, frontend:install, frontend:build
       # No -platform flag: each job runs on its native OS, Wails auto-detects.
