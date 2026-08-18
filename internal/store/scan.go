@@ -69,3 +69,54 @@ func Scan(skyDir string, reg *RegistryStore) (added []note.Note, removedIDs []st
 	}
 	return added, removed, nil
 }
+
+// ScanAddOnly is like Scan but never removes notes. It only adds new md
+// files that have no registry entry. Safe to call on window focus without
+// risking data loss from matching failures.
+func ScanAddOnly(skyDir string, reg *RegistryStore) ([]note.Note, error) {
+	entries, err := os.ReadDir(skyDir)
+	if err != nil {
+		return nil, fmt.Errorf("list sky folder: %w", err)
+	}
+
+	files := map[string]string{}
+	for _, e := range entries {
+		if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".md") {
+			continue
+		}
+		stem := strings.ToLower(strings.TrimSuffix(e.Name(), filepath.Ext(e.Name())))
+		files[stem] = e.Name()
+	}
+
+	claimed := map[string]bool{}
+	for _, n := range reg.All() {
+		if n.File != "" {
+			key := strings.ToLower(strings.TrimSuffix(n.File, filepath.Ext(n.File)))
+			if _, ok := files[key]; ok && !claimed[key] {
+				claimed[key] = true
+			}
+		}
+		stem := strings.ToLower(SanitizeTitle(n.Title))
+		if _, ok := files[stem]; ok && !claimed[stem] {
+			claimed[stem] = true
+		}
+	}
+
+	all := reg.All()
+	var added []note.Note
+	for stem, filename := range files {
+		if claimed[stem] {
+			continue
+		}
+		title := strings.TrimSuffix(filename, filepath.Ext(filename))
+		n := note.Note{ID: NewID(), Title: title, File: filename}
+		p := world.NextSpiralPosition(all, n.ID)
+		n.WorldX, n.WorldY, n.Positioned = p.X, p.Y, true
+		if err := reg.Create(n); err != nil {
+			return nil, err
+		}
+		all = append(all, n)
+		added = append(added, n)
+	}
+	return added, nil
+}
