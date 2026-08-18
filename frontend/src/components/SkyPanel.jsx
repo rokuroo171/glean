@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Stage, Layer, Circle, Line } from 'react-konva'
 import { colors, space, typography } from '../lib/theme'
 import Icon from './Icon'
@@ -8,6 +8,18 @@ const SPECIES = { warm: colors.starWarm, cool: colors.starCool, hot: colors.star
 export default function SkyPanel({ notes, trails, activeId, onOpenNote, onExpand, skyName }) {
   const [query, setQuery] = useState('')
   const [size, setSize] = useState({ w: 264, h: 0 })
+  const [pulsingId, setPulsingId] = useState(null)
+  const prevActiveId = useRef(activeId)
+
+  useEffect(() => {
+    if (activeId && activeId !== prevActiveId.current) {
+      setPulsingId(activeId)
+      const t = setTimeout(() => setPulsingId(null), 400)
+      prevActiveId.current = activeId
+      return () => clearTimeout(t)
+    }
+    prevActiveId.current = activeId
+  }, [activeId])
 
   const q = query.trim().toLowerCase()
   const visible = q
@@ -60,11 +72,14 @@ export default function SkyPanel({ notes, trails, activeId, onOpenNote, onExpand
               {layout.points.map(n => {
                 const r = Math.min(4 + (n.visit_count || 0) * 0.15, 9)
                 const active = n.id === activeId
+                const pulsing = n.id === pulsingId
                 return (
-                  <Circle key={n.id} x={n.x} y={n.y} radius={active ? r + 3 : r}
+                  <Circle key={n.id} x={n.x} y={n.y}
+                    radius={pulsing ? r + 6 : active ? r + 3 : r}
                     fill={SPECIES[n.species] || colors.starNeutral}
                     stroke={active ? colors.accentWarm : undefined} strokeWidth={active ? 2 : 0}
                     opacity={q && !visible.includes(n) ? 0.15 : 1}
+                    animation={pulsing ? 'bounce' : undefined}
                     onClick={() => onOpenNote(n.id)}
                     onTap={() => onOpenNote(n.id)} />
                 )

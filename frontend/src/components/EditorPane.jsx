@@ -20,6 +20,8 @@ export function parseHeadings(markdown) {
 
 export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty, setDirty, linked, onOpenNote }) {
   const [mode, setMode] = useState('edit') // edit | preview
+  const [typing, setTyping] = useState(false)
+  const typingTimer = useRef(null)
   const [currentHeading, setCurrentHeading] = useState(0)
   const debounceRef = useRef(null)
   const taRef = useRef(null)
@@ -37,6 +39,9 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   function handleChange(newBody) {
     onBodyChange(newBody)
     setDirty(true)
+    setTyping(true)
+    if (typingTimer.current) clearTimeout(typingTimer.current)
+    typingTimer.current = setTimeout(() => setTyping(false), 600)
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       flushRef.current()
@@ -119,7 +124,9 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
             ))}
           </div>
         )}
-        <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: space[3] }}>
+        <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: space[3],
+          transition: 'box-shadow 0.6s ease-out',
+          boxShadow: typing ? `inset 0 0 30px rgba(180, 140, 80, 0.06)` : 'none' }}>
           {mode === 'preview' ? (
             <div style={{ color: colors.text, lineHeight: 1.6 }}>{renderMarkdown(body)}</div>
           ) : (
