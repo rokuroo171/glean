@@ -6,6 +6,10 @@ export function CreateNote(arg1, arg2) {
   return window['go']['main']['App']['CreateNote'](arg1, arg2);
 }
 
+export function DefaultSkyPath(arg1) {
+  return window['go']['main']['App']['DefaultSkyPath'](arg1);
+}
+
 export function DeleteNote(arg1) {
   return window['go']['main']['App']['DeleteNote'](arg1);
 }
@@ -42,8 +46,16 @@ export function GetWorkspaceState() {
   return window['go']['main']['App']['GetWorkspaceState']();
 }
 
+export function MigrateSky() {
+  return window['go']['main']['App']['MigrateSky']();
+}
+
 export function OpenNote(arg1) {
   return window['go']['main']['App']['OpenNote'](arg1);
+}
+
+export function OpenSky(arg1) {
+  return window['go']['main']['App']['OpenSky'](arg1);
 }
 
 export function SaveNote(arg1, arg2, arg3) {
@@ -52,6 +64,18 @@ export function SaveNote(arg1, arg2, arg3) {
 
 export function SaveWorkspaceState(arg1) {
   return window['go']['main']['App']['SaveWorkspaceState'](arg1);
+}
+
+export function SetupSky(arg1, arg2) {
+  return window['go']['main']['App']['SetupSky'](arg1, arg2);
+}
+
+export function SkipMigration() {
+  return window['go']['main']['App']['SkipMigration']();
+}
+
+export function SkyState() {
+  return window['go']['main']['App']['SkyState']();
 }
 
 export function WaterNote(arg1) {

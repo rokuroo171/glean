@@ -95,6 +95,30 @@ export namespace main {
 	        this.list = source["list"];
 	    }
 	}
+	export class SkyStateView {
+	    configured: boolean;
+	    sky_missing: boolean;
+	    sky_name: string;
+	    sky_path: string;
+	    has_legacy: boolean;
+	    registry_empty: boolean;
+	    migration_skipped: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new SkyStateView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.configured = source["configured"];
+	        this.sky_missing = source["sky_missing"];
+	        this.sky_name = source["sky_name"];
+	        this.sky_path = source["sky_path"];
+	        this.has_legacy = source["has_legacy"];
+	        this.registry_empty = source["registry_empty"];
+	        this.migration_skipped = source["migration_skipped"];
+	    }
+	}
 	export class StatsView {
 	    total_notes: number;
 	    stage_counts: Record<string, number>;
@@ -158,9 +182,24 @@ export namespace main {
 
 export namespace store {
 	
+	export class MigrateReport {
+	    imported: number;
+	    failures?: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new MigrateReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.imported = source["imported"];
+	        this.failures = source["failures"];
+	    }
+	}
 	export class WorkspaceState {
 	    open_ids: string[];
 	    active_id: string;
+	    sky_collapsed: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new WorkspaceState(source);
@@ -170,6 +209,7 @@ export namespace store {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.open_ids = source["open_ids"];
 	        this.active_id = source["active_id"];
+	        this.sky_collapsed = source["sky_collapsed"];
 	    }
 	}
 
