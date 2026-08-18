@@ -129,6 +129,13 @@ export default function App() {
     setNoteBodies(prev => ({ ...prev, [id]: newBody }))
   }, [])
 
+  const handleRescan = useCallback(async () => {
+    if (wails) {
+      const updated = await wails.App.ScanSky()
+      setNotes(updated)
+    }
+  }, [])
+
   const handleRefreshNote = useCallback(async (id) => {
     if (wails) {
       const note = await wails.App.GetNote(id)
@@ -236,6 +243,7 @@ export default function App() {
         onBodyChange={handleBodyChange}
         onSaveNow={handleSaveNow}
         onRefreshNote={handleRefreshNote}
+        onRescan={handleRescan}
         onWish={handleWish}
         onDelete={handleDelete}
       />

@@ -123,6 +123,22 @@ func (a *App) GetNotes() []NoteView {
 	return views
 }
 
+// ScanSky re-scans the sky folder for new or removed md files and returns
+// the updated note list. Called on window focus so external files become
+// stars without a relaunch.
+func (a *App) ScanSky() []NoteView {
+	if a.store == nil {
+		return nil
+	}
+	_, _, _ = store.Scan(a.skyDir, a.store)
+	notes := a.store.All()
+	views := make([]NoteView, len(notes))
+	for i, n := range notes {
+		views[i] = noteToView(n)
+	}
+	return views
+}
+
 // notePath resolves a note's md file from the registry's recorded name.
 func (a *App) notePath(n note.Note) (string, error) {
 	if n.File != "" {

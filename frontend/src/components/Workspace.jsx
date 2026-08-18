@@ -16,7 +16,7 @@ export default function Workspace({
   onOpenNote, onNewNote, onOpenStats, onCreateNote,
   fetchWorkspaceState, saveWorkspaceState,
   noteBodies, // map id -> body, filled by App via OpenNote
-  onBodyChange, onSaveNow, onRefreshNote,
+  onBodyChange, onSaveNow, onRefreshNote, onRescan,
   onWish, onDelete,
 }) {
   const [pseudoTab, setPseudoTab] = useState(null) // null | 'stats' | 'settings'
@@ -25,7 +25,7 @@ export default function Workspace({
   const [skyCollapsed, setSkyCollapsed] = useState(false)
   const [openIds, setOpenIds] = useState([])
   const [activeId, setActiveId] = useState(null)
-  const [dirty, setDirty] = useState(false)
+  const [dirty, setDirty] = useState({}) // { [noteId]: true }
   const [externalChanged, setExternalChanged] = useState(false)
   const [externalBody, setExternalBody] = useState(null)
 
@@ -46,7 +46,7 @@ export default function Workspace({
   const tabs = useMemo(() => openIds
     .map(id => notes.find(n => n.id === id))
     .filter(Boolean)
-    .map(n => ({ id: n.id, title: n.title, species: n.species, dirty: false })), [openIds, notes])
+    .map(n => ({ id: n.id, title: n.title, species: n.species, dirty: !!dirty[n.id] })), [openIds, notes, dirty])
 
   function openNote(id) {
     setPseudoTab(null)
@@ -63,12 +63,18 @@ export default function Workspace({
   }
 
   function closeTab(id) {
-    if (id === activeId && dirty) onSaveNow(id)
+    if (dirty[id]) onSaveNow(id)
     const next = openIds.filter(x => x !== id)
     setOpenIds(next)
     const active = activeId === id ? (next[next.length - 1] || null) : activeId
     setActiveId(active)
     persist(next, active)
+    setDirty(prev => { const n = { ...prev }; delete n[id]; return n })
+  }
+
+  function handleSaveComplete(id) {
+    onSaveNow(id)
+    setDirty(prev => { const n = { ...prev }; delete n[id]; return n })
   }
 
   async function createAndOpen(title) {
@@ -95,11 +101,13 @@ export default function Workspace({
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  // When the window regains focus, compare the disk body with what the
-  // editor holds. A mismatch means the file changed outside glean.
+  // When the window regains focus, re-scan the sky folder for new or
+  // removed md files and check if the active note changed on disk.
   useEffect(() => {
     const onFocus = async () => {
-      if (!activeId || dirty) return
+      // Re-scan picks up external md files added to the sky folder.
+      onRescan()
+      if (!activeId || dirty[activeId]) return
       const note = await onRefreshNote(activeId)
       if (!note) return
       const current = noteBodies[activeId] || ''
@@ -110,7 +118,7 @@ export default function Workspace({
     }
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
-  }, [activeId, dirty, noteBodies, onRefreshNote])
+  }, [activeId, dirty, noteBodies, onRefreshNote, onRescan])
 
   function reloadFromDisk() {
     if (externalBody !== null && activeId) {
@@ -199,16 +207,16 @@ export default function Workspace({
                 note={activeNote}
                 body={body}
                 onBodyChange={(newBody) => onBodyChange(activeNote.id, newBody)}
-                onSaveNow={() => onSaveNow(activeNote.id)}
-                dirty={dirty}
-                setDirty={setDirty}
+                onSaveNow={() => handleSaveComplete(activeNote.id)}
+                dirty={!!dirty[activeNote?.id]}
+                setDirty={(v) => setDirty(prev => ({ ...prev, [activeNote.id]: v }))}
                 linked={linked}
                 onOpenNote={openNote}
               />
             </div>
           )}
           <StatusBar words={body.trim() ? body.trim().split(/\s+/).length : 0}
-            saveState={dirty ? 'unsaved' : 'saved'} skyName={skyName} version={version} />
+            saveState={dirty[activeNote?.id] ? 'unsaved' : 'saved'} skyName={skyName} version={version} />
         </div>
         <div style={{ width: 220, borderLeft: `1px solid ${colors.border}`, overflow: 'auto' }}>
           {activeNote && (

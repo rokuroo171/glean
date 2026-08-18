@@ -10,6 +10,8 @@ import { motionTokens } from '../lib/motion-tokens'
 import { useReducedMotion } from '../hooks/useReducedMotion'
 import { GetPalette } from '../../wailsjs/go/main/App'
 
+const wails = window.go?.main
+
 // Color temperature evolution (Idea 7). Behavioral coloring.
 // Frequently visited stars shift warmer (amber/gold), neglected stars shift cooler (blue-white).
 // Blend between cold and warm palettes based on recency of last visit.
@@ -328,6 +330,7 @@ export default function Sky({
   useEffect(() => {
     let mounted = true
     const fetchPalette = () => {
+      if (!wails) return // browser/mock mode: keep hardcoded ambientPalette()
       GetPalette().then(c => {
         if (mounted) setPalette({ line: c.accent, text: c.primary })
       }).catch(() => {}) // fallback to hardcoded ambientPalette()
@@ -1351,7 +1354,7 @@ export default function Sky({
                 {/* Outer glow halo. Soft bloom behind the star. */}
                 <Path
                   data={starD}
-                  scale={starScale * 2 * hoverGlowScale * idleGlowScale}
+                  scale={{ x: starScale * 2 * hoverGlowScale * idleGlowScale, y: starScale * 2 * hoverGlowScale * idleGlowScale }}
                   offsetX={12}
                   offsetY={12}
                   fill={noteColors.glow}
@@ -1362,7 +1365,7 @@ export default function Sky({
                 {/* Inner glow. Closer bloom. */}
                 <Path
                   data={starD}
-                  scale={starScale * 1.5 * hoverGlowScale * idleGlowScale}
+                  scale={{ x: starScale * 1.5 * hoverGlowScale * idleGlowScale, y: starScale * 1.5 * hoverGlowScale * idleGlowScale }}
                   offsetX={12}
                   offsetY={12}
                   fill={noteColors.glow}
@@ -1373,7 +1376,7 @@ export default function Sky({
                 {/* Star core. The 4-point shape. */}
                 <Path
                   data={starD}
-                  scale={starScale}
+                  scale={{ x: starScale, y: starScale }}
                   offsetX={12}
                   offsetY={12}
                   fill={noteColors.core}

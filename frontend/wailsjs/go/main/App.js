@@ -66,6 +66,10 @@ export function SaveWorkspaceState(arg1) {
   return window['go']['main']['App']['SaveWorkspaceState'](arg1);
 }
 
+export function ScanSky() {
+  return window['go']['main']['App']['ScanSky']();
+}
+
 export function SetupSky(arg1, arg2) {
   return window['go']['main']['App']['SetupSky'](arg1, arg2);
 }
