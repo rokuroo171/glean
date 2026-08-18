@@ -18,8 +18,8 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
       // Linux webkit2gtk ignores CSS drag regions; hand the drag to the runtime there.
       onPointerDown={() => { if (runtime?.WindowStartDragging) runtime.WindowStartDragging() }}
     >
-      <button type="button" onClick={onToggleSky} aria-label={skyCollapsed ? 'show sky panel' : 'hide sky panel'}
-        title={skyCollapsed ? 'Show sky panel' : 'Hide sky panel'}
+      <button type="button" onClick={onToggleSky} aria-label={skyCollapsed ? 'show explorer' : 'hide explorer'}
+        title={skyCollapsed ? 'Show explorer' : 'Hide explorer'}
         style={{ flexShrink: 0, background: 'none', border: 'none', color: colors.textMuted,
           cursor: 'pointer', padding: 4, borderRadius: 4, display: 'flex', ...noDrag }}>
         <Icon name={skyCollapsed ? 'panel-right' : 'panel-left'} size={14} />
