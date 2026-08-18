@@ -1,3 +1,4 @@
+import { motion, AnimatePresence } from 'motion/react'
 import { colors } from '../lib/theme'
 import StarIcon from './StarIcon'
 import WindowControls from './WindowControls'
@@ -41,24 +42,31 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
         </div>
       )}
 
-      {tabs.map(t => {
-        const active = t.id === activeId
-        return (
-          <div key={t.id} onClick={() => onSelect(t.id)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px',
-              borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-              background: active ? colors.bg : 'transparent',
-              border: `1px solid ${active ? colors.borderStrong : 'transparent'}`, ...noDrag }}>
-            <StarIcon species={t.species} size="sm" />
-            <span style={{ color: colors.text, fontSize: 12, maxWidth: 160, overflow: 'hidden',
-              textOverflow: 'ellipsis' }}>{t.title}</span>
-            {t.dirty && <span style={{ width: 6, height: 6, borderRadius: 3, background: colors.accentWarm }} />}
-            <span role="button" aria-label={`close ${t.title}`}
-              onClick={(e) => { e.stopPropagation(); onClose(t.id) }}
-              style={{ color: colors.textMuted, cursor: 'pointer', display: 'flex', padding: '0 2px' }}><Icon name="x" size={12} /></span>
-          </div>
-        )
-      })}
+      <AnimatePresence initial={false}>
+        {tabs.map(t => {
+          const active = t.id === activeId
+          return (
+            <motion.div key={t.id} layout
+              initial={{ opacity: 0, width: 0, scaleX: 0.8 }}
+              animate={{ opacity: 1, width: 'auto', scaleX: 1 }}
+              exit={{ opacity: 0, width: 0, scaleX: 0.8 }}
+              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              onClick={() => onSelect(t.id)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px',
+                borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                background: active ? colors.bg : 'transparent',
+                border: `1px solid ${active ? colors.borderStrong : 'transparent'}`, ...noDrag }}>
+              <StarIcon species={t.species} size="sm" />
+              <span style={{ color: colors.text, fontSize: 12, maxWidth: 160, overflow: 'hidden',
+                textOverflow: 'ellipsis' }}>{t.title}</span>
+              {t.dirty && <span style={{ width: 6, height: 6, borderRadius: 3, background: colors.accentWarm }} />}
+              <span role="button" aria-label={`close ${t.title}`}
+                onClick={(e) => { e.stopPropagation(); onClose(t.id) }}
+                style={{ color: colors.textMuted, cursor: 'pointer', display: 'flex', padding: '0 2px' }}><Icon name="x" size={12} /></span>
+            </motion.div>
+          )
+        })}
+      </AnimatePresence>
       <button type="button" onClick={onNew} aria-label="new star"
         style={{ flexShrink: 0, background: 'none', border: `1px solid ${colors.border}`,
           color: colors.textMuted, borderRadius: 6, width: 26, height: 26, cursor: 'pointer',
