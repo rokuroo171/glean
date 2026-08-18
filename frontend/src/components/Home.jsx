@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { motion } from 'motion/react'
 import StarIcon from './StarIcon'
+import Icon from './Icon'
 import { colors, space, typography } from '../lib/theme'
 import { bodyPreview, relativeTime, pickGreeting } from '../lib/format'
 import { springs, motionTokens } from '../lib/motion-tokens'
@@ -124,10 +125,10 @@ export default function Home({ notes, stats, onNoteClick, onOpenStats, onNewNote
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 1.04 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.96 }}
-      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      initial={{ opacity: 0, y: 12, scale: 1.02 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8, scale: 0.98 }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}
     >
       <HomeBackground />
@@ -142,14 +143,18 @@ export default function Home({ notes, stats, onNoteClick, onOpenStats, onNewNote
         }}
       >
         {/* Greeting */}
-        <div style={{ marginBottom: space[5], pointerEvents: 'none' }}>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          style={{ marginBottom: space[5], pointerEvents: 'none' }}>
           <h1 style={{ ...typography.greeting, color: colors.text, margin: 0 }}>
             {pickGreeting(stats, notes)}
           </h1>
           <p style={{ ...typography.tagline, color: colors.textMuted, margin: `${space[1]}px 0 0` }}>
             The night holds what you seek.
           </p>
-        </div>
+        </motion.div>
 
         {/* Recent notes */}
         <div style={{ pointerEvents: 'auto' }}>
@@ -186,10 +191,7 @@ export default function Home({ notes, stats, onNoteClick, onOpenStats, onNewNote
               onMouseDown={(e) => { e.currentTarget.style.transform = `scale(${tapScale})` }}
               onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
             >
-              <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <path d="M12 5v14" />
-                <path d="M5 12h14" />
-              </svg>
+              <Icon name="plus" size={12} />
               new note
             </button>
           </div>
@@ -199,9 +201,12 @@ export default function Home({ notes, stats, onNoteClick, onOpenStats, onNewNote
             </p>
           ) : (
             recentNotes.map((note, i) => (
-              <button
+              <motion.button
                 key={note.id}
                 type="button"
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.15 + i * 0.05, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                 onClick={() => onNoteClick(note.id)}
                 style={{
                   display: 'flex',
@@ -235,7 +240,7 @@ export default function Home({ notes, stats, onNoteClick, onOpenStats, onNewNote
                     {bodyPreview(note.body)}
                   </div>
                 </div>
-              </button>
+              </motion.button>
             ))
           )}
         </div>
