@@ -19,7 +19,7 @@ export function parseHeadings(markdown) {
 }
 
 export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty, setDirty, linked, onOpenNote }) {
-  const [mode, setMode] = useState('edit') // edit | preview
+  const [mode, setMode] = useState('preview') // preview | edit
   const [typing, setTyping] = useState(false)
   const typingTimer = useRef(null)
   const [currentHeading, setCurrentHeading] = useState(0)
