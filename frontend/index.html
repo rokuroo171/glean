@@ -10,8 +10,73 @@
         width: 100%; height: 100%;
         overflow: hidden;
         background: #0B0F19;
+        color: #c8d6e0;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        -webkit-font-smoothing: antialiased;
       }
+
+      /* Selection */
+      ::selection {
+        background: rgba(180, 140, 80, 0.3);
+        color: #e0ece4;
+      }
+
+      /* Scrollbars — thin, dark, theme-blended */
+      *::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      *::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      *::-webkit-scrollbar-thumb {
+        background: rgba(90, 106, 122, 0.35);
+        border-radius: 3px;
+      }
+      *::-webkit-scrollbar-thumb:hover {
+        background: rgba(90, 106, 122, 0.55);
+      }
+      *::-webkit-scrollbar-corner {
+        background: transparent;
+      }
+
+      /* Focus — visible ring replacing browser defaults */
+      :focus-visible {
+        outline: 2px solid rgba(180, 140, 80, 0.6);
+        outline-offset: 2px;
+        border-radius: 4px;
+      }
+      :focus:not(:focus-visible) {
+        outline: none;
+      }
+
+      /* Inputs and textareas — kill browser chrome */
+      input, textarea, select {
+        font-family: inherit;
+        font-size: inherit;
+      }
+      input::placeholder, textarea::placeholder {
+        color: rgba(90, 106, 122, 0.6);
+      }
+
+      /* Buttons — kill default styling */
+      button {
+        font-family: inherit;
+        cursor: pointer;
+      }
+
+      /* Links */
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      /* Disable double-click text selection on UI controls */
+      button, [role="button"], [role="tab"] {
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after {
           animation-duration: 0.01ms !important;
