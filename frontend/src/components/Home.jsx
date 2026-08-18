@@ -18,18 +18,12 @@ const DECOR_STARS = [
   { x: '75%', y: '80%', size: 12, color: colors.textDim },
 ]
 
-function HomeBackground({ onEnterSky }) {
+function HomeBackground() {
   return (
-    <button
-      type="button"
-      onClick={onEnterSky}
-      aria-label="Enter the sky"
+    <div
       style={{
         position: 'absolute',
         inset: 0,
-        border: 'none',
-        padding: 0,
-        cursor: 'pointer',
         background: colors.bg,
         zIndex: 0,
       }}
@@ -76,7 +70,7 @@ function HomeBackground({ onEnterSky }) {
           <StarIcon color={star.color} size={star.size > 20 ? 'lg' : star.size > 14 ? 'md' : 'sm'} />
         </div>
       ))}
-    </button>
+    </div>
   )
 }
 
@@ -110,7 +104,7 @@ function StreakRing({ streak }) {
   )
 }
 
-export default function Home({ notes, stats, onNoteClick, onEnterSky, onOpenStats, onNewNote }) {
+export default function Home({ notes, stats, onNoteClick, onOpenStats, onNewNote }) {
   const safeMotion = useSafeMotion(12)
   const reducedMotion = useReducedMotion()
   const tapScale = reducedMotion ? 1 : motionTokens.scale.press
@@ -136,7 +130,7 @@ export default function Home({ notes, stats, onNoteClick, onEnterSky, onOpenStat
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}
     >
-      <HomeBackground onEnterSky={onEnterSky} />
+      <HomeBackground />
 
       <div
         style={{

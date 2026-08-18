@@ -22,6 +22,7 @@ type App struct {
 	skyDir       string
 	adjacency    *adjacency.Store
 	activity     *activity.Store
+	workspace    *store.WorkspaceStore
 	lastNoteID   string
 	lastNoteOpen time.Time
 }
@@ -38,7 +39,11 @@ func NewApp() (*App, error) {
 	}
 	adj, _ := adjacency.Open(skyDir)
 	act, _ := activity.Open(skyDir)
-	return &App{store: reg, skyDir: skyDir, adjacency: adj, activity: act}, nil
+	ws, err := store.OpenWorkspace(skyDir)
+	if err != nil {
+		return nil, err
+	}
+	return &App{store: reg, skyDir: skyDir, adjacency: adj, activity: act, workspace: ws}, nil
 }
 
 // resolveSkyDir returns the configured sky, bootstrapping a default one
@@ -401,6 +406,15 @@ type PaletteView struct {
 	Muted     string `json:"muted"`
 	Heading   string `json:"heading"`
 	List      string `json:"list"`
+}
+
+// GetSkyName returns the configured sky's display name.
+func (a *App) GetSkyName() string {
+	name, err := store.LoadSkyName(a.skyDir)
+	if err != nil {
+		return "My Sky"
+	}
+	return name
 }
 
 // GetPalette returns the ambient color palette based on current time-of-day and season.
