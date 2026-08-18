@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import Workspace from './components/Workspace'
 import NewNotePrompt from './components/NewNotePrompt'
-import StatsOverlay from './components/StatsOverlay'
 import { colors } from './lib/theme'
 
 const wails = window.go?.main
@@ -47,13 +46,18 @@ async function getSkyName() {
   return 'My Sky'
 }
 
+async function getSkyPath() {
+  if (wails) return wails.App.GetSkyPath()
+  return 'local'
+}
+
 export default function App() {
   const [notes, setNotes] = useState([])
   const [trails, setTrails] = useState([])
   const [stats, setStats] = useState(null)
-  const [showStats, setShowStats] = useState(false)
   const [noteBodies, setNoteBodies] = useState({})
   const [skyName, setSkyName] = useState('My Sky')
+  const [skyPath, setSkyPath] = useState('local')
   const [showNewPrompt, setShowNewPrompt] = useState(false)
   const [newNoteTitle, setNewNoteTitle] = useState('')
 
@@ -61,6 +65,7 @@ export default function App() {
     loadSky()
     loadStats()
     getSkyName().then(setSkyName)
+    getSkyPath().then(setSkyPath)
   }, [])
 
   const loadSky = useCallback(async () => {
@@ -162,12 +167,7 @@ export default function App() {
 
   const handleOpenStats = useCallback(async () => {
     await loadStats()
-    setShowStats(true)
   }, [loadStats])
-
-  const handleCloseStats = useCallback(() => {
-    setShowStats(false)
-  }, [])
 
   return (
     <div style={{ width: '100vw', height: '100vh', background: colors.bg, position: 'relative', overflow: 'hidden' }}>
@@ -176,6 +176,7 @@ export default function App() {
         trails={trails}
         stats={stats}
         skyName={skyName}
+        skyPath={skyPath}
         version="v1.0.0"
         onOpenNote={handleOpenNote}
         onNewNote={handleNewNote}
@@ -197,10 +198,6 @@ export default function App() {
           onSubmit={handleCreateSubmit}
           onCancel={() => setShowNewPrompt(false)}
         />
-      )}
-
-      {showStats && (
-        <StatsOverlay stats={stats} onClose={handleCloseStats} />
       )}
     </div>
   )

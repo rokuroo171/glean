@@ -1,12 +1,23 @@
 import { colors } from '../lib/theme'
 import StarIcon from './StarIcon'
 
-export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSettings }) {
+export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSettings, pseudoTab, onClosePseudo }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px',
       borderBottom: `1px solid ${colors.border}`, background: colors.bgElevated,
       overflowX: 'auto', flexShrink: 0 }}>
       <span style={{ color: colors.text, fontSize: 13, fontWeight: 600, marginRight: 8 }}>glean</span>
+      {pseudoTab && (
+        <div key="pseudo"
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px',
+            borderRadius: 6, whiteSpace: 'nowrap', flexShrink: 0,
+            background: colors.bg, border: `1px solid ${colors.borderStrong}` }}>
+          <span style={{ color: colors.text, fontSize: 12 }}>{pseudoTab === 'stats' ? 'Sky overview' : 'settings'}</span>
+          <span role="button" aria-label={`close ${pseudoTab}`}
+            onClick={onClosePseudo}
+            style={{ color: colors.textMuted, fontSize: 11, padding: '0 2px', cursor: 'pointer' }}>x</span>
+        </div>
+      )}
       {tabs.map(t => {
         const active = t.id === activeId
         return (
