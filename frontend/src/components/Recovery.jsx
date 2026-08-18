@@ -12,12 +12,22 @@ export default function Recovery({ onCreateNew, onComplete }) {
   const [error, setError] = useState(null)
 
   async function locate() {
-    const dir = OpenDirectoryDialog ? await OpenDirectoryDialog({ title: 'Locate your Sky folder' }) : null
+    let dir
+    if (OpenDirectoryDialog) {
+      dir = await OpenDirectoryDialog({ title: 'Locate your Sky folder' })
+    } else {
+      const entered = prompt('Enter the path to your Sky folder:')
+      dir = entered && entered.trim() ? entered.trim() : null
+    }
     if (!dir) return
     setBusy(true)
     setError(null)
     try {
-      const state = await wails.App.OpenSky(dir)
+      const state = wails
+        ? await wails.App.OpenSky(dir)
+        : { configured: true, sky_missing: false, sky_name: 'My Sky',
+            sky_path: dir, has_legacy: false, registry_empty: true,
+            migration_skipped: false }
       onComplete(state)
     } catch (e) {
       setBusy(false)
