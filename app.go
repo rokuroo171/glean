@@ -1,10 +1,10 @@
 package main
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"hash/fnv"
+	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/glean/glean/internal/activity"
@@ -18,28 +18,27 @@ import (
 
 // App is the Wails application struct. Bound methods are exposed to the React frontend.
 type App struct {
-	store        *store.Store
+	store        *store.RegistryStore
+	skyDir       string
 	adjacency    *adjacency.Store
 	activity     *activity.Store
 	lastNoteID   string
 	lastNoteOpen time.Time
 }
 
-// NewApp creates the application with all stores loaded.
-// Transitional: adjacency and activity already live in the sky sidecar;
-// the note store is rewired in the md model milestone.
+// NewApp creates the application with all stores loaded from the sky.
 func NewApp() (*App, error) {
 	skyDir, err := resolveSkyDir()
 	if err != nil {
 		return nil, err
 	}
-	s, err := store.Open()
+	reg, err := store.OpenRegistry(skyDir)
 	if err != nil {
 		return nil, err
 	}
 	adj, _ := adjacency.Open(skyDir)
 	act, _ := activity.Open(skyDir)
-	return &App{store: s, adjacency: adj, activity: act}, nil
+	return &App{store: reg, skyDir: skyDir, adjacency: adj, activity: act}, nil
 }
 
 // resolveSkyDir returns the configured sky, bootstrapping a default one
@@ -130,9 +129,10 @@ func fnvHash(s string) uint64 {
 	return h.Sum64()
 }
 
-// GetNotes returns all notes as views for the sky canvas.
+// GetNotes returns all notes as views for the sky canvas. Bodies stay
+// empty here; they load on open.
 func (a *App) GetNotes() []NoteView {
-	notes := a.store.Notes()
+	notes := a.store.All()
 	views := make([]NoteView, len(notes))
 	for i, n := range notes {
 		views[i] = noteToView(n)
@@ -140,12 +140,30 @@ func (a *App) GetNotes() []NoteView {
 	return views
 }
 
-// GetNote returns a single note by ID.
+// notePath resolves a note's md file from the registry's recorded name.
+func (a *App) notePath(n note.Note) (string, error) {
+	if n.File != "" {
+		return filepath.Join(a.skyDir, n.File), nil
+	}
+	return store.FileNameFor(a.skyDir, n.Title)
+}
+
+// GetNote returns a single note by ID, loading its body from the md file
+// without recording a visit.
 func (a *App) GetNote(id string) (NoteView, bool) {
 	n, ok := a.store.Get(id)
 	if !ok {
 		return NoteView{}, false
 	}
+	path, err := a.notePath(n)
+	if err != nil {
+		return NoteView{}, false
+	}
+	body, err := store.ReadNoteFile(path)
+	if err != nil {
+		return NoteView{}, false
+	}
+	n.Body = body
 	return noteToView(n), true
 }
 
@@ -154,19 +172,26 @@ func (a *App) CreateNote(title string, contextID string) (NoteView, error) {
 	if title == "" {
 		title = "Untitled"
 	}
-	id := generateID()
-	notes := a.store.Notes()
+	id := store.NewID()
+	notes := a.store.All()
 	p := world.PositionForNew(notes, contextID, id)
 
 	n := note.Note{
 		ID:         id,
 		Title:      title,
-		Body:       "",
 		CreatedAt:  time.Now(),
 		WorldX:     p.X,
 		WorldY:     p.Y,
 		Positioned: true,
 	}
+	name, err := store.FileNameFor(a.skyDir, title)
+	if err != nil {
+		return NoteView{}, err
+	}
+	if err := store.WriteNoteFile(name, ""); err != nil {
+		return NoteView{}, err
+	}
+	n.File = filepath.Base(name)
 	if err := a.store.Create(n); err != nil {
 		return NoteView{}, err
 	}
@@ -174,19 +199,48 @@ func (a *App) CreateNote(title string, contextID string) (NoteView, error) {
 	return noteToView(n), nil
 }
 
-// SaveNote updates a note's body and title.
+// SaveNote writes the md file, renames on title change, updates the registry.
 func (a *App) SaveNote(id, title, body string) error {
 	n, ok := a.store.Get(id)
 	if !ok {
 		return nil
 	}
+	oldPath, err := a.notePath(n)
+	if err != nil {
+		return err
+	}
+	if strings.EqualFold(store.SanitizeTitle(title), store.SanitizeTitle(n.Title)) {
+		// Same title, keep the existing file.
+		if err := store.WriteNoteFile(oldPath, body); err != nil {
+			return err
+		}
+		n.Title = title
+		return a.store.Update(n)
+	}
+	newPath, err := store.FileNameFor(a.skyDir, title)
+	if err != nil {
+		return err
+	}
+	if err := store.WriteNoteFile(newPath, body); err != nil {
+		return err
+	}
+	_ = os.Remove(oldPath)
 	n.Title = title
-	n.Body = body
+	n.File = filepath.Base(newPath)
 	return a.store.Update(n)
 }
 
-// DeleteNote removes a note by ID.
+// DeleteNote removes the registry entry and the md file.
 func (a *App) DeleteNote(id string) error {
+	n, ok := a.store.Get(id)
+	if !ok {
+		return nil
+	}
+	path, err := a.notePath(n)
+	if err != nil {
+		return err
+	}
+	_ = os.Remove(path)
 	if a.lastNoteID == id {
 		a.lastNoteID = ""
 		a.lastNoteOpen = time.Time{}
@@ -212,13 +266,23 @@ func (a *App) WaterNote(id string) (bool, error) {
 	return true, nil
 }
 
-// OpenNote records a visit (passive wish) and returns the note.
-// Also records adjacency transitions for constellation line rendering.
+// OpenNote records a visit (passive wish) and returns the note, loading
+// its body from the md file. Also records adjacency transitions for
+// constellation line rendering.
 func (a *App) OpenNote(id string) (NoteView, error) {
 	n, ok := a.store.Get(id)
 	if !ok {
 		return NoteView{}, nil
 	}
+	path, err := a.notePath(n)
+	if err != nil {
+		return NoteView{}, err
+	}
+	body, err := store.ReadNoteFile(path)
+	if err != nil {
+		return NoteView{}, err
+	}
+	n.Body = body
 
 	now := time.Now()
 
@@ -291,7 +355,7 @@ type MilestonesView struct {
 
 // GetStats returns sky stats: stage counts, streaks, milestones, daily activity.
 func (a *App) GetStats() StatsView {
-	notes := a.store.Notes()
+	notes := a.store.All()
 	stageCounts := map[string]int{}
 	for _, n := range notes {
 		stageCounts[stageName(growth.BrightnessStage(n))]++
@@ -356,11 +420,5 @@ func (a *App) recordActivity() {
 	if a.activity == nil {
 		return
 	}
-	_ = a.activity.Record(time.Now(), a.store.Notes())
-}
-
-func generateID() string {
-	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	return hex.EncodeToString(b)
+	_ = a.activity.Record(time.Now(), a.store.All())
 }

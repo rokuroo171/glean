@@ -58,6 +58,33 @@ func TestScanRemovesMissingFiles(t *testing.T) {
 	}
 }
 
+func TestScanKeepsDedupedFiles(t *testing.T) {
+	skyDir := t.TempDir()
+	reg, _ := OpenRegistry(skyDir)
+	// Two notes whose titles sanitize to the same stem, each owning a
+	// different dedupe file. Both must survive a scan.
+	a := note.Note{ID: NewID(), Title: "Steady light", File: "Steady light.md",
+		Positioned: true, WorldX: 1, WorldY: 1}
+	b := note.Note{ID: NewID(), Title: "Steady light!", File: "Steady light 2.md",
+		Positioned: true, WorldX: 2, WorldY: 2}
+	_ = reg.Create(a)
+	_ = reg.Create(b)
+	if err := WriteNoteFile(filepath.Join(skyDir, "Steady light.md"), "a"); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteNoteFile(filepath.Join(skyDir, "Steady light 2.md"), "b"); err != nil {
+		t.Fatal(err)
+	}
+
+	added, removed, err := Scan(skyDir, reg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(added) != 0 || len(removed) != 0 {
+		t.Fatalf("scan should be a no-op, added=%d removed=%d", len(added), len(removed))
+	}
+}
+
 func TestScanKeepsExistingNotes(t *testing.T) {
 	skyDir := t.TempDir()
 	reg, _ := OpenRegistry(skyDir)

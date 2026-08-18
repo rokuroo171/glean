@@ -8,12 +8,11 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/google/uuid"
-
 	"github.com/glean/glean/internal/activity"
 	"github.com/glean/glean/internal/growth"
 	"github.com/glean/glean/internal/note"
 	"github.com/glean/glean/internal/store"
+	"github.com/glean/glean/internal/world"
 )
 
 // stageLabel returns a human-readable stage name for CLI output.
@@ -43,7 +42,12 @@ func Run(args []string) int {
 		return 1
 	}
 
-	s, err := store.Open()
+	skyDir, err := resolveSkyDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "glean: %v\n", err)
+		return 1
+	}
+	reg, err := store.OpenRegistry(skyDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "glean: %v\n", err)
 		return 1
@@ -51,64 +55,98 @@ func Run(args []string) int {
 
 	switch args[0] {
 	case "quick":
-		return runQuick(s, args[1:])
+		return runQuick(reg, skyDir, args[1:])
 	case "list":
-		return runList(s)
+		return runList(reg)
 	case "export":
-		return runExport(s, args[1:])
+		return runExport(reg, skyDir, args[1:])
 	case "import":
-		return runImport(s, args[1:])
+		return runImport(reg, skyDir, args[1:])
 	default:
 		fmt.Fprintf(os.Stderr, "glean: unknown command %q\n", args[0])
 		return 1
 	}
 }
 
-func runQuick(s *store.Store, args []string) int {
+// resolveSkyDir returns the configured sky, bootstrapping a default one
+// when no pointer exists. Mirrors the app's transitional bootstrap.
+func resolveSkyDir() (string, error) {
+	skyDir, ok, err := store.ResolveSky()
+	if err != nil {
+		return "", err
+	}
+	if ok {
+		return skyDir, nil
+	}
+	dir, err := store.AppConfigDir()
+	if err != nil {
+		return "", err
+	}
+	skyDir = filepath.Join(dir, "sky")
+	if err := store.CreateSky(skyDir, "My Sky"); err != nil {
+		return "", err
+	}
+	if err := store.SavePointer(store.SkyPointer{SkyPath: skyDir}); err != nil {
+		return "", err
+	}
+	return skyDir, nil
+}
+
+func runQuick(reg *store.RegistryStore, skyDir string, args []string) int {
 	if len(args) == 0 {
 		fmt.Fprintln(os.Stderr, "usage: glean quick \"text\"")
 		return 1
 	}
 	text := strings.Join(args, " ")
 	title := titleFromText(text)
-	n := note.Note{
-		ID:          uuid.NewString(),
-		Title:       title,
-		Body:        text,
-		CreatedAt:   time.Now(),
-		LastVisited: time.Time{},
-		VisitCount:  0,
-	}
-	if err := s.Create(n); err != nil {
+	name, err := store.FileNameFor(skyDir, title)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "glean: %v\n", err)
 		return 1
 	}
-	recordActivity(s)
+	if err := store.WriteNoteFile(name, text); err != nil {
+		fmt.Fprintf(os.Stderr, "glean: %v\n", err)
+		return 1
+	}
+	n := note.Note{ID: store.NewID(), Title: title, File: filepath.Base(name), CreatedAt: time.Now()}
+	p := world.NextSpiralPosition(reg.All(), n.ID)
+	n.WorldX, n.WorldY, n.Positioned = p.X, p.Y, true
+	if err := reg.Create(n); err != nil {
+		fmt.Fprintf(os.Stderr, "glean: %v\n", err)
+		return 1
+	}
+	recordActivity(skyDir, reg)
 	fmt.Printf("created %s (%s)\n", n.ID, n.Title)
 	return 0
 }
 
-func runList(s *store.Store) int {
-	for _, n := range s.Notes() {
+func runList(reg *store.RegistryStore) int {
+	for _, n := range reg.All() {
 		stage := stageLabel(growth.BrightnessStage(n))
 		fmt.Printf("[%s] %s\n", stage, n.Title)
 	}
 	return 0
 }
 
-func runExport(s *store.Store, args []string) int {
+func runExport(reg *store.RegistryStore, skyDir string, args []string) int {
 	if len(args) == 0 {
 		fmt.Fprintln(os.Stderr, "usage: glean export <id>")
 		return 1
 	}
 	id := args[0]
-	n, ok := s.Get(id)
+	n, ok := reg.Get(id)
 	if !ok {
 		fmt.Fprintf(os.Stderr, "glean: note not found: %s\n", id)
 		return 1
 	}
+	path := filepath.Join(skyDir, n.File)
+	body, err := store.ReadNoteFile(path)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "glean: %v\n", err)
+		return 1
+	}
 	filename := sanitizeFilename(n.Title) + ".md"
-	if err := os.WriteFile(filename, []byte(n.Body), 0o644); err != nil {
+	if err := os.WriteFile(filename, []byte(body), 0o644); err != nil {
 		fmt.Fprintf(os.Stderr, "glean: %v\n", err)
 		return 1
 	}
@@ -116,7 +154,7 @@ func runExport(s *store.Store, args []string) int {
 	return 0
 }
 
-func runImport(s *store.Store, args []string) int {
+func runImport(reg *store.RegistryStore, skyDir string, args []string) int {
 	if len(args) == 0 {
 		fmt.Fprintln(os.Stderr, "usage: glean import <folder>")
 		return 1
@@ -135,15 +173,17 @@ func runImport(s *store.Store, args []string) int {
 			return err
 		}
 		base := strings.TrimSuffix(info.Name(), filepath.Ext(info.Name()))
-		n := note.Note{
-			ID:          uuid.NewString(),
-			Title:       base,
-			Body:        string(body),
-			CreatedAt:   time.Now(),
-			LastVisited: time.Time{},
-			VisitCount:  0,
+		name, err := store.FileNameFor(skyDir, base)
+		if err != nil {
+			return err
 		}
-		if err := s.Create(n); err != nil {
+		if err := store.WriteNoteFile(name, string(body)); err != nil {
+			return err
+		}
+		n := note.Note{ID: store.NewID(), Title: base, File: filepath.Base(name), CreatedAt: time.Now()}
+		p := world.NextSpiralPosition(reg.All(), n.ID)
+		n.WorldX, n.WorldY, n.Positioned = p.X, p.Y, true
+		if err := reg.Create(n); err != nil {
 			return err
 		}
 		count++
@@ -154,7 +194,7 @@ func runImport(s *store.Store, args []string) int {
 		return 1
 	}
 	if count > 0 {
-		recordActivity(s)
+		recordActivity(skyDir, reg)
 	}
 	fmt.Printf("imported %d notes\n", count)
 	return 0
@@ -192,14 +232,10 @@ func sanitizeFilename(title string) string {
 	return name
 }
 
-func recordActivity(s *store.Store) {
-	skyDir, ok, err := store.ResolveSky()
-	if err != nil || !ok {
-		return
-	}
+func recordActivity(skyDir string, reg *store.RegistryStore) {
 	a, err := activity.Open(skyDir)
 	if err != nil {
 		return
 	}
-	_ = a.Record(time.Now(), s.Notes())
+	_ = a.Record(time.Now(), reg.All())
 }
