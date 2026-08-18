@@ -85,6 +85,18 @@ export default function App() {
     loadSky()
   }, [notes, loadSky])
 
+  const handleBodyChange = useCallback((id, newBody) => {
+    setNoteBodies(prev => ({ ...prev, [id]: newBody }))
+  }, [])
+
+  const handleSaveNow = useCallback(async (id) => {
+    const note = notes.find(n => n.id === id)
+    if (!note) return
+    const body = noteBodies[id] || ''
+    if (wails) await wails.App.SaveNote(id, note.title, body)
+    loadSky()
+  }, [notes, noteBodies, loadSky])
+
   const handleCreate = useCallback(async (title, contextId) => {
     let note
     if (wails) {
@@ -143,6 +155,8 @@ export default function App() {
         fetchWorkspaceState={async () => (wails ? wails.App.GetWorkspaceState() : { open_ids: [], active_id: '' })}
         saveWorkspaceState={async (st) => { if (wails) await wails.App.SaveWorkspaceState(st) }}
         noteBodies={noteBodies}
+        onBodyChange={handleBodyChange}
+        onSaveNow={handleSaveNow}
       />
 
       {showNewPrompt && (
