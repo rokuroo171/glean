@@ -8,6 +8,7 @@ import SkyPanel from './SkyPanel'
 import DetailsPanel from './DetailsPanel'
 import StatsOverlay from './StatsOverlay'
 import SettingsPane from './SettingsPane'
+import FullSky from './FullSky'
 
 export default function Workspace({
   notes, trails, stats, skyName, skyPath, version,
@@ -18,6 +19,7 @@ export default function Workspace({
   onWish, onDelete,
 }) {
   const [pseudoTab, setPseudoTab] = useState(null) // null | 'stats' | 'settings'
+  const [fullSky, setFullSky] = useState(false)
   const [openIds, setOpenIds] = useState([])
   const [activeId, setActiveId] = useState(null)
   const [dirty, setDirty] = useState(false)
@@ -125,7 +127,8 @@ export default function Workspace({
       )}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         <div style={{ width: 264, borderRight: `1px solid ${colors.border}`, display: 'flex', minHeight: 0 }}>
-          <SkyPanel notes={notes} trails={trails} activeId={activeId} onOpenNote={openNote} />
+          <SkyPanel notes={notes} trails={trails} activeId={activeId}
+            onOpenNote={openNote} onExpand={() => setFullSky(true)} />
         </div>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           {!activeNote && pseudoTab === 'stats' ? (
@@ -165,6 +168,10 @@ export default function Workspace({
           )}
         </div>
       </div>
+      {fullSky && (
+        <FullSky notes={notes} trails={trails} onNoteClick={openNote}
+          onClose={() => setFullSky(false)} />
+      )}
     </div>
   )
 }
