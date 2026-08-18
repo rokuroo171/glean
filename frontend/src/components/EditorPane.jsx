@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { colors, space, typography } from '../lib/theme'
 import { renderMarkdown } from '../lib/markdown'
+import StarIcon from './StarIcon'
 
 const AUTOSAVE_DELAY = 1500
 const LINE_HEIGHT = 22
@@ -16,7 +17,7 @@ export function parseHeadings(markdown) {
   return out
 }
 
-export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty, setDirty }) {
+export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty, setDirty, linked, onOpenNote }) {
   const [mode, setMode] = useState('edit') // edit | preview
   const [currentHeading, setCurrentHeading] = useState(0)
   const debounceRef = useRef(null)
@@ -87,6 +88,22 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
           ))}
         </div>
       </div>
+      {linked && linked.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px',
+          borderBottom: `1px solid ${colors.border}`, fontSize: 12, color: colors.textMuted,
+          flexShrink: 0, overflowX: 'auto' }}>
+          <span style={{ ...typography.sectionLabel, color: colors.textMuted, marginRight: 2 }}>Trail</span>
+          {linked.map(n => (
+            <button key={n.id} type="button" onClick={() => onOpenNote(n.id)}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, background: colors.bgElevated,
+                border: `1px solid ${colors.border}`, borderRadius: 12, padding: '2px 8px',
+                cursor: 'pointer', fontSize: 11, color: colors.text, whiteSpace: 'nowrap' }}>
+              <StarIcon species={n.species} size="sm" />
+              <span>{n.title}</span>
+            </button>
+          ))}
+        </div>
+      )}
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
         {mode === 'edit' && headings.length >= 3 && (
           <div style={{ width: 180, borderRight: `1px solid ${colors.border}`,

@@ -127,7 +127,7 @@ export default function Workspace({
       )}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         <div style={{ width: 264, borderRight: `1px solid ${colors.border}`, display: 'flex', minHeight: 0 }}>
-          <SkyPanel notes={notes} trails={trails} activeId={activeId}
+          <SkyPanel notes={notes} trails={trails} activeId={activeId} skyName={skyName}
             onOpenNote={openNote} onExpand={() => setFullSky(true)} />
         </div>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
@@ -153,6 +153,8 @@ export default function Workspace({
                 onSaveNow={() => onSaveNow(activeNote.id)}
                 dirty={dirty}
                 setDirty={setDirty}
+                linked={linked}
+                onOpenNote={openNote}
               />
             </div>
           )}

@@ -4,7 +4,7 @@ import { colors, space, typography } from '../lib/theme'
 
 const SPECIES = { warm: colors.starWarm, cool: colors.starCool, hot: colors.starHot, neutral: colors.starNeutral }
 
-export default function SkyPanel({ notes, trails, activeId, onOpenNote, onExpand }) {
+export default function SkyPanel({ notes, trails, activeId, onOpenNote, onExpand, skyName }) {
   const [query, setQuery] = useState('')
   const [size, setSize] = useState({ w: 264, h: 0 })
 
@@ -34,7 +34,7 @@ export default function SkyPanel({ notes, trails, activeId, onOpenNote, onExpand
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <div style={{ padding: space[2] }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <div style={{ ...typography.sectionLabel, color: colors.textMuted }}>Sky</div>
+          <div style={{ ...typography.sectionLabel, color: colors.textMuted }}>{skyName || 'Sky'}</div>
           <button type="button" onClick={onExpand} aria-label="expand sky"
             style={{ background: 'none', border: 'none', color: colors.textMuted,
               fontSize: 12, cursor: 'pointer', padding: '0 2px' }}>expand</button>
