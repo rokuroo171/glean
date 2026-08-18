@@ -4,6 +4,7 @@ import TabBar from './TabBar'
 import StatusBar from './StatusBar'
 import Home from './Home'
 import EditorPane from './EditorPane'
+import SkyPanel from './SkyPanel'
 
 export default function Workspace({
   notes, trails, stats, skyName, version,
@@ -105,8 +106,9 @@ export default function Workspace({
         </div>
       )}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-        {/* Left panel: SkyPanel lands in Task 5. Placeholder keeps layout. */}
-        <div style={{ width: 264, borderRight: `1px solid ${colors.border}` }} />
+        <div style={{ width: 264, borderRight: `1px solid ${colors.border}`, display: 'flex', minHeight: 0 }}>
+          <SkyPanel notes={notes} trails={trails} activeId={activeId} onOpenNote={openNote} />
+        </div>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           {!activeNote ? (
             <div style={{ flex: 1, overflow: 'auto', padding: space[4] }}>
