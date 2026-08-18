@@ -8,7 +8,7 @@ const runtime = window.runtime
 
 const noDrag = { WebkitAppRegion: 'no-drag' }
 
-export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSettings, onCommand, skyCollapsed, onToggleSky, pseudoTab, onClosePseudo }) {
+export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSettings, onCommand, skyCollapsed, onToggleSky, pseudoTab, onClosePseudo, detailsOpen, onToggleDetails }) {
   return (
     <div
       style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 0 0 10px', height: 38,
@@ -81,6 +81,11 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
       </button>
       <div style={{ flex: 1 }} />
 
+      <button type="button" onClick={onToggleDetails} aria-label="toggle details"
+        title={detailsOpen ? 'Hide details' : 'Show details'}
+        style={{ flexShrink: 0, background: 'none', border: 'none',
+          color: detailsOpen ? colors.accent : colors.textMuted,
+          cursor: 'pointer', padding: 4, ...noDrag }}><Icon name="panel-right" size={15} /></button>
       <button type="button" onClick={onSettings} aria-label="settings"
         style={{ flexShrink: 0, background: 'none', border: 'none', color: colors.textMuted,
           cursor: 'pointer', padding: 4, ...noDrag }}><Icon name="settings" size={15} /></button>
