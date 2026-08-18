@@ -156,3 +156,22 @@ export namespace main {
 
 }
 
+export namespace store {
+	
+	export class WorkspaceState {
+	    open_ids: string[];
+	    active_id: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new WorkspaceState(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.open_ids = source["open_ids"];
+	        this.active_id = source["active_id"];
+	    }
+	}
+
+}
+

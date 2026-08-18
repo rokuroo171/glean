@@ -22,6 +22,14 @@ export function GetPalette() {
   return window['go']['main']['App']['GetPalette']();
 }
 
+export function GetSkyName() {
+  return window['go']['main']['App']['GetSkyName']();
+}
+
+export function GetSkyPath() {
+  return window['go']['main']['App']['GetSkyPath']();
+}
+
 export function GetStats() {
   return window['go']['main']['App']['GetStats']();
 }
@@ -30,12 +38,20 @@ export function GetTrails() {
   return window['go']['main']['App']['GetTrails']();
 }
 
+export function GetWorkspaceState() {
+  return window['go']['main']['App']['GetWorkspaceState']();
+}
+
 export function OpenNote(arg1) {
   return window['go']['main']['App']['OpenNote'](arg1);
 }
 
 export function SaveNote(arg1, arg2, arg3) {
   return window['go']['main']['App']['SaveNote'](arg1, arg2, arg3);
+}
+
+export function SaveWorkspaceState(arg1) {
+  return window['go']['main']['App']['SaveWorkspaceState'](arg1);
 }
 
 export function WaterNote(arg1) {
