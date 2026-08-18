@@ -123,14 +123,16 @@ func (a *App) GetNotes() []NoteView {
 	return views
 }
 
-// ScanSky re-scans the sky folder for new or removed md files and returns
-// the updated note list. Called on window focus so external files become
-// stars without a relaunch.
+// ScanSky re-scans the sky folder for new md files and returns the
+// updated note list. Called on window focus so external files become
+// stars without a relaunch. Unlike the startup scan, this never removes
+// notes — it only adds new ones — to avoid losing bodies.
 func (a *App) ScanSky() []NoteView {
 	if a.store == nil {
 		return nil
 	}
-	_, _, _ = store.Scan(a.skyDir, a.store)
+	added, _ := store.ScanAddOnly(a.skyDir, a.store)
+	_ = added // new notes are already in the registry
 	notes := a.store.All()
 	views := make([]NoteView, len(notes))
 	for i, n := range notes {
