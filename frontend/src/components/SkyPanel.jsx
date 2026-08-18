@@ -4,7 +4,7 @@ import { colors, space, typography } from '../lib/theme'
 
 const SPECIES = { warm: colors.starWarm, cool: colors.starCool, hot: colors.starHot, neutral: colors.starNeutral }
 
-export default function SkyPanel({ notes, trails, activeId, onOpenNote }) {
+export default function SkyPanel({ notes, trails, activeId, onOpenNote, onExpand }) {
   const [query, setQuery] = useState('')
   const [size, setSize] = useState({ w: 264, h: 0 })
 
@@ -33,7 +33,12 @@ export default function SkyPanel({ notes, trails, activeId, onOpenNote }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <div style={{ padding: space[2] }}>
-        <div style={{ ...typography.sectionLabel, color: colors.textMuted, marginBottom: 8 }}>Sky</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ ...typography.sectionLabel, color: colors.textMuted }}>Sky</div>
+          <button type="button" onClick={onExpand} aria-label="expand sky"
+            style={{ background: 'none', border: 'none', color: colors.textMuted,
+              fontSize: 12, cursor: 'pointer', padding: '0 2px' }}>expand</button>
+        </div>
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search stars..."
           style={{ width: '100%', background: colors.bg, color: colors.text,
             border: `1px solid ${colors.border}`, borderRadius: 14, padding: '6px 12px',
