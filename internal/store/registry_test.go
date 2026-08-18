@@ -71,6 +71,46 @@ func TestRegistryUpdateAndDelete(t *testing.T) {
 	}
 }
 
+func TestRegistryFileRoundTrip(t *testing.T) {
+	skyDir := t.TempDir()
+	reg, _ := OpenRegistry(skyDir)
+	n := note.Note{ID: NewID(), Title: "Steady light", File: "Steady light 2.md",
+		Positioned: true, WorldX: 1, WorldY: 1}
+	if err := reg.Create(n); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := reg.Get(n.ID)
+	if got.File != "Steady light 2.md" {
+		t.Fatalf("File lost in round trip: %+v", got)
+	}
+	reg2, err := OpenRegistry(skyDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, _ = reg2.Get(n.ID)
+	if got.File != "Steady light 2.md" {
+		t.Fatalf("File lost across reopen: %+v", got)
+	}
+}
+
+func TestRegistryBackfillsMissingFile(t *testing.T) {
+	skyDir := t.TempDir()
+	reg, _ := OpenRegistry(skyDir)
+	n := note.Note{ID: NewID(), Title: "Steady light", Positioned: true, WorldX: 1, WorldY: 1}
+	_ = reg.Create(n)
+	if n.File != "" {
+		t.Fatal("test setup: entry should start without a file")
+	}
+	reg2, err := OpenRegistry(skyDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, _ := reg2.Get(n.ID)
+	if got.File != "Steady light.md" {
+		t.Fatalf("backfilled File = %q, want %q", got.File, "Steady light.md")
+	}
+}
+
 func TestRegistryPositionsMissingNotes(t *testing.T) {
 	skyDir := t.TempDir()
 	reg, _ := OpenRegistry(skyDir)

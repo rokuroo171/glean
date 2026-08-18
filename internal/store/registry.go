@@ -15,9 +15,12 @@ import (
 )
 
 // RegistryEntry is the persisted per-note behavior metadata. No body.
+// File is the note's filename inside the sky folder, so lookups never
+// guess at dedupe names.
 type RegistryEntry struct {
 	ID              string    `json:"id"`
 	Title           string    `json:"title"`
+	File            string    `json:"file,omitempty"`
 	CreatedAt       time.Time `json:"created_at"`
 	LastVisited     time.Time `json:"last_visited"`
 	VisitCount      int       `json:"visit_count"`
@@ -29,7 +32,7 @@ type RegistryEntry struct {
 
 func entryFromNote(n note.Note) RegistryEntry {
 	return RegistryEntry{
-		ID: n.ID, Title: n.Title, CreatedAt: n.CreatedAt,
+		ID: n.ID, Title: n.Title, File: n.File, CreatedAt: n.CreatedAt,
 		LastVisited: n.LastVisited, VisitCount: n.VisitCount,
 		LastManualWater: n.LastManualWater, WorldX: n.WorldX,
 		WorldY: n.WorldY, Positioned: n.Positioned,
@@ -38,7 +41,7 @@ func entryFromNote(n note.Note) RegistryEntry {
 
 func entryToNote(e RegistryEntry) note.Note {
 	return note.Note{
-		ID: e.ID, Title: e.Title, CreatedAt: e.CreatedAt,
+		ID: e.ID, Title: e.Title, File: e.File, CreatedAt: e.CreatedAt,
 		LastVisited: e.LastVisited, VisitCount: e.VisitCount,
 		LastManualWater: e.LastManualWater, WorldX: e.WorldX,
 		WorldY: e.WorldY, Positioned: e.Positioned,
@@ -81,15 +84,26 @@ func OpenRegistry(skyDir string) (*RegistryStore, error) {
 	if s.entries == nil {
 		s.entries = []RegistryEntry{}
 	}
+	// Backfill any entry missing its filename so lookups never guess.
+	changed := false
+	for i := range s.entries {
+		if s.entries[i].File == "" {
+			s.entries[i].File = SanitizeTitle(s.entries[i].Title) + ".md"
+			changed = true
+		}
+	}
 	notes := make([]note.Note, len(s.entries))
 	for i, e := range s.entries {
 		notes[i] = entryToNote(e)
 	}
-	if positioned, changed := world.LockMissingPositions(notes); changed {
+	if positioned, c := world.LockMissingPositions(notes); c {
 		s.entries = s.entries[:0]
 		for _, n := range positioned {
 			s.entries = append(s.entries, entryFromNote(n))
 		}
+		changed = true
+	}
+	if changed {
 		if err := s.saveUnlocked(); err != nil {
 			return nil, err
 		}
