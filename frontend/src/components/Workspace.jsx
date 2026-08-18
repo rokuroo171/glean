@@ -24,6 +24,7 @@ export default function Workspace({
   const [commandOpen, setCommandOpen] = useState(false)
   const [fullSky, setFullSky] = useState(false)
   const [skyCollapsed, setSkyCollapsed] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const [openIds, setOpenIds] = useState([])
   const [activeId, setActiveId] = useState(null)
   const [dirty, setDirty] = useState({}) // { [noteId]: true }
@@ -150,7 +151,8 @@ export default function Workspace({
         onSettings={() => setPseudoTab('settings')}
         onCommand={() => setCommandOpen(true)}
         skyCollapsed={skyCollapsed} onToggleSky={toggleSky}
-        pseudoTab={pseudoTab} onClosePseudo={() => setPseudoTab(null)} />
+        pseudoTab={pseudoTab} onClosePseudo={() => setPseudoTab(null)}
+        detailsOpen={detailsOpen} onToggleDetails={() => setDetailsOpen(v => !v)} />
       {externalChanged && (
         <div style={{ display: 'flex', alignItems: 'center', gap: space[2], padding: '6px 12px',
           background: 'rgba(180,140,80,0.15)', borderBottom: `1px solid ${colors.border}`,
@@ -214,14 +216,14 @@ export default function Workspace({
           <StatusBar words={body.trim() ? body.trim().split(/\s+/).length : 0}
             saveState={dirty[activeNote?.id] ? 'unsaved' : 'saved'} skyName={skyName} version={version} />
         </div>
-        <div style={{ width: 220, borderLeft: `1px solid ${colors.border}`, overflow: 'auto' }}>
-          {activeNote && (
+        {detailsOpen && activeNote && (
+          <div style={{ width: 220, borderLeft: `1px solid ${colors.border}`, overflow: 'auto', flexShrink: 0 }}>
             <DetailsPanel note={activeNote} linked={linked}
               onWish={onWish}
               onDelete={(id) => { onDelete(id); closeTab(id) }}
               onOpenNote={openNote} />
-          )}
-        </div>
+          </div>
+        )}
       </div>
       {fullSky && (
         <FullSky notes={notes} trails={trails} onNoteClick={openNote}
