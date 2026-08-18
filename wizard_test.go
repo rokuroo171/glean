@@ -125,4 +125,7 @@ func TestMigrateAndSkip(t *testing.T) {
 	if err != nil || !ok || !p.MigrationSkipped {
 		t.Fatalf("skip flag not persisted: %+v %v %v", p, ok, err)
 	}
+	if !a.SkyState().MigrationSkipped {
+		t.Fatal("SkyState should report the skip flag")
+	}
 }
