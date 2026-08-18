@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { motion } from 'motion/react'
 import { colors, space, typography } from '../lib/theme'
 import { useSafeMotion } from '../hooks/useReducedMotion'
+import Icon from './Icon'
 
 const wails = window.go?.main
-const { OpenDirectoryDialog } = window.runtime ?? {}
 
 const RESERVED = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i
 
@@ -12,6 +12,11 @@ function validSkyName(name) {
   const clean = name.replace(/[<>:"/\\|?*]/g, '').trim().replace(/[. ]+$/g, '')
   if (!clean || clean.length > 60 || RESERVED.test(clean)) return null
   return clean
+}
+
+// Defer runtime lookup to call time — window.runtime may not be ready at module load.
+function getOpenDirDialog() {
+  return window.runtime?.OpenDirectoryDialog
 }
 
 export default function Wizard({ onComplete }) {
@@ -26,8 +31,9 @@ export default function Wizard({ onComplete }) {
   const cleaned = validSkyName(name)
 
   async function pickFolder() {
-    if (OpenDirectoryDialog) {
-      const dir = await OpenDirectoryDialog({ title: 'Choose your Sky folder' })
+    const dialog = getOpenDirDialog()
+    if (dialog) {
+      const dir = await dialog({ title: 'Choose your Sky folder' })
       if (!dir) return null
       return dir
     }
@@ -100,7 +106,7 @@ export default function Wizard({ onComplete }) {
           onClick={() => setMode('name')}
           style={{ marginTop: space[5], border: `1px solid ${colors.borderStrong}`,
             background: 'none', color: colors.text, padding: '10px 24px', borderRadius: 8, cursor: 'pointer' }}
-        >Begin</motion.button>
+        ><Icon name="star" size={14} /> Begin</motion.button>
       </motion.div>
     )
   }
@@ -142,7 +148,7 @@ export default function Wizard({ onComplete }) {
             }
           }} style={{ background: colors.accent, color: '#0B0F19', border: 'none',
             borderRadius: 8, padding: '10px 26px', fontSize: 14, cursor: 'pointer' }}>
-            {busy ? 'importing...' : 'Import'}
+            {busy ? 'importing...' : <><Icon name="sparkle" size={14} /> Import</>}
           </motion.button>
           <button type="button" disabled={busy} onClick={async () => {
             if (wails?.App.SkipMigration) await wails.App.SkipMigration()
@@ -150,7 +156,7 @@ export default function Wizard({ onComplete }) {
             setTimeout(() => onComplete(), 1200)
           }} style={{ background: 'none', border: `1px solid ${colors.border}`, color: colors.textMuted,
             borderRadius: 8, padding: '10px 26px', fontSize: 14, cursor: 'pointer' }}>
-            Skip
+            <Icon name="x" size={14} /> Skip
           </button>
         </div>
         {report && (
@@ -164,7 +170,7 @@ export default function Wizard({ onComplete }) {
           <motion.button whileTap={{ scale: 0.97 }} onClick={() => { setMode('ready'); setTimeout(() => onComplete(), 1200) }}
             style={{ marginTop: space[3], background: colors.accent, color: '#0B0F19', border: 'none',
               borderRadius: 8, padding: '10px 26px', fontSize: 14, cursor: 'pointer' }}>
-            Continue
+            <Icon name="chevron-right" size={14} /> Continue
           </motion.button>
         )}
       </motion.div>
@@ -208,8 +214,8 @@ export default function Wizard({ onComplete }) {
           />
           <button type="button" onClick={async () => { const d = await pickFolder(); if (d) setPath(d) }}
             style={{ background: 'none', border: `1px solid ${colors.border}`, color: colors.textMuted,
-              borderRadius: 8, padding: '10px 14px', cursor: 'pointer', fontSize: 13 }}>
-            choose location
+              borderRadius: 8, padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+            <Icon name="search" size={13} /> Choose
           </button>
         </div>
       )}
@@ -224,13 +230,13 @@ export default function Wizard({ onComplete }) {
           style={{ background: colors.accent, color: '#0B0F19', border: 'none',
             borderRadius: 8, padding: '10px 26px', fontSize: 14, cursor: 'pointer',
             opacity: busy || (mode !== 'folder' && !cleaned) ? 0.4 : 1 }}>
-          {busy ? 'working...' : 'Create my Sky'}
+          {busy ? 'working...' : <><Icon name="star" size={14} /> Create my Sky</>}
         </motion.button>
         {!isFolderMode && (
           <button type="button" onClick={chooseExisting}
             style={{ background: 'none', border: 'none', color: colors.textMuted,
-              cursor: 'pointer', fontSize: 13, textDecoration: 'underline' }}>
-            use an existing folder instead
+              cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Icon name="panel-right" size={12} /> Use an existing folder
           </button>
         )}
       </div>

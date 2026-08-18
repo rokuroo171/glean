@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { motion } from 'motion/react'
 import { colors, space, typography } from '../lib/theme'
 import { useSafeMotion } from '../hooks/useReducedMotion'
+import Icon from './Icon'
 
 const wails = window.go?.main
-const { OpenDirectoryDialog } = window.runtime ?? {}
 
 export default function Recovery({ onCreateNew, onComplete }) {
   const safeMotion = useSafeMotion(24)
@@ -13,8 +13,9 @@ export default function Recovery({ onCreateNew, onComplete }) {
 
   async function locate() {
     let dir
-    if (OpenDirectoryDialog) {
-      dir = await OpenDirectoryDialog({ title: 'Locate your Sky folder' })
+    const dialog = window.runtime?.OpenDirectoryDialog
+    if (dialog) {
+      dir = await dialog({ title: 'Locate your Sky folder' })
     } else {
       const entered = prompt('Enter the path to your Sky folder:')
       dir = entered && entered.trim() ? entered.trim() : null
@@ -48,12 +49,12 @@ export default function Recovery({ onCreateNew, onComplete }) {
         <motion.button whileTap={{ scale: 0.97 }} disabled={busy} onClick={locate}
           style={{ background: colors.accent, color: '#0B0F19', border: 'none',
             borderRadius: 8, padding: '10px 26px', fontSize: 14, cursor: 'pointer' }}>
-          {busy ? 'opening...' : 'Locate folder'}
+          {busy ? 'opening...' : <><Icon name="search" size={14} /> Locate folder</>}
         </motion.button>
         <button type="button" onClick={onCreateNew}
           style={{ background: 'none', border: `1px solid ${colors.border}`, color: colors.textMuted,
-            borderRadius: 8, padding: '10px 26px', fontSize: 14, cursor: 'pointer' }}>
-          Create a new one
+            borderRadius: 8, padding: '10px 26px', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Icon name="plus" size={14} /> Create a new one
         </button>
       </div>
     </motion.div>
