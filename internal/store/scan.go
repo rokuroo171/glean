@@ -31,6 +31,14 @@ func Scan(skyDir string, reg *RegistryStore) (added []note.Note, removedIDs []st
 	claimed := map[string]bool{} // lowercase stems already matched to an entry
 	var removed []string
 	for _, n := range reg.All() {
+		// Prefer the recorded filename, then fall back to the title stem.
+		if n.File != "" {
+			key := strings.ToLower(strings.TrimSuffix(n.File, filepath.Ext(n.File)))
+			if _, ok := files[key]; ok && !claimed[key] {
+				claimed[key] = true
+				continue
+			}
+		}
 		stem := strings.ToLower(SanitizeTitle(n.Title))
 		if _, ok := files[stem]; ok && !claimed[stem] {
 			claimed[stem] = true
@@ -50,7 +58,7 @@ func Scan(skyDir string, reg *RegistryStore) (added []note.Note, removedIDs []st
 			continue
 		}
 		title := strings.TrimSuffix(filename, filepath.Ext(filename))
-		n := note.Note{ID: NewID(), Title: title}
+		n := note.Note{ID: NewID(), Title: title, File: filename}
 		p := world.NextSpiralPosition(all, n.ID)
 		n.WorldX, n.WorldY, n.Positioned = p.X, p.Y, true
 		if err := reg.Create(n); err != nil {

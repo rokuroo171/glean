@@ -91,6 +91,7 @@ func Migrate(skyDir string) (MigrateReport, error) {
 		if n.ID == "" {
 			n.ID = NewID()
 		}
+		n.File = filepath.Base(name)
 		if !n.Positioned {
 			p := world.NextSpiralPosition(reg.All(), n.ID)
 			n.WorldX, n.WorldY, n.Positioned = p.X, p.Y, true

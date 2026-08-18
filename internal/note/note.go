@@ -7,6 +7,7 @@ type Note struct {
 	ID              string    `json:"id"`
 	Title           string    `json:"title"`
 	Body            string    `json:"body"`
+	File            string    `json:"file,omitempty"`
 	CreatedAt       time.Time `json:"created_at"`
 	LastVisited     time.Time `json:"last_visited"`
 	VisitCount      int       `json:"visit_count"`
