@@ -10,9 +10,9 @@ type Stage int
 
 const (
 	FaintSpeck   Stage = iota // visit_count == 1
-	DimStar                   // visit_count 2–4
-	SteadyStar                // visit_count 5–9
-	BrightStar                // visit_count 10–19
+	DimStar                   // visit_count 2-4
+	SteadyStar                // visit_count 5-9
+	BrightStar                // visit_count 10-19
 	BrilliantStar             // visit_count 20+
 )
 
