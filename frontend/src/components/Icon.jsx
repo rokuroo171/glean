@@ -1,6 +1,6 @@
 /**
  * Centralized icon component. SVG paths sourced from Lucide Icons
- * (https://lucide.dev) — ISC License, copyright Lucide Contributors.
+ * (https://lucide.dev) -- ISC License, copyright Lucide Contributors.
  *
  * Usage: <Icon name="settings" size={16} />
  *
@@ -8,6 +8,8 @@
  * paths. Only the icons actually used in the app are included here;
  * nothing is tree-shaken out because they are all referenced.
  */
+
+  // DON'T REMOVE IT! please, maybe this are lucide.dev auto genereted??? idk...
 
 const paths = {
   settings: [

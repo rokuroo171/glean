@@ -148,7 +148,11 @@ export default function App() {
   const handleSaveNow = useCallback(async (id) => {
     const note = notes.find(n => n.id === id)
     if (!note) return
-    const body = noteBodies[id] || ''
+    // Skip if the body hasn't been loaded from disk yet.
+    // noteBodies[id] is undefined before OpenNote returns,
+    // and saving empty string would wipe the file.
+    if (!(id in noteBodies)) return
+    const body = noteBodies[id]
     if (wails) await wails.App.SaveNote(id, note.title, body)
     loadSky()
   }, [notes, noteBodies, loadSky])

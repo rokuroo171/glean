@@ -4,19 +4,15 @@ import StarIcon from './StarIcon'
 import WindowControls from './WindowControls'
 import Icon from './Icon'
 
-const runtime = window.runtime
-
-const noDrag = { WebkitAppRegion: 'no-drag' }
+const drag = { '--wails-draggable': 'drag' }
+const noDrag = { '--wails-draggable': 'no-drag' }
 
 export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSettings, onCommand, skyCollapsed, onToggleSky, pseudoTab, onClosePseudo, detailsOpen, onToggleDetails }) {
   return (
     <div
       style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 0 0 10px', height: 38,
         borderBottom: `1px solid ${colors.border}`, background: colors.bgElevated,
-        overflowX: 'auto', flexShrink: 0,
-        WebkitAppRegion: 'drag', WebkitUserSelect: 'none' }}
-      // Linux webkit2gtk ignores CSS drag regions; hand the drag to the runtime there.
-      onPointerDown={() => { if (runtime?.WindowStartDragging) runtime.WindowStartDragging() }}
+        flexShrink: 0, WebkitUserSelect: 'none', ...drag }}
     >
       <button type="button" onClick={onToggleSky} aria-label={skyCollapsed ? 'show explorer' : 'hide explorer'}
         title={skyCollapsed ? 'Show explorer' : 'Hide explorer'}

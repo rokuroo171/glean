@@ -36,9 +36,9 @@ visible button. Stars pass through five brightness stages as visit count rises:
 | Stage | Visits |
 |-------|--------|
 | Faint Speck | 1 |
-| Dim Star | 2–4 |
-| Steady Star | 5–9 |
-| Bright Star | 10–19 |
+| Dim Star | 2-4 |
+| Steady Star | 5-9 |
+| Bright Star | 10-19 |
 | Brilliant Star | 20+ |
 
 Opening a note counts as a visit. There's also a manual wish, a small

@@ -5,7 +5,7 @@ const runtime = window.runtime
 function Control({ label, onClick, danger }) {
   return (
     <button type="button" aria-label={label} title={label} onClick={onClick}
-      style={{ WebkitAppRegion: 'no-drag', background: 'none', border: 'none', width: 42, height: '100%',
+      style={{ '--wails-draggable': 'no-drag', background: 'none', border: 'none', width: 42, height: '100%',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         color: colors.textMuted, cursor: 'pointer', padding: 0 }}
       onMouseEnter={(e) => {

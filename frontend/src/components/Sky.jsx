@@ -94,7 +94,7 @@ function hashMix(x) {
 // Stars are generated per-tile using a seeded PRNG indexed by (tileX, tileY, starIndex).
 // The renderer computes which tiles are visible from camera + scale, then renders stars
 // from each tile with world positions mod-wrapped into [0, TILE_SIZE). This gives an
-// infinite starfield with no edges, at any pan position and any scale 0.2–3.
+// infinite starfield with no edges, at any pan position and any scale 0.2-3.
 const TWINKLE_TILE_SIZE = 1000
 const BG_TWINKLE_COLORS = {
   warm:    '#bba080',
@@ -110,16 +110,16 @@ function makeTwinkleStar(tileX, tileY, index, variant) {
     x: rand() * TWINKLE_TILE_SIZE,
     y: rand() * TWINKLE_TILE_SIZE,
     r: variant === 'near'
-      ? rand() * 1.6 + 1.2          // 1.2–2.8px
-      : rand() * 0.6 + 0.8,         // 0.8–1.4px
+      ? rand() * 1.6 + 1.2          // 1.2-2.8px
+      : rand() * 0.6 + 0.8,         // 0.8-1.4px
     baseOp: variant === 'near'
-      ? rand() * 0.3 + 0.15          // 0.15–0.45
-      : rand() * 0.12 + 0.06,        // 0.06–0.18
+      ? rand() * 0.3 + 0.15          // 0.15-0.45
+      : rand() * 0.12 + 0.06,        // 0.06-0.18
     twinkle: variant === 'near' ? rand() < 0.6 : rand() < 0.4,
     phase: rand() * Math.PI * 2,
     speed: variant === 'near'
-      ? rand() * 0.5 + 0.2           // 0.2–0.7 Hz
-      : rand() * 0.4 + 0.15,         // 0.15–0.55 Hz (slower, subtler)
+      ? rand() * 0.5 + 0.2           // 0.2-0.7 Hz
+      : rand() * 0.4 + 0.15,         // 0.15-0.55 Hz (slower, subtler)
     colorTemp: rand() < 0.4 ? 'cool' : rand() < 0.7 ? 'warm' : 'neutral',
   }
 }

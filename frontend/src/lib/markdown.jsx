@@ -190,7 +190,17 @@ const components = {
 
   // Links and images
   a: ({ children, href, ...props }) => (
-    <a style={s.a} href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
+    <a
+      style={s.a}
+      href={href}
+      onClick={(e) => {
+        e.preventDefault()
+        if (href && window.runtime?.BrowserOpenURL) {
+          window.runtime.BrowserOpenURL(href)
+        }
+      }}
+      {...props}
+    >{children}</a>
   ),
   img: ({ src, alt, ...props }) => <img src={src} alt={alt} style={s.img} {...props} />,
 

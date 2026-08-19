@@ -14,7 +14,7 @@ function validSkyName(name) {
   return clean
 }
 
-// Defer runtime lookup to call time — window.runtime may not be ready at module load.
+// Defer runtime lookup to call time -- window.runtime may not be ready at module load.
 function getOpenDirDialog() {
   return window.runtime?.OpenDirectoryDialog
 }
