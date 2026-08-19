@@ -9,8 +9,6 @@
  * nothing is tree-shaken out because they are all referenced.
  */
 
-  // DON'T REMOVE IT! please, maybe this are lucide.dev auto genereted??? idk...
-
 const paths = {
   settings: [
     'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z',
@@ -68,6 +66,55 @@ const paths = {
   ],
   star: [
     'M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14l-5-4.87 6.91-1.01L12 2z',
+  ],
+  // Lucide sparkles -- stars / sky view icon.
+  // https://lucide.dev/icons/sparkles -- ISC License.
+  sparkles: [
+    'M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z',
+    'M20 2v4',
+    'M22 4h-4',
+    'M4 20m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0',
+  ],
+  // Lucide file-plus -- new file icon.
+  // https://lucide.dev/icons/file-plus
+  'file-plus': [
+    'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z',
+    'M14 2v4a2 2 0 0 0 2 2h4',
+    'M9 15h6',
+    'M12 18v-6',
+  ],
+  // Lucide folder-plus -- new folder icon.
+  // https://lucide.dev/icons/folder-plus
+  'folder-plus': [
+    'M12 10v6',
+    'M9 13h6',
+    'M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z',
+  ],
+  // Lucide refresh-cw -- refresh icon.
+  // https://lucide.dev/icons/refresh-cw
+  'refresh-cw': [
+    'M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8',
+    'M21 3v5h-5',
+    'M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16',
+    'M8 16H3v5',
+  ],
+  // Lucide layout-list -- collapse all / list view.
+  // https://lucide.dev/icons/layout-list
+  'layout-list': [
+    'M3 5h18',
+    'M3 12h18',
+    'M3 19h18',
+  ],
+  // Lucide file -- generic file icon.
+  // https://lucide.dev/icons/file
+  'file': [
+    'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z',
+    'M14 2v4a2 2 0 0 0 2 2h4',
+  ],
+  // Lucide folder -- generic folder icon.
+  // https://lucide.dev/icons/folder
+  'folder': [
+    'M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z',
   ],
 }
 

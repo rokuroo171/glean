@@ -31,7 +31,7 @@ func TestFileNameForDedupes(t *testing.T) {
 	if err := WriteNoteFile(filepath.Join(skyDir, "Steady light 2.md"), "b"); err != nil {
 		t.Fatal(err)
 	}
-	got, err := FileNameFor(skyDir, "Steady light")
+	got, err := FileNameFor(skyDir, "", "Steady light")
 	if err != nil {
 		t.Fatal(err)
 	}
