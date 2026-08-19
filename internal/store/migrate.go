@@ -25,24 +25,39 @@ func LegacyPaths() (notesPath, trailsPath, statsPath string, err error) {
 
 // HasLegacy reports whether any legacy JSON store exists.
 func HasLegacy() (bool, error) {
-	notes, trails, stats, err := LegacyPaths()
+	notes, _, _, err := LegacyPaths()
 	if err != nil {
 		return false, err
 	}
-	for _, p := range []string{notes, trails, stats} {
-		if _, err := os.Stat(p); err == nil {
-			return true, nil
-		} else if !os.IsNotExist(err) {
-			return false, err
-		}
+	// Only the notes file determines legacy status. Adjacency and
+	// activity are sidecar data that may linger after the notes are
+	// already gone.
+	_, statErr := os.Stat(notes)
+	if statErr == nil {
+		return true, nil
 	}
-	return false, nil
+	if os.IsNotExist(statErr) {
+		return false, nil
+	}
+	return false, statErr
 }
 
 // MigrateReport summarizes a legacy import.
 type MigrateReport struct {
 	Imported int      `json:"imported"`
 	Failures []string `json:"failures,omitempty"`
+}
+
+// RemoveLegacy deletes the three legacy JSON files from the config dir
+// so the migration offer does not reappear after skip or import.
+func RemoveLegacy() {
+	dir, err := AppConfigDir()
+	if err != nil {
+		return
+	}
+	for _, name := range []string{"glean.json", "adjacency.json", "activity.json"} {
+		_ = os.Remove(filepath.Join(dir, name))
+	}
 }
 
 // Migrate copies the legacy store into a Sky folder. Legacy files are
@@ -79,7 +94,7 @@ func Migrate(skyDir string) (MigrateReport, error) {
 
 	report := MigrateReport{}
 	for _, n := range coll.Notes {
-		name, err := FileNameFor(skyDir, n.Title)
+		name, err := FileNameFor(skyDir, "", n.Title)
 		if err != nil {
 			report.Failures = append(report.Failures, n.Title)
 			continue
@@ -91,7 +106,8 @@ func Migrate(skyDir string) (MigrateReport, error) {
 		if n.ID == "" {
 			n.ID = NewID()
 		}
-		n.File = filepath.Base(name)
+		rel, _ := filepath.Rel(skyDir, name)
+		n.File = rel
 		if !n.Positioned {
 			p := world.NextSpiralPosition(reg.All(), n.ID)
 			n.WorldX, n.WorldY, n.Positioned = p.X, p.Y, true

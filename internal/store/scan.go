@@ -10,28 +10,53 @@ import (
 	"github.com/glean/glean/internal/world"
 )
 
-// Scan reconciles the sky folder with the registry. Root-level md files
-// without a registry entry become new notes; entries whose derived file is
-// gone are removed.
-func Scan(skyDir string, reg *RegistryStore) (added []note.Note, removedIDs []string, err error) {
-	entries, err := os.ReadDir(skyDir)
+// scanDir recursively collects md files under dir, returning relative paths
+// from skyRoot. It skips the .glean sidecar directory.
+func scanDir(dir, skyRoot string) (map[string]string, error) {
+	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("list sky folder: %w", err)
+		return nil, err
 	}
-
-	files := map[string]string{} // lowercase stem -> actual filename
+	files := map[string]string{}
 	for _, e := range entries {
-		if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".md") {
+		full := filepath.Join(dir, e.Name())
+		rel, _ := filepath.Rel(skyRoot, full)
+		if e.IsDir() {
+			// Skip the sidecar directory and hidden directories.
+			if strings.HasPrefix(e.Name(), ".") {
+				continue
+			}
+			sub, err := scanDir(full, skyRoot)
+			if err != nil {
+				return nil, err
+			}
+			for k, v := range sub {
+				files[k] = v
+			}
 			continue
 		}
-		stem := strings.ToLower(strings.TrimSuffix(e.Name(), filepath.Ext(e.Name())))
-		files[stem] = e.Name()
+		if !strings.EqualFold(filepath.Ext(e.Name()), ".md") {
+			continue
+		}
+		// Key is the lowercase relative path without extension.
+		key := strings.ToLower(strings.TrimSuffix(rel, filepath.Ext(rel)))
+		files[key] = rel
+	}
+	return files, nil
+}
+
+// Scan reconciles the sky folder with the registry. Md files anywhere in
+// the tree without a registry entry become new notes; entries whose file
+// is gone are removed. The File field stores the relative path from sky root.
+func Scan(skyDir string, reg *RegistryStore) (added []note.Note, removedIDs []string, err error) {
+	files, err := scanDir(skyDir, skyDir)
+	if err != nil {
+		return nil, nil, fmt.Errorf("scan sky folder: %w", err)
 	}
 
-	claimed := map[string]bool{} // lowercase stems already matched to an entry
+	claimed := map[string]bool{}
 	var removed []string
 	for _, n := range reg.All() {
-		// Prefer the recorded filename, then fall back to the title stem.
 		if n.File != "" {
 			key := strings.ToLower(strings.TrimSuffix(n.File, filepath.Ext(n.File)))
 			if _, ok := files[key]; ok && !claimed[key] {
@@ -53,12 +78,14 @@ func Scan(skyDir string, reg *RegistryStore) (added []note.Note, removedIDs []st
 	}
 
 	all := reg.All()
-	for stem, filename := range files {
-		if claimed[stem] {
+	for key, relPath := range files {
+		if claimed[key] {
 			continue
 		}
-		title := strings.TrimSuffix(filename, filepath.Ext(filename))
-		n := note.Note{ID: NewID(), Title: title, File: filename}
+		// Title is the filename without extension.
+		base := filepath.Base(relPath)
+		title := strings.TrimSuffix(base, filepath.Ext(base))
+		n := note.Note{ID: NewID(), Title: title, File: relPath}
 		p := world.NextSpiralPosition(all, n.ID)
 		n.WorldX, n.WorldY, n.Positioned = p.X, p.Y, true
 		if err := reg.Create(n); err != nil {
@@ -74,18 +101,9 @@ func Scan(skyDir string, reg *RegistryStore) (added []note.Note, removedIDs []st
 // files that have no registry entry. Safe to call on window focus without
 // risking data loss from matching failures.
 func ScanAddOnly(skyDir string, reg *RegistryStore) ([]note.Note, error) {
-	entries, err := os.ReadDir(skyDir)
+	files, err := scanDir(skyDir, skyDir)
 	if err != nil {
-		return nil, fmt.Errorf("list sky folder: %w", err)
-	}
-
-	files := map[string]string{}
-	for _, e := range entries {
-		if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".md") {
-			continue
-		}
-		stem := strings.ToLower(strings.TrimSuffix(e.Name(), filepath.Ext(e.Name())))
-		files[stem] = e.Name()
+		return nil, fmt.Errorf("scan sky folder: %w", err)
 	}
 
 	claimed := map[string]bool{}
@@ -104,12 +122,13 @@ func ScanAddOnly(skyDir string, reg *RegistryStore) ([]note.Note, error) {
 
 	all := reg.All()
 	var added []note.Note
-	for stem, filename := range files {
-		if claimed[stem] {
+	for key, relPath := range files {
+		if claimed[key] {
 			continue
 		}
-		title := strings.TrimSuffix(filename, filepath.Ext(filename))
-		n := note.Note{ID: NewID(), Title: title, File: filename}
+		base := filepath.Base(relPath)
+		title := strings.TrimSuffix(base, filepath.Ext(base))
+		n := note.Note{ID: NewID(), Title: title, File: relPath}
 		p := world.NextSpiralPosition(all, n.ID)
 		n.WorldX, n.WorldY, n.Positioned = p.X, p.Y, true
 		if err := reg.Create(n); err != nil {

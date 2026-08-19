@@ -7,19 +7,13 @@ import Icon from './Icon'
 const drag = { '--wails-draggable': 'drag' }
 const noDrag = { '--wails-draggable': 'no-drag' }
 
-export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSettings, onCommand, skyCollapsed, onToggleSky, pseudoTab, onClosePseudo, detailsOpen, onToggleDetails }) {
+export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSettings, onCommand, pseudoTab, onClosePseudo, detailsOpen, onToggleDetails }) {
   return (
     <div
       style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 0 0 10px', height: 38,
         borderBottom: `1px solid ${colors.border}`, background: colors.bgElevated,
         flexShrink: 0, WebkitUserSelect: 'none', ...drag }}
     >
-      <button type="button" onClick={onToggleSky} aria-label={skyCollapsed ? 'show explorer' : 'hide explorer'}
-        title={skyCollapsed ? 'Show explorer' : 'Hide explorer'}
-        style={{ flexShrink: 0, background: 'none', border: 'none', color: colors.textMuted,
-          cursor: 'pointer', padding: 4, borderRadius: 4, display: 'flex', ...noDrag }}>
-        <Icon name={skyCollapsed ? 'panel-right' : 'panel-left'} size={14} />
-      </button>
       <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: colors.text,
         fontSize: 13, fontWeight: 600, marginRight: 8 }}>
         <StarIcon species="warm" size="sm" />
@@ -81,7 +75,12 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
         title={detailsOpen ? 'Hide details' : 'Show details'}
         style={{ flexShrink: 0, background: 'none', border: 'none',
           color: detailsOpen ? colors.accent : colors.textMuted,
-          cursor: 'pointer', padding: 4, ...noDrag }}><Icon name="panel-right" size={15} /></button>
+          cursor: 'pointer', padding: 4, ...noDrag }}>
+        <span style={{ display: 'inline-block', transition: 'transform 0.2s ease',
+          transform: detailsOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+          <Icon name="chevron-right" size={15} />
+        </span>
+      </button>
       <button type="button" onClick={onSettings} aria-label="settings"
         style={{ flexShrink: 0, background: 'none', border: 'none', color: colors.textMuted,
           cursor: 'pointer', padding: 4, ...noDrag }}><Icon name="settings" size={15} /></button>

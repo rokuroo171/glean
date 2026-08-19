@@ -22,6 +22,7 @@ export namespace main {
 	    id: string;
 	    title: string;
 	    body: string;
+	    folder: string;
 	    // Go type: time
 	    created_at: any;
 	    // Go type: time
@@ -44,6 +45,7 @@ export namespace main {
 	        this.id = source["id"];
 	        this.title = source["title"];
 	        this.body = source["body"];
+	        this.folder = source["folder"];
 	        this.created_at = this.convertValues(source["created_at"], null);
 	        this.last_visited = this.convertValues(source["last_visited"], null);
 	        this.visit_count = source["visit_count"];

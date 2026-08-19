@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"hash/fnv"
 	"os"
@@ -15,10 +16,12 @@ import (
 	"github.com/glean/glean/internal/note"
 	"github.com/glean/glean/internal/store"
 	"github.com/glean/glean/internal/world"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App is the Wails application struct. Bound methods are exposed to the React frontend.
 type App struct {
+	ctx          context.Context
 	store        *store.RegistryStore
 	skyDir       string
 	adjacency    *adjacency.Store
@@ -29,7 +32,7 @@ type App struct {
 }
 
 // NewApp wires the sky-based stores when a sky is configured. Without a
-// pointer the stores stay nil and the frontend shows the wizard.
+// pointer the stores stay nil and the frontend shows the setup screen.
 func NewApp() (*App, error) {
 	skyDir, ok, err := store.ResolveSky()
 	if err != nil {
@@ -50,6 +53,7 @@ type NoteView struct {
 	ID              string    `json:"id"`
 	Title           string    `json:"title"`
 	Body            string    `json:"body"`
+	Folder          string    `json:"folder"`
 	CreatedAt       time.Time `json:"created_at"`
 	LastVisited     time.Time `json:"last_visited"`
 	VisitCount      int       `json:"visit_count"`
@@ -66,6 +70,7 @@ func noteToView(n note.Note) NoteView {
 		ID:              n.ID,
 		Title:           n.Title,
 		Body:            n.Body,
+		Folder:          store.FolderOf(n.File),
 		CreatedAt:       n.CreatedAt,
 		LastVisited:     n.LastVisited,
 		VisitCount:      n.VisitCount,
@@ -141,12 +146,14 @@ func (a *App) ScanSky() []NoteView {
 	return views
 }
 
-// notePath resolves a note's md file from the registry's recorded name.
+// notePath resolves a note's md file from the registry's recorded path.
+// File stores the relative path from skyDir (e.g. "glean/arch.md").
 func (a *App) notePath(n note.Note) (string, error) {
 	if n.File != "" {
 		return filepath.Join(a.skyDir, n.File), nil
 	}
-	return store.FileNameFor(a.skyDir, n.Title)
+	// Legacy entry without File -- derive from title at root.
+	return store.FileNameFor(a.skyDir, "", n.Title)
 }
 
 // GetNote returns a single note by ID, loading its body from the md file
@@ -183,6 +190,15 @@ func (a *App) CreateNote(title string, contextID string) (NoteView, error) {
 	notes := a.store.All()
 	p := world.PositionForNew(notes, contextID, id)
 
+	// contextID determines the folder: if the context note is in a
+	// subfolder, the new note goes there too.
+	folder := ""
+	if contextID != "" {
+		if ctx, ok := a.store.Get(contextID); ok && ctx.File != "" {
+			folder = store.FolderOf(ctx.File)
+		}
+	}
+
 	n := note.Note{
 		ID:         id,
 		Title:      title,
@@ -191,14 +207,15 @@ func (a *App) CreateNote(title string, contextID string) (NoteView, error) {
 		WorldY:     p.Y,
 		Positioned: true,
 	}
-	name, err := store.FileNameFor(a.skyDir, title)
+	name, err := store.FileNameFor(a.skyDir, folder, title)
 	if err != nil {
 		return NoteView{}, err
 	}
 	if err := store.WriteNoteFile(name, ""); err != nil {
 		return NoteView{}, err
 	}
-	n.File = filepath.Base(name)
+	rel, _ := filepath.Rel(a.skyDir, name)
+	n.File = rel
 	if err := a.store.Create(n); err != nil {
 		return NoteView{}, err
 	}
@@ -227,7 +244,9 @@ func (a *App) SaveNote(id, title, body string) error {
 		n.Title = title
 		return a.store.Update(n)
 	}
-	newPath, err := store.FileNameFor(a.skyDir, title)
+	// Title changed -- create new file in the same folder, remove old.
+	folder := store.FolderOf(n.File)
+	newPath, err := store.FileNameFor(a.skyDir, folder, title)
 	if err != nil {
 		return err
 	}
@@ -236,7 +255,8 @@ func (a *App) SaveNote(id, title, body string) error {
 	}
 	_ = os.Remove(oldPath)
 	n.Title = title
-	n.File = filepath.Base(newPath)
+	rel, _ := filepath.Rel(a.skyDir, newPath)
+	n.File = rel
 	return a.store.Update(n)
 }
 
@@ -457,4 +477,96 @@ func (a *App) recordActivity() {
 		return
 	}
 	_ = a.activity.Record(time.Now(), a.store.All())
+}
+
+// PickFolder opens the native OS directory picker and returns the selected
+// path, or empty string if cancelled. Works on Windows, macOS, and Linux
+// (uses whatever GTK/Qt file chooser the desktop environment provides).
+func (a *App) PickFolder() string {
+	if a.ctx == nil {
+		return ""
+	}
+	dir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Choose your Sky folder",
+	})
+	if err != nil {
+		return ""
+	}
+	return dir
+}
+
+// CreateFolder creates a new note inside a subfolder, creating the
+// folder if it does not exist.
+func (a *App) CreateFolder(name, folder string) (NoteView, error) {
+	if a.store == nil {
+		return NoteView{}, fmt.Errorf("no sky configured")
+	}
+	if name == "" {
+		name = "Untitled"
+	}
+	id := store.NewID()
+	notes := a.store.All()
+	p := world.PositionForNew(notes, "", id)
+	n := note.Note{
+		ID:         id,
+		Title:      name,
+		CreatedAt:  time.Now(),
+		WorldX:     p.X,
+		WorldY:     p.Y,
+		Positioned: true,
+	}
+	path, err := store.FileNameFor(a.skyDir, folder, name)
+	if err != nil {
+		return NoteView{}, err
+	}
+	if err := store.WriteNoteFile(path, ""); err != nil {
+		return NoteView{}, err
+	}
+	rel, _ := filepath.Rel(a.skyDir, path)
+	n.File = rel
+	if err := a.store.Create(n); err != nil {
+		return NoteView{}, err
+	}
+	a.recordActivity()
+	return noteToView(n), nil
+}
+
+// MoveNote moves a note to a different folder within the sky.
+func (a *App) MoveNote(id, targetFolder string) error {
+	if a.store == nil {
+		return fmt.Errorf("no sky configured")
+	}
+	n, ok := a.store.Get(id)
+	if !ok {
+		return fmt.Errorf("note not found: %s", id)
+	}
+	oldPath, err := a.notePath(n)
+	if err != nil {
+		return err
+	}
+	newPath, err := store.FileNameFor(a.skyDir, targetFolder, n.Title)
+	if err != nil {
+		return err
+	}
+	body, err := store.ReadNoteFile(oldPath)
+	if err != nil {
+		return err
+	}
+	if err := store.WriteNoteFile(newPath, body); err != nil {
+		return err
+	}
+	_ = os.Remove(oldPath)
+	rel, _ := filepath.Rel(a.skyDir, newPath)
+	n.File = rel
+	return a.store.Update(n)
+}
+
+// SetWindowSize resizes the OS window. Used by the setup intro to show a
+// small welcome card, then expand to full size for the setup forms.
+func (a *App) SetWindowSize(width, height int) {
+	if a.ctx == nil {
+		return
+	}
+	runtime.WindowSetSize(a.ctx, width, height)
+	runtime.WindowCenter(a.ctx)
 }

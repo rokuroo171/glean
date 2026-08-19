@@ -99,7 +99,7 @@ func runQuick(reg *store.RegistryStore, skyDir string, args []string) int {
 	}
 	text := strings.Join(args, " ")
 	title := titleFromText(text)
-	name, err := store.FileNameFor(skyDir, title)
+	name, err := store.FileNameFor(skyDir, "", title)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "glean: %v\n", err)
 		return 1
@@ -108,7 +108,8 @@ func runQuick(reg *store.RegistryStore, skyDir string, args []string) int {
 		fmt.Fprintf(os.Stderr, "glean: %v\n", err)
 		return 1
 	}
-	n := note.Note{ID: store.NewID(), Title: title, File: filepath.Base(name), CreatedAt: time.Now()}
+	rel, _ := filepath.Rel(skyDir, name)
+	n := note.Note{ID: store.NewID(), Title: title, File: rel, CreatedAt: time.Now()}
 	p := world.NextSpiralPosition(reg.All(), n.ID)
 	n.WorldX, n.WorldY, n.Positioned = p.X, p.Y, true
 	if err := reg.Create(n); err != nil {
@@ -173,14 +174,15 @@ func runImport(reg *store.RegistryStore, skyDir string, args []string) int {
 			return err
 		}
 		base := strings.TrimSuffix(info.Name(), filepath.Ext(info.Name()))
-		name, err := store.FileNameFor(skyDir, base)
+		name, err := store.FileNameFor(skyDir, "", base)
 		if err != nil {
 			return err
 		}
 		if err := store.WriteNoteFile(name, string(body)); err != nil {
 			return err
 		}
-		n := note.Note{ID: store.NewID(), Title: base, File: filepath.Base(name), CreatedAt: time.Now()}
+		rel, _ := filepath.Rel(skyDir, name)
+		n := note.Note{ID: store.NewID(), Title: base, File: rel, CreatedAt: time.Now()}
 		p := world.NextSpiralPosition(reg.All(), n.ID)
 		n.WorldX, n.WorldY, n.Positioned = p.X, p.Y, true
 		if err := reg.Create(n); err != nil {
