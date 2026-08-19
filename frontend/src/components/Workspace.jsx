@@ -12,6 +12,8 @@ import FullSky from './FullSky'
 import CommandCenter from './CommandCenter'
 import Icon from './Icon'
 
+const wails = window.go?.main
+
 export default function Workspace({
   notes, trails, stats, skyName, skyPath, version,
   onOpenNote, onNewNote, onOpenStats, onCreateNote,
@@ -90,6 +92,16 @@ export default function Workspace({
     saveWorkspaceState({ open_ids: openIds, active_id: activeId, sky_collapsed: next })
   }
 
+  // Load the body for the active tab once notes are available.
+  // On startup, tabs restore from saved state but bodies are not loaded
+  // yet. Without this, the editor shows empty content and the focus
+  // handler fires a false "File changed on disk" alert.
+  useEffect(() => {
+    if (!activeId || !notes.length) return
+    if (activeId in noteBodies) return
+    onOpenNote(activeId)
+  }, [activeId, notes, noteBodies, onOpenNote])
+
   // The command center opens from the title bar pill, or with the
   // shortcuts both references use: Ctrl+K and Ctrl+O.
   useEffect(() => {
@@ -150,7 +162,6 @@ export default function Workspace({
         onSelect={openNote} onClose={closeTab} onNew={onNewNote}
         onSettings={() => setPseudoTab('settings')}
         onCommand={() => setCommandOpen(true)}
-        skyCollapsed={skyCollapsed} onToggleSky={toggleSky}
         pseudoTab={pseudoTab} onClosePseudo={() => setPseudoTab(null)}
         detailsOpen={detailsOpen} onToggleDetails={() => setDetailsOpen(v => !v)} />
       {externalChanged && (
@@ -167,22 +178,40 @@ export default function Workspace({
         </div>
       )}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-        {skyCollapsed ? (
-          <div style={{ width: 44, borderRight: `1px solid ${colors.border}`, flexShrink: 0,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: space[2], gap: space[2] }}>
-            <button type="button" onClick={toggleSky} aria-label="show explorer" title="Show explorer"
-              style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', padding: 4 }}>
-              <Icon name="panel-right" size={14} />
-            </button>
-            <button type="button" onClick={() => setFullSky(true)} aria-label="full sky" title="Full sky"
-              style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', padding: 4 }}>
-              <Icon name="maximize" size={14} />
-            </button>
-          </div>
-        ) : (
+        {/* Persistent left icon rail -- always visible, carries app navigation. */}
+        <div style={{ width: 44, borderRight: `1px solid ${colors.border}`, flexShrink: 0,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: space[2], gap: space[2] }}>
+          <button type="button" onClick={toggleSky} aria-label={skyCollapsed ? 'show explorer' : 'hide explorer'}
+            title={skyCollapsed ? 'Show explorer' : 'Hide explorer'}
+            style={{ background: 'none', border: 'none', color: skyCollapsed ? colors.textMuted : colors.accent,
+              cursor: 'pointer', padding: 4, borderRadius: 4 }}>
+            <span style={{ display: 'inline-block', transition: 'transform 0.2s ease',
+              transform: skyCollapsed ? 'rotate(0deg)' : 'rotate(180deg)' }}>
+              <Icon name="chevron-right" size={16} />
+            </span>
+          </button>
+          <button type="button" onClick={() => setFullSky(true)} aria-label="sky view" title="Sky"
+            style={{ background: 'none', border: 'none', color: colors.textMuted,
+              cursor: 'pointer', padding: 4, borderRadius: 4 }}>
+            <Icon name="sparkles" size={16} />
+          </button>
+        </div>
+        {/* File explorer panel -- slides in/out next to the icon rail. */}
+        {!skyCollapsed && (
           <div style={{ width: 264, borderRight: `1px solid ${colors.border}`, display: 'flex', minHeight: 0 }}>
             <FileExplorer notes={notes} activeId={activeId} skyName={skyName}
-              onOpenNote={openNote} onExpand={() => setFullSky(true)} />
+              onOpenNote={openNote}
+              onCreateNote={async (name, folder) => {
+                const note = await onCreateNote(name, '')
+                if (note) openNote(note.id)
+              }}
+              onCreateFolder={async (name) => {
+                try {
+                  const note = await wails.App.CreateFolder(name, '')
+                  if (note) openNote(note.id)
+                } catch {}
+              }}
+              onRefresh={onRescan} />
           </div>
         )}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>

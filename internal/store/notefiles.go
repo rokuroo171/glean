@@ -40,16 +40,21 @@ func SanitizeTitle(title string) string {
 	return out
 }
 
-// FileNameFor returns a deduped .md path for a title, checking disk
-// case-insensitively.
-func FileNameFor(skyDir, title string) (string, error) {
+// FileNameFor returns a deduped .md path for a title inside a subfolder
+// of the sky directory. folder is the relative path from skyDir (empty for
+// root). It checks disk case-insensitively.
+func FileNameFor(skyDir, folder, title string) (string, error) {
 	stem := SanitizeTitle(title)
 	if stem == "" {
 		stem = "Untitled"
 	}
-	entries, err := os.ReadDir(skyDir)
+	dir := filepath.Join(skyDir, folder)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", fmt.Errorf("create folder: %w", err)
+	}
+	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return "", fmt.Errorf("list sky folder: %w", err)
+		return "", fmt.Errorf("list folder: %w", err)
 	}
 	taken := map[string]bool{}
 	for _, e := range entries {
@@ -59,12 +64,12 @@ func FileNameFor(skyDir, title string) (string, error) {
 	}
 	name := stem + ".md"
 	if !taken[strings.ToLower(name)] {
-		return filepath.Join(skyDir, name), nil
+		return filepath.Join(dir, name), nil
 	}
 	for i := 2; ; i++ {
 		name = fmt.Sprintf("%s %d.md", stem, i)
 		if !taken[strings.ToLower(name)] {
-			return filepath.Join(skyDir, name), nil
+			return filepath.Join(dir, name), nil
 		}
 	}
 }
@@ -96,4 +101,20 @@ func DeleteNoteFile(path string) error {
 		return fmt.Errorf("delete note file: %w", err)
 	}
 	return nil
+}
+
+// FolderOf returns the directory portion of a note's relative File path.
+// "glean/arch" -> "glean", "note" -> "".
+func FolderOf(file string) string {
+	dir := filepath.Dir(file)
+	if dir == "." {
+		return ""
+	}
+	return dir
+}
+
+// CreateFolder creates an empty .md file inside the given subfolder so
+// the folder appears in the file system and the explorer.
+func CreateFolder(skyDir, folder, name string) (string, error) {
+	return FileNameFor(skyDir, folder, name)
 }

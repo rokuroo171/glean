@@ -7,5 +7,6 @@ import (
 )
 
 func (a *App) startup(ctx context.Context) {
+	a.ctx = ctx
 	runtime.LogInfo(ctx, "glean started")
 }

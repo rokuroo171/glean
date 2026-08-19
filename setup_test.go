@@ -69,7 +69,7 @@ func TestSetupSkyConfigures(t *testing.T) {
 	}
 }
 
-func TestSetupSkyScansExistingFolder(t *testing.T) {
+func TestSetupSkyDoesNotScan(t *testing.T) {
 	a := testApp(t)
 	skyDir := t.TempDir()
 	_ = os.WriteFile(filepath.Join(skyDir, "Fresh.md"), []byte("# hi"), 0o644)
@@ -77,8 +77,21 @@ func TestSetupSkyScansExistingFolder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if !st.RegistryEmpty {
+		t.Fatal("SetupSky should not scan -- fresh sky starts empty")
+	}
+}
+
+func TestOpenSkyScansExistingFolder(t *testing.T) {
+	a := testApp(t)
+	skyDir := t.TempDir()
+	_ = os.WriteFile(filepath.Join(skyDir, "Fresh.md"), []byte("# hi"), 0o644)
+	st, err := a.OpenSky(skyDir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if st.RegistryEmpty {
-		t.Fatal("existing md file should have become a star")
+		t.Fatal("OpenSky should scan existing md files")
 	}
 }
 
