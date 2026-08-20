@@ -11,11 +11,15 @@ export function DefaultSkyPath(arg1:string):Promise<string>;
 
 export function DeleteNote(arg1:string):Promise<void>;
 
+export function GetKnownSkies():Promise<Array<main.KnownSkyView>>;
+
 export function GetNote(arg1:string):Promise<main.NoteView|boolean>;
 
 export function GetNotes():Promise<Array<main.NoteView>>;
 
 export function GetPalette():Promise<main.PaletteView>;
+
+export function GetPreferences():Promise<main.PreferencesView>;
 
 export function GetSkyName():Promise<string>;
 
@@ -37,7 +41,11 @@ export function OpenSky(arg1:string):Promise<main.SkyStateView>;
 
 export function PickFolder():Promise<string>;
 
+export function RemoveKnownSky(arg1:string):Promise<void>;
+
 export function SaveNote(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function SavePreferences(arg1:main.PreferencesView):Promise<void>;
 
 export function SaveWorkspaceState(arg1:store.WorkspaceState):Promise<void>;
 
@@ -50,5 +58,7 @@ export function SetupSky(arg1:string,arg2:string):Promise<main.SkyStateView>;
 export function SkipMigration():Promise<void>;
 
 export function SkyState():Promise<main.SkyStateView>;
+
+export function SwitchSky(arg1:string):Promise<string>;
 
 export function WaterNote(arg1:string):Promise<boolean>;

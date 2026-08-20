@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/glean/glean/internal/activity"
@@ -12,31 +13,51 @@ import (
 	"github.com/glean/glean/internal/store"
 )
 
+// setTestEnv redirects AppConfigDir to a fresh temp tree.
+func setTestEnv(t *testing.T) {
+	t.Helper()
+	dir := t.TempDir()
+	switch runtime.GOOS {
+	case "windows":
+		t.Setenv("APPDATA", dir)
+	case "darwin":
+		libDir := filepath.Join(dir, "Library", "Application Support")
+		os.MkdirAll(libDir, 0o755)
+		t.Setenv("HOME", dir)
+	default:
+		t.Setenv("XDG_CONFIG_HOME", dir)
+	}
+}
+
 func testApp(t *testing.T) *App {
 	t.Helper()
-	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	setTestEnv(t)
 	return &App{}
 }
 
 func writeLegacyStore(t *testing.T, notes []note.Note) {
 	t.Helper()
-	legacyDir := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "glean")
-	if err := os.MkdirAll(legacyDir, 0o755); err != nil {
+	// Legacy files live at AppConfigDir()/glean.json etc.
+	configDir, err := store.AppConfigDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	raw, err := json.Marshal(note.Collection{Notes: notes})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(legacyDir, "glean.json"), raw, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(configDir, "glean.json"), raw, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	rawA, _ := json.Marshal(adjacency.AdjacencyLog{Pairs: []adjacency.PairCount{}})
-	if err := os.WriteFile(filepath.Join(legacyDir, "adjacency.json"), rawA, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(configDir, "adjacency.json"), rawA, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	rawS, _ := json.Marshal(activity.Activity{DailyCounts: map[string]int{}})
-	if err := os.WriteFile(filepath.Join(legacyDir, "activity.json"), rawS, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(configDir, "activity.json"), rawS, 0o644); err != nil {
 		t.Fatal(err)
 	}
 }

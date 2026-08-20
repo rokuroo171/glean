@@ -7,6 +7,29 @@ import (
 	"strings"
 )
 
+// ValidateInsideDir checks that target resolves to a path within root.
+// Returns an error if the path escapes the root via symlink or .. traversal.
+func ValidateInsideDir(root, target string) error {
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return fmt.Errorf("resolve root: %w", err)
+	}
+	absTarget, err := filepath.Abs(target)
+	if err != nil {
+		return fmt.Errorf("resolve target: %w", err)
+	}
+	// Check prefix. filepath.Rel gives us the relative path; if it
+	// starts with ".." the target is outside root.
+	rel, err := filepath.Rel(absRoot, absTarget)
+	if err != nil {
+		return fmt.Errorf("path check: %w", err)
+	}
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return fmt.Errorf("path escapes sky directory: %s", target)
+	}
+	return nil
+}
+
 var reservedNames = map[string]bool{
 	"CON": true, "PRN": true, "AUX": true, "NUL": true,
 }
@@ -66,12 +89,13 @@ func FileNameFor(skyDir, folder, title string) (string, error) {
 	if !taken[strings.ToLower(name)] {
 		return filepath.Join(dir, name), nil
 	}
-	for i := 2; ; i++ {
+	for i := 2; i < 10000; i++ {
 		name = fmt.Sprintf("%s %d.md", stem, i)
 		if !taken[strings.ToLower(name)] {
 			return filepath.Join(dir, name), nil
 		}
 	}
+	return "", fmt.Errorf("too many duplicates for title: %s", stem)
 }
 
 // WriteNoteFile writes a note body atomically.
