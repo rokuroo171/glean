@@ -1,5 +1,51 @@
 export namespace main {
 	
+	export class EditorPrefsView {
+	    cursor_trail_mode: string;
+	    cursor_trail_color: string;
+	    cursor_trail_intensity: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new EditorPrefsView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.cursor_trail_mode = source["cursor_trail_mode"];
+	        this.cursor_trail_color = source["cursor_trail_color"];
+	        this.cursor_trail_intensity = source["cursor_trail_intensity"];
+	    }
+	}
+	export class KnownSkyView {
+	    name: string;
+	    path: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KnownSkyView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	    }
+	}
+	export class LayoutPrefsView {
+	    sidebar_position: string;
+	    density: string;
+	    show_status_bar: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new LayoutPrefsView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.sidebar_position = source["sidebar_position"];
+	        this.density = source["density"];
+	        this.show_status_bar = source["show_status_bar"];
+	    }
+	}
 	export class MilestonesView {
 	    first_sprout_at?: string;
 	    first_tree_at?: string;
@@ -97,6 +143,54 @@ export namespace main {
 	        this.list = source["list"];
 	    }
 	}
+	export class ThemePrefsView {
+	    preset: string;
+	    accent_hex: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ThemePrefsView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.preset = source["preset"];
+	        this.accent_hex = source["accent_hex"];
+	    }
+	}
+	export class PreferencesView {
+	    theme: ThemePrefsView;
+	    layout: LayoutPrefsView;
+	    editor: EditorPrefsView;
+	
+	    static createFrom(source: any = {}) {
+	        return new PreferencesView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.theme = this.convertValues(source["theme"], ThemePrefsView);
+	        this.layout = this.convertValues(source["layout"], LayoutPrefsView);
+	        this.editor = this.convertValues(source["editor"], EditorPrefsView);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class SkyStateView {
 	    configured: boolean;
 	    sky_missing: boolean;
@@ -163,6 +257,7 @@ export namespace main {
 		    return a;
 		}
 	}
+	
 	export class TrailView {
 	    note_a: string;
 	    note_b: string;

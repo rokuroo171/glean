@@ -41,6 +41,13 @@ func NewApp() (*App, error) {
 	if !ok {
 		return &App{}, nil
 	}
+	// Check the sky folder actually exists before opening stores.
+	// Without this, a deleted folder opens empty stores and the frontend
+	// shows a ghost workspace instead of the recovery screen.
+	info, err := os.Stat(skyDir)
+	if err != nil || !info.IsDir() {
+		return &App{}, nil
+	}
 	a := &App{}
 	if err := a.openSkyAt(skyDir); err != nil {
 		return nil, err
@@ -149,11 +156,21 @@ func (a *App) ScanSky() []NoteView {
 // notePath resolves a note's md file from the registry's recorded path.
 // File stores the relative path from skyDir (e.g. "glean/arch.md").
 func (a *App) notePath(n note.Note) (string, error) {
+	var p string
 	if n.File != "" {
-		return filepath.Join(a.skyDir, n.File), nil
+		p = filepath.Join(a.skyDir, n.File)
+	} else {
+		// Legacy entry without File -- derive from title at root.
+		var err error
+		p, err = store.FileNameFor(a.skyDir, "", n.Title)
+		if err != nil {
+			return "", err
+		}
 	}
-	// Legacy entry without File -- derive from title at root.
-	return store.FileNameFor(a.skyDir, "", n.Title)
+	if err := store.ValidateInsideDir(a.skyDir, p); err != nil {
+		return "", err
+	}
+	return p, nil
 }
 
 // GetNote returns a single note by ID, loading its body from the md file
@@ -211,6 +228,9 @@ func (a *App) CreateNote(title string, contextID string) (NoteView, error) {
 	if err != nil {
 		return NoteView{}, err
 	}
+	if err := store.ValidateInsideDir(a.skyDir, name); err != nil {
+		return NoteView{}, err
+	}
 	if err := store.WriteNoteFile(name, ""); err != nil {
 		return NoteView{}, err
 	}
@@ -230,7 +250,7 @@ func (a *App) SaveNote(id, title, body string) error {
 	}
 	n, ok := a.store.Get(id)
 	if !ok {
-		return nil
+		return fmt.Errorf("note not found: %s", id)
 	}
 	oldPath, err := a.notePath(n)
 	if err != nil {
@@ -519,6 +539,9 @@ func (a *App) CreateFolder(name, folder string) (NoteView, error) {
 	if err != nil {
 		return NoteView{}, err
 	}
+	if err := store.ValidateInsideDir(a.skyDir, path); err != nil {
+		return NoteView{}, err
+	}
 	if err := store.WriteNoteFile(path, ""); err != nil {
 		return NoteView{}, err
 	}
@@ -548,6 +571,9 @@ func (a *App) MoveNote(id, targetFolder string) error {
 	if err != nil {
 		return err
 	}
+	if err := store.ValidateInsideDir(a.skyDir, newPath); err != nil {
+		return err
+	}
 	body, err := store.ReadNoteFile(oldPath)
 	if err != nil {
 		return err
@@ -569,4 +595,158 @@ func (a *App) SetWindowSize(width, height int) {
 	}
 	runtime.WindowSetSize(a.ctx, width, height)
 	runtime.WindowCenter(a.ctx)
+}
+
+// KnownSkyView is the JSON-safe known sky entry for the frontend.
+type KnownSkyView struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
+}
+
+// GetKnownSkies returns all remembered skies for the manage-skies UI.
+func (a *App) GetKnownSkies() []KnownSkyView {
+	p, _, err := store.LoadPointer()
+	if err != nil || p.KnownSkies == nil {
+		return nil
+	}
+	views := make([]KnownSkyView, len(p.KnownSkies))
+	for i, ks := range p.KnownSkies {
+		views[i] = KnownSkyView{Name: ks.Name, Path: ks.Path}
+	}
+	return views
+}
+
+// SwitchSky changes the active sky to the given path and reloads everything.
+// Returns the new sky name on success.
+func (a *App) SwitchSky(path string) (string, error) {
+	if err := store.SwitchSky(path); err != nil {
+		return "", err
+	}
+	// Close old stores.
+	a.store = nil
+	a.adjacency = nil
+	a.activity = nil
+	a.workspace = nil
+	// Open the new sky.
+	if err := a.openSkyAt(path); err != nil {
+		return "", err
+	}
+	return a.GetSkyName(), nil
+}
+
+// RemoveKnownSky removes a sky from the known list. Does not delete files.
+func (a *App) RemoveKnownSky(path string) error {
+	return store.RemoveKnownSky(path)
+}
+
+// PreferencesView is the JSON-safe preferences representation for the frontend.
+type PreferencesView struct {
+	Theme  ThemePrefsView  `json:"theme"`
+	Layout LayoutPrefsView `json:"layout"`
+	Editor EditorPrefsView `json:"editor"`
+}
+
+type ThemePrefsView struct {
+	Preset    string `json:"preset"`
+	AccentHex string `json:"accent_hex"`
+}
+
+type LayoutPrefsView struct {
+	SidebarPosition string `json:"sidebar_position"`
+	Density         string `json:"density"`
+	ShowStatusBar   bool   `json:"show_status_bar"`
+}
+
+type EditorPrefsView struct {
+	CursorTrailMode      string `json:"cursor_trail_mode"`
+	CursorTrailColor     string `json:"cursor_trail_color"`
+	CursorTrailIntensity string `json:"cursor_trail_intensity"`
+}
+
+// GetPreferences returns the user's customization preferences.
+func (a *App) GetPreferences() PreferencesView {
+	p := store.LoadPreferences()
+	showStatus := true
+	if p.Layout.ShowStatusBar != nil {
+		showStatus = *p.Layout.ShowStatusBar
+	}
+	return PreferencesView{
+		Theme: ThemePrefsView{
+			Preset:    p.Theme.Preset,
+			AccentHex: p.Theme.AccentHex,
+		},
+		Layout: LayoutPrefsView{
+			SidebarPosition: p.Layout.SidebarPosition,
+			Density:         p.Layout.Density,
+			ShowStatusBar:   showStatus,
+		},
+		Editor: EditorPrefsView{
+			CursorTrailMode:      p.Editor.CursorTrailMode,
+			CursorTrailColor:     p.Editor.CursorTrailColor,
+			CursorTrailIntensity: p.Editor.CursorTrailIntensity,
+		},
+	}
+}
+
+// SavePreferences persists the user's customization preferences.
+func (a *App) SavePreferences(p PreferencesView) error {
+	// Validate and sanitize inputs.
+	validPresets := map[string]bool{"midnight": true, "aurora": true, "ember": true, "ocean": true, "lavender": true}
+	if !validPresets[p.Theme.Preset] {
+		p.Theme.Preset = "midnight"
+	}
+	if !isValidHex(p.Theme.AccentHex) {
+		p.Theme.AccentHex = "#5b9fd4"
+	}
+	validTrails := map[string]bool{"kitty": true, "sparkle": true, "ink": true, "off": true}
+	if !validTrails[p.Editor.CursorTrailMode] {
+		p.Editor.CursorTrailMode = "kitty"
+	}
+	if p.Editor.CursorTrailColor != "accent" && !isValidHex(p.Editor.CursorTrailColor) {
+		p.Editor.CursorTrailColor = "accent"
+	}
+	validIntensity := map[string]bool{"subtle": true, "normal": true, "vivid": true}
+	if !validIntensity[p.Editor.CursorTrailIntensity] {
+		p.Editor.CursorTrailIntensity = "normal"
+	}
+	validDensity := map[string]bool{"comfortable": true, "compact": true, "dense": true}
+	if !validDensity[p.Layout.Density] {
+		p.Layout.Density = "comfortable"
+	}
+	validSidebar := map[string]bool{"left": true, "right": true}
+	if !validSidebar[p.Layout.SidebarPosition] {
+		p.Layout.SidebarPosition = "left"
+	}
+
+	showStatus := &p.Layout.ShowStatusBar
+	return store.SavePreferences(store.Preferences{
+		Theme: store.ThemePrefs{
+			Preset:    p.Theme.Preset,
+			AccentHex: p.Theme.AccentHex,
+		},
+		Layout: store.LayoutPrefs{
+			SidebarPosition: p.Layout.SidebarPosition,
+			Density:         p.Layout.Density,
+			ShowStatusBar:   showStatus,
+		},
+		Editor: store.EditorPrefs{
+			CursorTrailMode:      p.Editor.CursorTrailMode,
+			CursorTrailColor:     p.Editor.CursorTrailColor,
+			CursorTrailIntensity: p.Editor.CursorTrailIntensity,
+		},
+	})
+}
+
+// isValidHex checks that a string is a valid 6-digit hex color like "#aabbcc".
+func isValidHex(s string) bool {
+	if len(s) != 7 || s[0] != '#' {
+		return false
+	}
+	for i := 1; i < 7; i++ {
+		c := s[i]
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
 }

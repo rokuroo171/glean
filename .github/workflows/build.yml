@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             target: linux
             goos: linux
             goarch: amd64
@@ -39,7 +39,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.26'
 
       - uses: actions/setup-node@v4
         with:
@@ -50,7 +50,7 @@ jobs:
         if: matrix.target == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libgtk-3-dev libgtk-3-0 patchelf
 
       # Windows: WebView2 (pre-installed on GitHub runners)
       # No extra steps needed Windows runners include WebView2 headers.
@@ -58,16 +58,25 @@ jobs:
       # macOS: Xcode (pre-installed on GitHub runners)
       # No extra steps needed macOS runners include Xcode CLI tools.
 
+      # Extract version from tag (falls back to 0.0.0 for manual runs)
+      - name: Set version
+        id: version
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then VERSION="0.0.0"; fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
       # Install Wails CLI
       - name: Install Wails
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
       # Stage the app icon where wails expects it, build/appicon.png.
-      # Wails derives icon.ico and icon.icns from it at build time.
+      # Wails derives icon.icns from it at build time.
       - name: Stage app icon
         run: |
-          mkdir -p build
-          cp packaging/appicon.png build/appicon.png
+          mkdir -p build/windows
+          cp packaging/icon.ico build/windows/icon.ico
 
       # Build
       # wails build handles: go mod tidy, frontend:install, frontend:build
@@ -108,22 +117,21 @@ jobs:
           path: build/bin/glean.app
           if-no-files-found: error
 
-      # Linux AppImage: bundle the binary with GTK so the release page
-      # carries a single runnable file. webkit2gtk stays a system dependency.
+      # Linux AppImage: wrap the binary so the release page carries a
+      # single runnable file. GTK and webkit2gtk stay system dependencies.
       - name: Build Linux AppImage
         if: matrix.target == 'linux'
         env:
           APPIMAGE_EXTRACT_AND_RUN: '1'
         run: |
+          set -ex
           mkdir -p AppDir/usr/bin
           cp build/bin/glean AppDir/usr/bin/glean
           cp packaging/linux/glean.desktop AppDir/glean.desktop
-          cp packaging/appicon.png AppDir/glean.png
-          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-gtk/releases/download/continuous/linuxdeploy-plugin-gtk-x86_64.AppImage
-          chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-gtk-x86_64.AppImage
-          export LDAI_OUTPUT=glean-x86_64.AppImage
-          ./linuxdeploy-x86_64.AppImage --appdir AppDir --plugin gtk --output appimage
+          wget --tries=3 --waitretry=5 https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage
+          export LDAI_OUTPUT=glean.AppImage
+          ./linuxdeploy-x86_64.AppImage --appdir AppDir --output appimage
 
       # Windows installer: wrap the binary in NSIS so the release page
       # carries a real setup.exe.
@@ -133,11 +141,9 @@ jobs:
 
       - name: Build Windows installer
         if: matrix.target == 'windows'
-        shell: bash
+        shell: pwsh
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then VERSION="0.0.0"; fi
-          makensis /DVERSION="$VERSION" packaging/windows/installer.nsi
+          & "C:\Program Files (x86)\NSIS\makensis.exe" /DVERSION="${{ steps.version.outputs.version }}" packaging\windows\installer.nsi
 
       # Publish straight to the GitHub Release when this run came from a
       # tag push. Tag v1.0.0, push, and the binaries land on the Releases page.
@@ -145,28 +151,29 @@ jobs:
         if: matrix.target == 'macos' || matrix.target == 'macos-arm64'
         run: |
           cd build/bin
-          zip -r ../../glean-${{ matrix.target }}.zip glean.app
+          ARCH="${{ matrix.target == 'macos-arm64' && 'arm64' || 'x86_64' }}"
+          zip -r "../../glean-${ARCH}.app.zip" glean.app
 
       - name: Publish Linux to Release
         if: startsWith(github.ref, 'refs/tags/') && matrix.target == 'linux'
         uses: softprops/action-gh-release@v2
         with:
-          files: glean-x86_64.AppImage
+          files: glean.AppImage
 
       - name: Publish Windows to Release
         if: startsWith(github.ref, 'refs/tags/') && matrix.target == 'windows'
         uses: softprops/action-gh-release@v2
         with:
-          files: build/bin/glean-setup.exe
+          files: build/bin/gleanInstaller.exe
 
       - name: Publish macOS to Release
         if: startsWith(github.ref, 'refs/tags/') && matrix.target == 'macos'
         uses: softprops/action-gh-release@v2
         with:
-          files: glean-macos.zip
+          files: glean-x86_64.app.zip
 
       - name: Publish macOS ARM64 to Release
         if: startsWith(github.ref, 'refs/tags/') && matrix.target == 'macos-arm64'
         uses: softprops/action-gh-release@v2
         with:
-          files: glean-macos-arm64.zip
+          files: glean-arm64.app.zip

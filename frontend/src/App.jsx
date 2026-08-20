@@ -3,6 +3,7 @@ import Workspace from './components/Workspace'
 import NewNotePrompt from './components/NewNotePrompt'
 import Setup from './components/Setup'
 import Recovery from './components/Recovery'
+import { PreferencesProvider } from './lib/preferences-context'
 import { colors } from './lib/theme'
 
 const wails = window.go?.main
@@ -229,6 +230,7 @@ export default function App() {
   )
 
   return (
+    <PreferencesProvider>
     <div style={{ width: '100vw', height: '100vh', background: colors.bg, position: 'relative', overflow: 'hidden' }}>
       <Workspace
         notes={notes}
@@ -250,16 +252,14 @@ export default function App() {
         onRescan={handleRescan}
         onWish={handleWish}
         onDelete={handleDelete}
-      />
-
-      {showNewPrompt && (
+      />      {showNewPrompt && (
         <NewNotePrompt
           title={newNoteTitle}
           onTitleChange={setNewNoteTitle}
           onSubmit={handleCreateSubmit}
-          onCancel={() => setShowNewPrompt(false)}
-        />
+          onCancel={() => setShowNewPrompt(false)} />
       )}
     </div>
+    </PreferencesProvider>
   )
 }

@@ -3,17 +3,39 @@ package store
 import (
 	"os"
 	"path/filepath"
+	"reflect"
+	"runtime"
 	"testing"
 )
 
 func setTestConfigDir(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	t.Setenv("XDG_CONFIG_HOME", dir)
-	return dir
+	switch runtime.GOOS {
+	case "windows":
+		t.Setenv("APPDATA", dir)
+	case "darwin":
+		// macOS uses ~/Library/Application Support. Create the subdirs so
+		// AppConfigDir resolves into our temp tree.
+		libDir := filepath.Join(dir, "Library", "Application Support")
+		os.MkdirAll(libDir, 0o755)
+		t.Setenv("HOME", dir)
+	default:
+		t.Setenv("XDG_CONFIG_HOME", dir)
+	}
+	// Return the actual config dir that AppConfigDir will resolve to,
+	// so callers can write files where the code expects them.
+	cfgDir, err := AppConfigDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return filepath.Dir(cfgDir) // parent of "glean"
 }
 
 func TestAppConfigDirHonorsXDG(t *testing.T) {
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+		t.Skip("XDG only applies on Linux")
+	}
 	dir := setTestConfigDir(t)
 	got, err := AppConfigDir()
 	if err != nil {
@@ -22,6 +44,30 @@ func TestAppConfigDirHonorsXDG(t *testing.T) {
 	want := filepath.Join(dir, "glean")
 	if got != want {
 		t.Fatalf("AppConfigDir() = %q, want %q", got, want)
+	}
+}
+
+func TestAppConfigDirPlatform(t *testing.T) {
+	got, err := AppConfigDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	switch runtime.GOOS {
+	case "windows":
+		// Should contain AppData\Roaming\glean or fallback path
+		if filepath.Base(got) != "glean" {
+			t.Fatalf("expected path ending in glean, got %q", got)
+		}
+	case "darwin":
+		want := filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "glean")
+		if got != want {
+			t.Fatalf("AppConfigDir() = %q, want %q", got, want)
+		}
+	default:
+		// Linux: should end with .config/glean (or XDG override)
+		if filepath.Base(got) != "glean" {
+			t.Fatalf("expected path ending in glean, got %q", got)
+		}
 	}
 }
 
@@ -35,7 +81,7 @@ func TestPointerSaveLoadRoundTrip(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("LoadPointer() = %v, %v, %v", got, ok, err)
 	}
-	if got != p {
+	if !reflect.DeepEqual(got, p) {
 		t.Fatalf("pointer mismatch: %+v != %+v", got, p)
 	}
 }

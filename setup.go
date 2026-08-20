@@ -58,11 +58,13 @@ func (a *App) DefaultSkyPath(name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	docs := filepath.Join(home, "Documents", clean)
+	// Default: Documents/glean/<sky-name>. Namespaced, discoverable, syncable.
+	docs := filepath.Join(home, "Documents", "glean", clean)
 	if _, err := os.Stat(filepath.Join(home, "Documents")); err == nil {
 		return docs, nil
 	}
-	return filepath.Join(home, clean), nil
+	// Fallback if Documents does not exist.
+	return filepath.Join(home, "glean", clean), nil
 }
 
 // openSkyAt wires the stores for a sky folder and scans it.
@@ -101,6 +103,7 @@ func (a *App) SetupSky(name, dir string) (SkyStateView, error) {
 	if err := store.SavePointer(store.SkyPointer{SkyPath: dir}); err != nil {
 		return SkyStateView{}, err
 	}
+	store.AddKnownSky(clean, dir)
 	// Wire stores without scanning -- a new sky has no files yet.
 	reg, err := store.OpenRegistry(dir)
 	if err != nil {
@@ -134,6 +137,7 @@ func (a *App) OpenSky(dir string) (SkyStateView, error) {
 	if err := store.SavePointer(store.SkyPointer{SkyPath: dir}); err != nil {
 		return SkyStateView{}, err
 	}
+	store.AddKnownSky(name, dir)
 	if err := a.openSkyAt(dir); err != nil {
 		return SkyStateView{}, err
 	}
