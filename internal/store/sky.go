@@ -5,25 +5,57 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 )
+
+// KnownSky is a remembered sky entry for the manage-skies UI.
+type KnownSky struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
+}
 
 // SkyPointer is the app-level pointer to the configured Sky folder.
 type SkyPointer struct {
-	SkyPath          string `json:"sky_path"`
-	MigrationSkipped bool   `json:"migration_skipped,omitempty"`
+	SkyPath          string     `json:"sky_path"`
+	MigrationSkipped bool       `json:"migration_skipped,omitempty"`
+	KnownSkies       []KnownSky `json:"known_skies,omitempty"`
 }
 
-// AppConfigDir returns the glean config dir honoring XDG_CONFIG_HOME.
+// AppConfigDir returns the platform-appropriate config directory for glean.
+//
+// Linux:  $XDG_CONFIG_HOME/glean  (defaults to ~/.config/glean)
+// Windows: %APPDATA%/glean       (C:\Users\<user>\AppData\Roaming\glean)
+// macOS:  ~/Library/Application Support/glean
 func AppConfigDir() (string, error) {
-	configHome := os.Getenv("XDG_CONFIG_HOME")
-	if configHome == "" {
+	switch runtime.GOOS {
+	case "windows":
+		if appData := os.Getenv("APPDATA"); appData != "" {
+			return filepath.Join(appData, "glean"), nil
+		}
+		// Fallback: use home directory
 		home, err := os.UserHomeDir()
 		if err != nil {
 			return "", fmt.Errorf("resolve home dir: %w", err)
 		}
-		configHome = filepath.Join(home, ".config")
+		return filepath.Join(home, "AppData", "Roaming", "glean"), nil
+
+	case "darwin":
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("resolve home dir: %w", err)
+		}
+		return filepath.Join(home, "Library", "Application Support", "glean"), nil
+
+	default: // linux, freebsd, etc.
+		if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+			return filepath.Join(xdg, "glean"), nil
+		}
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("resolve home dir: %w", err)
+		}
+		return filepath.Join(home, ".config", "glean"), nil
 	}
-	return filepath.Join(configHome, "glean"), nil
 }
 
 // PointerPath returns the path to the app pointer file.
@@ -149,4 +181,52 @@ func SanitizeSkyName(name string) (string, error) {
 		return "", fmt.Errorf("sky name is empty after sanitizing")
 	}
 	return out, nil
+}
+
+// AddKnownSky adds a sky to the known list if not already present.
+func AddKnownSky(name, path string) error {
+	p, ok, err := LoadPointer()
+	if err != nil {
+		return err
+	}
+	if !ok {
+		p = SkyPointer{}
+	}
+	// Dedupe by path.
+	for _, ks := range p.KnownSkies {
+		if ks.Path == path {
+			return nil
+		}
+	}
+	p.KnownSkies = append(p.KnownSkies, KnownSky{Name: name, Path: path})
+	return SavePointer(p)
+}
+
+// RemoveKnownSky removes a sky from the known list by path.
+func RemoveKnownSky(path string) error {
+	p, ok, err := LoadPointer()
+	if err != nil || !ok {
+		return err
+	}
+	filtered := p.KnownSkies[:0]
+	for _, ks := range p.KnownSkies {
+		if ks.Path != path {
+			filtered = append(filtered, ks)
+		}
+	}
+	p.KnownSkies = filtered
+	return SavePointer(p)
+}
+
+// SwitchSky updates the active sky path and reloads the pointer.
+func SwitchSky(path string) error {
+	p, ok, err := LoadPointer()
+	if err != nil {
+		return err
+	}
+	if !ok {
+		p = SkyPointer{}
+	}
+	p.SkyPath = path
+	return SavePointer(p)
 }

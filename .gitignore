@@ -1,13 +1,18 @@
 /glean
 /glean.exe
 *.tmp
+.DS_Store
+.inst
+refs
+
+# Frontend
 frontend/node_modules/
 frontend/dist/
-.DS_Store
-refs
-.
-build
+
+# Build output
+build/
 build/bin/
-build/windows/icon.ico
-.inst
-refs/
+
+# Installer dependencies
+installer/frontend/node_modules/
+installer/frontend/dist/

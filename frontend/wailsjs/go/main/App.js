@@ -18,6 +18,10 @@ export function DeleteNote(arg1) {
   return window['go']['main']['App']['DeleteNote'](arg1);
 }
 
+export function GetKnownSkies() {
+  return window['go']['main']['App']['GetKnownSkies']();
+}
+
 export function GetNote(arg1) {
   return window['go']['main']['App']['GetNote'](arg1);
 }
@@ -28,6 +32,10 @@ export function GetNotes() {
 
 export function GetPalette() {
   return window['go']['main']['App']['GetPalette']();
+}
+
+export function GetPreferences() {
+  return window['go']['main']['App']['GetPreferences']();
 }
 
 export function GetSkyName() {
@@ -70,8 +78,16 @@ export function PickFolder() {
   return window['go']['main']['App']['PickFolder']();
 }
 
+export function RemoveKnownSky(arg1) {
+  return window['go']['main']['App']['RemoveKnownSky'](arg1);
+}
+
 export function SaveNote(arg1, arg2, arg3) {
   return window['go']['main']['App']['SaveNote'](arg1, arg2, arg3);
+}
+
+export function SavePreferences(arg1) {
+  return window['go']['main']['App']['SavePreferences'](arg1);
 }
 
 export function SaveWorkspaceState(arg1) {
@@ -96,6 +112,10 @@ export function SkipMigration() {
 
 export function SkyState() {
   return window['go']['main']['App']['SkyState']();
+}
+
+export function SwitchSky(arg1) {
+  return window['go']['main']['App']['SwitchSky'](arg1);
 }
 
 export function WaterNote(arg1) {

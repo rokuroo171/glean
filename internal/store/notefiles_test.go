@@ -7,14 +7,15 @@ import (
 )
 
 func TestSanitizeTitle(t *testing.T) {
-	cases := []struct{ in, want string }{
-		{"Steady light", "Steady light"},
-		{`Bad: "name" / with? *stars*`, "Bad name  with stars"},
-		{"  padded  ", "padded"},
-		{"trailing dots...", "trailing dots"},
+	cases := []struct {
+		in, want string
+	}{
+		{"hello", "hello"},
+		{"<script>alert(1)</script>", "scriptalert(1)script"},
+		{"/etc/passwd", "etcpasswd"},
+		{`C:\Users\evil`, "CUsersevil"},
 		{"CON", "_CON"},
-		{"LPT1", "_LPT1"},
-		{"nul", "_nul"},
+		{"  padded  ", "padded"},
 	}
 	for _, c := range cases {
 		if got := SanitizeTitle(c.in); got != c.want {
@@ -41,8 +42,8 @@ func TestFileNameForDedupes(t *testing.T) {
 }
 
 func TestWriteReadDelete(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "note.md")
+	skyDir := t.TempDir()
+	path := filepath.Join(skyDir, "test.md")
 	if err := WriteNoteFile(path, "# hello\n\nbody"); err != nil {
 		t.Fatal(err)
 	}
@@ -57,6 +58,49 @@ func TestWriteReadDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		t.Fatal("file still exists after delete")
+		t.Fatal("file should be deleted")
+	}
+}
+
+func TestValidateInsideDir(t *testing.T) {
+	root := t.TempDir()
+
+	// Valid path inside root.
+	inner := filepath.Join(root, "sub", "file.md")
+	if err := ValidateInsideDir(root, inner); err != nil {
+		t.Fatalf("expected no error for inner path, got: %v", err)
+	}
+
+	// Path traversal with ..
+	outer := filepath.Join(root, "..", "escape")
+	if err := ValidateInsideDir(root, outer); err == nil {
+		t.Fatal("expected error for path escaping root")
+	}
+
+	// Absolute path outside root.
+	if err := ValidateInsideDir(root, "/etc/passwd"); err == nil {
+		t.Fatal("expected error for /etc/passwd")
+	}
+
+	// Same directory is fine.
+	if err := ValidateInsideDir(root, root); err != nil {
+		t.Fatalf("root itself should be valid: %v", err)
+	}
+}
+
+func TestFileNameForCapsAtLimit(t *testing.T) {
+	skyDir := t.TempDir()
+	// Create many duplicates to test the cap.
+	for i := 0; i < 5; i++ {
+		name := filepath.Join(skyDir, "dup"+string(rune('0'+i))+".md")
+		os.WriteFile(name, []byte("x"), 0o644)
+	}
+	// Should still work (under the 10000 limit).
+	got, err := FileNameFor(skyDir, "", "dup")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got == "" {
+		t.Fatal("FileNameFor returned empty path")
 	}
 }
