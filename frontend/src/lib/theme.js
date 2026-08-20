@@ -3,9 +3,11 @@
 export const colors = {
   bg: '#0B0F19',
   bgElevated: '#121824',
+  bgTranslucent: 'rgba(11, 15, 25, 0.85)',
   bgCard: 'rgba(18, 24, 36, 0.75)',
-  border: 'rgba(90, 106, 122, 0.25)',
-  borderStrong: 'rgba(90, 106, 122, 0.4)',
+  border: 'rgba(180, 140, 80, 0.12)',
+  borderStrong: 'rgba(180, 140, 80, 0.25)',
+  shadow: '0 2px 12px rgba(0, 0, 0, 0.3)',
   text: '#e8eaed',
   textMuted: '#6a7a8a',
   textDim: '#4a5a6a',

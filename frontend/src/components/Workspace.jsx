@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { colors, space } from '../lib/theme'
+import { usePreferences } from '../lib/preferences-context'
 import TabBar from './TabBar'
 import StatusBar from './StatusBar'
 import Home from './Home'
@@ -8,9 +9,12 @@ import FileExplorer from './FileExplorer'
 import DetailsPanel from './DetailsPanel'
 import StatsOverlay from './StatsOverlay'
 import SettingsPane from './SettingsPane'
+import CustomizationPane from './CustomizationPane'
 import FullSky from './FullSky'
 import CommandCenter from './CommandCenter'
 import Icon from './Icon'
+import NewFolderPrompt from './NewFolderPrompt'
+import ManageSky from './ManageSky'
 
 const wails = window.go?.main
 
@@ -22,7 +26,8 @@ export default function Workspace({
   onBodyChange, onSaveNow, onRefreshNote, onRescan,
   onWish, onDelete,
 }) {
-  const [pseudoTab, setPseudoTab] = useState(null) // null | 'stats' | 'settings'
+  const { prefs } = usePreferences()
+  const [pseudoTab, setPseudoTab] = useState(null) // null | 'stats' | 'settings' | 'customization'
   const [commandOpen, setCommandOpen] = useState(false)
   const [fullSky, setFullSky] = useState(false)
   const [skyCollapsed, setSkyCollapsed] = useState(false)
@@ -32,6 +37,11 @@ export default function Workspace({
   const [dirty, setDirty] = useState({}) // { [noteId]: true }
   const [externalChanged, setExternalChanged] = useState(false)
   const [externalBody, setExternalBody] = useState(null)
+  const [showFolderPrompt, setShowFolderPrompt] = useState(false)
+
+  const [showManageSky, setShowManageSky] = useState(false)
+  const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 })
+  const [editorMode, setEditorMode] = useState('preview')
 
   // Restore tabs once at mount.
   useEffect(() => {
@@ -84,6 +94,14 @@ export default function Workspace({
   async function createAndOpen(title) {
     const note = await onCreateNote(title)
     if (note) openNote(note.id)
+  }
+
+  function handleCommandAction(actionId) {
+    if (actionId === 'customize') setPseudoTab('customization')
+    else if (actionId === 'settings') setPseudoTab('settings')
+    else if (actionId === 'stats') { setPseudoTab('stats'); onOpenStats() }
+    else if (actionId === 'new-note') onNewNote()
+    else if (actionId === 'full-sky') setFullSky(true)
   }
 
   function toggleSky() {
@@ -145,6 +163,18 @@ export default function Workspace({
   const activeNote = notes.find(n => n.id === activeId) || null
   const body = activeNote ? (noteBodies[activeNote.id] || '') : ''
 
+  // Backlinks: which other notes mention the current note's title.
+  const backlinks = useMemo(() => {
+    if (!activeNote) return 0
+    const title = activeNote.title.toLowerCase()
+    let count = 0
+    for (const [id, body] of Object.entries(noteBodies)) {
+      if (id === activeId || !body) continue
+      if (body.toLowerCase().includes(title)) count++
+    }
+    return count
+  }, [activeNote, activeId, noteBodies])
+
   const linked = useMemo(() => {
     if (!activeNote) return []
     const ids = new Set()
@@ -161,6 +191,7 @@ export default function Workspace({
       <TabBar tabs={tabs} activeId={activeId}
         onSelect={openNote} onClose={closeTab} onNew={onNewNote}
         onSettings={() => setPseudoTab('settings')}
+        onCustomize={() => setPseudoTab('customization')}
         onCommand={() => setCommandOpen(true)}
         pseudoTab={pseudoTab} onClosePseudo={() => setPseudoTab(null)}
         detailsOpen={detailsOpen} onToggleDetails={() => setDetailsOpen(v => !v)} />
@@ -180,7 +211,8 @@ export default function Workspace({
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         {/* Persistent left icon rail -- always visible, carries app navigation. */}
         <div style={{ width: 44, borderRight: `1px solid ${colors.border}`, flexShrink: 0,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: space[2], gap: space[2] }}>
+          display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: space[2], gap: space[2],
+          background: colors.bgTranslucent, backdropFilter: 'blur(12px)' }}>
           <button type="button" onClick={toggleSky} aria-label={skyCollapsed ? 'show explorer' : 'hide explorer'}
             title={skyCollapsed ? 'Show explorer' : 'Hide explorer'}
             style={{ background: 'none', border: 'none', color: skyCollapsed ? colors.textMuted : colors.accent,
@@ -195,33 +227,45 @@ export default function Workspace({
               cursor: 'pointer', padding: 4, borderRadius: 4 }}>
             <Icon name="sparkles" size={16} />
           </button>
+          <button type="button" onClick={() => setPseudoTab('customization')} aria-label="customization" title="Customization"
+            style={{ background: 'none', border: 'none', color: pseudoTab === 'customization' ? colors.accent : colors.textMuted,
+              cursor: 'pointer', padding: 4, borderRadius: 4 }}>
+            <Icon name="palette" size={16} />
+          </button>
+          <button type="button" onClick={() => { setPseudoTab('stats'); onOpenStats() }} aria-label="stats" title="Sky overview"
+            style={{ background: 'none', border: 'none', color: pseudoTab === 'stats' ? colors.accent : colors.textMuted,
+              cursor: 'pointer', padding: 4, borderRadius: 4 }}>
+            <Icon name="bar-chart" size={16} />
+          </button>
         </div>
         {/* File explorer panel -- slides in/out next to the icon rail. */}
         {!skyCollapsed && (
-          <div style={{ width: 264, borderRight: `1px solid ${colors.border}`, display: 'flex', minHeight: 0 }}>
+          <div style={{ width: 264, borderRight: `1px solid ${colors.border}`, display: 'flex', minHeight: 0,
+            background: colors.bgTranslucent, backdropFilter: 'blur(12px)' }}>
             <FileExplorer notes={notes} activeId={activeId} skyName={skyName}
               onOpenNote={openNote}
               onCreateNote={async (name, folder) => {
                 const note = await onCreateNote(name, '')
                 if (note) openNote(note.id)
               }}
-              onCreateFolder={async (name) => {
-                try {
-                  const note = await wails.App.CreateFolder(name, '')
-                  if (note) openNote(note.id)
-                } catch {}
-              }}
-              onRefresh={onRescan} />
+              onCreateFolder={() => { setFolderName(''); setShowFolderPrompt(true) }}
+              onRefresh={onRescan}
+              skyPath={skyPath}
+              onManageSky={() => setShowManageSky(true)} />
           </div>
         )}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-          {!activeNote && pseudoTab === 'stats' ? (
+          {pseudoTab === 'stats' ? (
             <div style={{ flex: 1, overflow: 'auto' }}>
               <StatsOverlay stats={stats} />
             </div>
-          ) : !activeNote && pseudoTab === 'settings' ? (
+          ) : pseudoTab === 'settings' ? (
             <div style={{ flex: 1, overflow: 'auto' }}>
               <SettingsPane skyName={skyName} skyPath={skyPath} version={version} />
+            </div>
+          ) : pseudoTab === 'customization' ? (
+            <div style={{ flex: 1, overflow: 'auto' }}>
+              <CustomizationPane />
             </div>
           ) : !activeNote ? (
             <div style={{ flex: 1, overflow: 'auto', padding: space[4] }}>
@@ -239,15 +283,30 @@ export default function Workspace({
                 setDirty={(v) => setDirty(prev => ({ ...prev, [activeNote.id]: v }))}
                 linked={linked}
                 onOpenNote={openNote}
+                skyName={skyName}
+                onCursorChange={setCursorPos}
+                editorMode={editorMode}
+                onEditorModeChange={setEditorMode}
               />
             </div>
           )}
-          <StatusBar words={body.trim() ? body.trim().split(/\s+/).length : 0}
-            saveState={dirty[activeNote?.id] ? 'unsaved' : 'saved'} skyName={skyName} version={version} />
+          {prefs.layout.show_status_bar && (
+            <StatusBar
+              words={body.trim() ? body.trim().split(/\s+/).length : 0}
+              chars={body.length}
+              line={cursorPos.line}
+              col={cursorPos.col}
+              backlinks={backlinks}
+              showCursor={editorMode === 'edit' || editorMode === 'split'}
+              saveState={dirty[activeNote?.id] ? 'unsaved' : 'saved'}
+              skyName={skyName} version={version} />
+          )}
         </div>
         {detailsOpen && activeNote && (
-          <div style={{ width: 220, borderLeft: `1px solid ${colors.border}`, overflow: 'auto', flexShrink: 0 }}>
+          <div style={{ width: 220, borderLeft: `1px solid ${colors.border}`, overflow: 'auto', flexShrink: 0,
+            background: colors.bgTranslucent, backdropFilter: 'blur(12px)' }}>
             <DetailsPanel note={activeNote} linked={linked}
+              noteBodies={noteBodies} notes={notes}
               onWish={onWish}
               onDelete={(id) => { onDelete(id); closeTab(id) }}
               onOpenNote={openNote} />
@@ -258,8 +317,31 @@ export default function Workspace({
         <FullSky notes={notes} trails={trails} onNoteClick={openNote}
           onClose={() => setFullSky(false)} />
       )}
+      {showManageSky && (
+        <ManageSky
+          currentSky={{ name: skyName, path: skyPath }}
+          onSwitch={(path, name) => {
+            // Reload everything after switch
+            window.location.reload()
+          }}
+          onClose={() => setShowManageSky(false)}
+        />
+      )}
+      {showFolderPrompt && (
+        <NewFolderPrompt
+          onSubmit={async (name) => {
+            try {
+              const note = await wails.App.CreateFolder(name, '')
+              if (note) openNote(note.id)
+            } catch {}
+            setShowFolderPrompt(false)
+          }}
+          onCancel={() => setShowFolderPrompt(false)}
+        />
+      )}
       {commandOpen && (
         <CommandCenter notes={notes} onOpen={openNote} onCreate={createAndOpen}
+          onAction={handleCommandAction}
           onClose={() => setCommandOpen(false)} />
       )}
     </div>

@@ -5,7 +5,7 @@ import Icon from './Icon'
 
 const STAGE_SCORE = { faintspeck: 1, dimstar: 2, steadystar: 3, brightstar: 4, brilliantstar: 5 }
 
-export default function DetailsPanel({ note, linked, onWish, onDelete, onOpenNote }) {
+export default function DetailsPanel({ note, linked, noteBodies, notes, onWish, onDelete, onOpenNote }) {
   const [wishMsg, setWishMsg] = useState(null)
   const score = STAGE_SCORE[note.stage] || 1
 
@@ -54,6 +54,40 @@ export default function DetailsPanel({ note, linked, onWish, onDelete, onOpenNot
           </button>
         ))
       )}
+
+      {/* Backlinks */}
+      <div style={{ ...typography.sectionLabel, color: colors.textMuted, margin: `${space[2]}px 0` }}>Backlinks</div>
+      {(() => {
+        if (!noteBodies || !notes) return <div style={{ fontSize: 11, color: colors.textDim }}>No data.</div>
+        const title = note.title.toLowerCase()
+        const matches = []
+        for (const [id, body] of Object.entries(noteBodies)) {
+          if (id === note.id || !body) continue
+          const idx = body.toLowerCase().indexOf(title)
+          if (idx === -1) continue
+          const start = Math.max(0, idx - 40)
+          const end = Math.min(body.length, idx + title.length + 40)
+          const snippet = (start > 0 ? '...' : '') + body.slice(start, end).trim() + (end < body.length ? '...' : '')
+          const source = notes.find(n => n.id === id)
+          if (source) matches.push({ source, snippet })
+        }
+        if (matches.length === 0) return <div style={{ fontSize: 11, color: colors.textDim }}>No other notes mention this one.</div>
+        return matches.map(m => (
+          <button key={m.source.id} type="button" onClick={() => onOpenNote(m.source.id)}
+            style={{ display: 'block', width: '100%', background: 'none',
+              border: 'none', padding: '6px 0', cursor: 'pointer', textAlign: 'left',
+              borderBottom: `1px solid ${colors.border}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+              <StarIcon species={m.source.species} size="sm" />
+              <span style={{ fontSize: 12, color: colors.text, fontWeight: 500 }}>{m.source.title}</span>
+            </div>
+            <div style={{ fontSize: 11, color: colors.textDim, lineHeight: 1.4,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {m.snippet}
+            </div>
+          </button>
+        ))
+      })()}
     </div>
   )
 }

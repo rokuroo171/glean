@@ -116,6 +116,60 @@ const paths = {
   'folder': [
     'M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z',
   ],
+  // Lucide folder-open -- expanded folder icon.
+  // https://lucide.dev/icons/folder-open
+  'folder-open': [
+    'm6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2',
+  ],
+  // Lucide columns-2 -- split view icon.
+  // https://lucide.dev/icons/columns-2
+  'columns': [
+    'M12 5v14',
+    'M18 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z',
+  ],
+  // Lucide file-text -- markdown/text file icon.
+  // https://lucide.dev/icons/file-text
+  'file-text': [
+    'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z',
+    'M14 2v4a2 2 0 0 0 2 2h4',
+    'M10 9H8',
+    'M16 13H8',
+    'M16 17H8',
+  ],
+  // Lucide palette -- customization / theme icon.
+  // https://lucide.dev/icons/palette
+  palette: [
+    'M13.5 6.5a4.5 4.5 0 0 0-9 0c0 4 4.5 4.5 4.5 9a4.5 4.5 0 0 0 9 0c0-4.5-4.5-4.5-4.5-9z',
+    'M12 2a3 3 0 0 0-3 3c0 1.1.9 2 2 2h1a3 3 0 0 0 3-3 3 3 0 0 0-3-3z',
+  ],
+  // Lucide bar-chart-2 -- stats icon.
+  // https://lucide.dev/icons/bar-chart-2
+  'bar-chart': [
+    'M18 20V10',
+    'M12 20V4',
+    'M6 20v-6',
+  ],
+  // Lucide clock -- time display.
+  clock: [
+    'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z',
+    'M12 6v6l4 2',
+  ],
+  // Lucide monitor -- layout/display icon.
+  monitor: [
+    'M2 3h20v14H2z',
+    'M8 21h8',
+    'M12 17v4',
+  ],
+  // Lucide type -- font/text icon.
+  type: [
+    'M4 7V4h16v3',
+    'M9 20h6',
+    'M12 4v16',
+  ],
+  // Lucide zap -- cursor trail / effect icon.
+  zap: [
+    'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
+  ],
 }
 
 export default function Icon({ name, size = 16, className, style, ...rest }) {

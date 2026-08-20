@@ -8,12 +8,19 @@
   !define VERSION "1.0.0"
 !endif
 
+; Set icons for the installer and uninstaller EXEs
+!define MUI_ICON "..\..\build\windows\icon.ico"
+!define MUI_UNICON "..\..\build\windows\icon.ico"
+
 Name "glean ${VERSION}"
-OutFile "../../build/bin/glean-setup.exe"
+OutFile "..\..\build\bin\gleanInstaller.exe"
 InstallDir "$PROGRAMFILES64\glean"
 InstallDirRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\glean" "InstallLocation"
 RequestExecutionLevel admin
 Unicode true
+
+Icon "..\..\build\windows\icon.ico"
+UninstallIcon "..\..\build\windows\icon.ico"
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
@@ -41,7 +48,7 @@ FunctionEnd
 
 Section "glean" SecMain
   SetOutPath "$INSTDIR"
-  File "../../build/bin/glean.exe"
+  File "..\..\build\bin\glean.exe"
 
   WriteUninstaller "$INSTDIR\uninstall.exe"
 
