@@ -125,28 +125,53 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN: '1'
         run: |
           set -ex
-          mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/bin AppDir/usr/share/icons/hicolor/256x256/apps
           cp build/bin/glean AppDir/usr/bin/glean
           cp packaging/linux/glean.desktop AppDir/glean.desktop
+          # Convert .ico to .png for the AppImage icon
+          python3 packaging/linux/ico-to-png.py packaging/icon.ico AppDir/glean.png
+          cp AppDir/glean.png AppDir/usr/share/icons/hicolor/256x256/apps/glean.png
           wget --tries=3 --waitretry=5 https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           chmod +x linuxdeploy-x86_64.AppImage
           export LDAI_OUTPUT=glean.AppImage
           ./linuxdeploy-x86_64.AppImage --appdir AppDir --output appimage
 
-      # Windows installer: wrap the binary in NSIS so the release page
-      # carries a real setup.exe.
-      - name: Install NSIS
-        if: matrix.target == 'windows'
-        run: choco install nsis -y --no-progress
-
+      # Windows installer: compile the C# installer + uninstaller
       - name: Build Windows installer
         if: matrix.target == 'windows'
-        shell: pwsh
         run: |
-          & "C:\Program Files (x86)\NSIS\makensis.exe" /DVERSION="${{ steps.version.outputs.version }}" packaging\windows\installer.nsi
+          cmd /c "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:winexe /win32icon:packaging\icon.ico /reference:C:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF\PresentationFramework.dll /reference:C:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF\PresentationCore.dll /reference:C:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF\WindowsBase.dll /reference:C:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Xaml.dll /out:build\bin\gleanInstaller.exe installer\Installer.cs"
+          cmd /c "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:winexe /win32icon:packaging\icon.ico /reference:C:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF\PresentationFramework.dll /reference:C:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF\PresentationCore.dll /reference:C:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF\WindowsBase.dll /reference:C:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Xaml.dll /out:build\bin\gleanUninstaller.exe installer\Uninstaller.cs"
+
+      # Generate release body: commit message + changelog with clickable hashes.
+      - name: Generate changelog
+        if: startsWith(github.ref, 'refs/tags/')
+        id: changelog
+        shell: bash
+        run: |
+          PREV_TAG=$(git tag --sort=-v:refname | grep '^v' | head -2 | tail -1)
+          REPO_URL=$(git remote get-url origin | sed 's/\.git$//')
+          # Commit message body (skip first line = title)
+          BODY=$(git log -1 --pretty=format:'%b' HEAD | sed '/^$/d')
+          # Changelog with clickable hashes
+          if [ -n "$PREV_TAG" ]; then
+            LOG=$(git log --pretty=format:'- [%%h]($REPO_URL/commit/%%h) %%s' ${PREV_TAG}..HEAD)
+          else
+            LOG=$(git log --pretty=format:'- [%%h]($REPO_URL/commit/%%h) %%s')
+          fi
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "body<<$EOF" >> "$GITHUB_OUTPUT"
+          if [ -n "$BODY" ]; then
+            echo "$BODY" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+          fi
+          echo "## Changelog" >> "$GITHUB_OUTPUT"
+          echo "" >> "$GITHUB_OUTPUT"
+          echo "$LOG" >> "$GITHUB_OUTPUT"
+          echo "$EOF" >> "$GITHUB_OUTPUT"
 
       # Publish straight to the GitHub Release when this run came from a
-      # tag push. Tag v1.0.0, push, and the binaries land on the Releases page.
+      # tag push.
       - name: Package macOS app bundle
         if: matrix.target == 'macos' || matrix.target == 'macos-arm64'
         run: |
@@ -159,21 +184,25 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: glean.AppImage
+          body: ${{ steps.changelog.outputs.body }}
 
       - name: Publish Windows to Release
         if: startsWith(github.ref, 'refs/tags/') && matrix.target == 'windows'
         uses: softprops/action-gh-release@v2
         with:
           files: build/bin/gleanInstaller.exe
+          body: ${{ steps.changelog.outputs.body }}
 
       - name: Publish macOS to Release
         if: startsWith(github.ref, 'refs/tags/') && matrix.target == 'macos'
         uses: softprops/action-gh-release@v2
         with:
           files: glean-x86_64.app.zip
+          body: ${{ steps.changelog.outputs.body }}
 
       - name: Publish macOS ARM64 to Release
         if: startsWith(github.ref, 'refs/tags/') && matrix.target == 'macos-arm64'
         uses: softprops/action-gh-release@v2
         with:
           files: glean-arm64.app.zip
+          body: ${{ steps.changelog.outputs.body }}

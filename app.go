@@ -19,6 +19,8 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
+
+
 // App is the Wails application struct. Bound methods are exposed to the React frontend.
 type App struct {
 	ctx          context.Context
@@ -29,6 +31,12 @@ type App struct {
 	workspace    *store.WorkspaceStore
 	lastNoteID   string
 	lastNoteOpen time.Time
+}
+
+// SetWindowTitle updates the window title bar and taskbar preview text.
+// Call from the frontend as notes are opened or closed.
+func (a *App) SetWindowTitle(title string) {
+	runtime.WindowSetTitle(a.ctx, title)
 }
 
 // NewApp wires the sky-based stores when a sky is configured. Without a
@@ -196,7 +204,8 @@ func (a *App) GetNote(id string) (NoteView, bool) {
 }
 
 // CreateNote creates a new note with a title and returns it.
-func (a *App) CreateNote(title string, contextID string) (NoteView, error) {
+// The optional folder param places the note in a subfolder directly.
+func (a *App) CreateNote(title string, contextID string, folder string) (NoteView, error) {
 	if a.store == nil {
 		return NoteView{}, fmt.Errorf("no sky configured")
 	}
@@ -207,10 +216,8 @@ func (a *App) CreateNote(title string, contextID string) (NoteView, error) {
 	notes := a.store.All()
 	p := world.PositionForNew(notes, contextID, id)
 
-	// contextID determines the folder: if the context note is in a
-	// subfolder, the new note goes there too.
-	folder := ""
-	if contextID != "" {
+	// If folder is provided directly, use it. Otherwise derive from contextID.
+	if folder == "" && contextID != "" {
 		if ctx, ok := a.store.Get(contextID); ok && ctx.File != "" {
 			folder = store.FolderOf(ctx.File)
 		}
@@ -515,43 +522,60 @@ func (a *App) PickFolder() string {
 	return dir
 }
 
-// CreateFolder creates a new note inside a subfolder, creating the
-// folder if it does not exist.
-func (a *App) CreateFolder(name, folder string) (NoteView, error) {
+// CreateFolder creates a new empty directory under the sky.
+func (a *App) CreateFolder(name, folder string) error {
 	if a.store == nil {
-		return NoteView{}, fmt.Errorf("no sky configured")
+		return fmt.Errorf("no sky configured")
 	}
 	if name == "" {
-		name = "Untitled"
+		return fmt.Errorf("folder name is empty")
 	}
-	id := store.NewID()
-	notes := a.store.All()
-	p := world.PositionForNew(notes, "", id)
-	n := note.Note{
-		ID:         id,
-		Title:      name,
-		CreatedAt:  time.Now(),
-		WorldX:     p.X,
-		WorldY:     p.Y,
-		Positioned: true,
+
+	// Build the full folder path: skyDir/folder/name
+	var folderPath string
+	if folder == "" {
+		folderPath = filepath.Join(a.skyDir, name)
+	} else {
+		folderPath = filepath.Join(a.skyDir, folder, name)
 	}
-	path, err := store.FileNameFor(a.skyDir, folder, name)
-	if err != nil {
-		return NoteView{}, err
+
+	// Create the actual directory on disk
+	if err := os.MkdirAll(folderPath, 0o755); err != nil {
+		return fmt.Errorf("create folder: %w", err)
 	}
-	if err := store.ValidateInsideDir(a.skyDir, path); err != nil {
-		return NoteView{}, err
+	return nil
+}
+
+// ListFolders returns all subdirectories in the sky as a flat list of
+// relative paths (e.g. ["A", "A/B", "A/B/C"]). Empty for root-only skies.
+func (a *App) ListFolders() []string {
+	if a.skyDir == "" {
+		return []string{}
 	}
-	if err := store.WriteNoteFile(path, ""); err != nil {
-		return NoteView{}, err
+	var result []string
+	var walk func(dir, prefix string)
+	walk = func(dir, prefix string) {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			return
+		}
+		for _, e := range entries {
+			if !e.IsDir() {
+				continue
+			}
+			if strings.HasPrefix(e.Name(), ".") {
+				continue
+			}
+			rel := e.Name()
+			if prefix != "" {
+				rel = prefix + "/" + e.Name()
+			}
+			result = append(result, rel)
+			walk(filepath.Join(dir, e.Name()), rel)
+		}
 	}
-	rel, _ := filepath.Rel(a.skyDir, path)
-	n.File = rel
-	if err := a.store.Create(n); err != nil {
-		return NoteView{}, err
-	}
-	a.recordActivity()
-	return noteToView(n), nil
+	walk(a.skyDir, "")
+	return result
 }
 
 // MoveNote moves a note to a different folder within the sky.
