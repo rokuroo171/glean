@@ -2,15 +2,27 @@ import { useMemo, useRef, useState, useEffect } from 'react'
 import { colors, space, typography } from '../lib/theme'
 import StarIcon from './StarIcon'
 import Icon from './Icon'
+import './Tooltip.js'
 
-/* ------------------------------------------------------------------ */
-/* Tree data structure                                                 */
-/* ------------------------------------------------------------------ */
+const wails = window.go?.main
 
-function buildTree(notes) {
+// --- Tree data structure ---
+
+function buildTree(notes, folderList) {
   const root = { folders: {}, notes: [] }
+
+  for (const f of (folderList || [])) {
+    // Normalize Windows backslashes to forward slashes
+    const parts = f.replace(/\\/g, '/').split('/').filter(Boolean)
+    let node = root
+    for (const part of parts) {
+      if (!node.folders[part]) node.folders[part] = { folders: {}, notes: [] }
+      node = node.folders[part]
+    }
+  }
+
   for (const n of notes) {
-    const parts = (n.folder || '').split('/').filter(Boolean)
+    const parts = (n.folder || '').replace(/\\/g, '/').split('/').filter(Boolean)
     let node = root
     for (const part of parts) {
       if (!node.folders[part]) node.folders[part] = { folders: {}, notes: [] }
@@ -39,15 +51,17 @@ function sortFolders(folders, sort) {
   return Object.keys(folders).sort((a, b) => a.localeCompare(b))
 }
 
-/* ------------------------------------------------------------------ */
-/* Inline input for creating a file or folder                          */
-/* ------------------------------------------------------------------ */
+// --- Inline input ---
 
-function InlineInput({ isFolder, placeholder, onSubmit, onCancel }) {
-  const [value, setValue] = useState('')
+function InlineInput({ isFolder, placeholder, initialValue, onSubmit, onCancel }) {
+  const [value, setValue] = useState(initialValue || '')
   const ref = useRef(null)
 
-  useEffect(() => { ref.current?.focus() }, [])
+  useEffect(() => {
+    ref.current?.focus()
+    // Select all text for rename mode
+    if (initialValue) ref.current?.select()
+  }, [])
 
   function handleKeyDown(e) {
     if (e.key === 'Enter' && value.trim()) {
@@ -72,23 +86,23 @@ function InlineInput({ isFolder, placeholder, onSubmit, onCancel }) {
   )
 }
 
-/* ------------------------------------------------------------------ */
-/* Recursive folder tree node                                          */
-/* ------------------------------------------------------------------ */
+// --- Folder tree node ---
 
 function FolderNode({ name, node, depth, activeId, sort, collapsed, toggleFolder,
-  onOpenNote, creating, setCreating, onCreateFile }) {
-  const path = depth === 0 ? name : `${name}`
-  const isCollapsed = collapsed[name]
+  onOpenNote, creating, setCreating, onCreateFile, onCreateFolder, parentPath, renaming, onRename }) {
+  const fullPath = parentPath ? `${parentPath}/${name}` : name
+  const isCollapsed = collapsed[fullPath]
   const children = sortFolders(node.folders, sort)
   const notes = sortNotes(node.notes, sort)
-  const indent = depth * 16
+  const indent = depth * 12
 
   return (
     <div>
-      {/* Folder header row */}
-      <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
-        <button type="button" onClick={() => toggleFolder(name)}
+      <div style={{ display: 'flex', alignItems: 'center', overflow: 'hidden' }}
+        className="folder-row"
+        onMouseEnter={(e) => { e.currentTarget.querySelectorAll('.folder-add-btn').forEach(b => b.style.display = 'flex') }}
+        onMouseLeave={(e) => { e.currentTarget.querySelectorAll('.folder-add-btn').forEach(b => b.style.display = 'none') }}>
+        <button type="button" onClick={() => toggleFolder(fullPath)}
           style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1,
             padding: `4px ${8 + indent}px`, background: 'none', border: 'none',
             cursor: 'pointer', textAlign: 'left' }}>
@@ -100,46 +114,62 @@ function FolderNode({ name, node, depth, activeId, sort, collapsed, toggleFolder
           <Icon name={isCollapsed ? 'folder' : 'folder-open'} size={13}
             style={{ color: colors.accentWarm, flexShrink: 0 }} />
           <span style={{ fontSize: 12, fontWeight: 500, color: colors.text,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            flex: 1, minWidth: 40 }}>
             {name}
           </span>
         </button>
-        <button type="button" title="New file in folder"
-          style={{ background: 'none', border: 'none', color: colors.textMuted,
-            cursor: 'pointer', padding: 2, marginRight: 6, borderRadius: 3,
-            display: 'none', // shown on hover via CSS
-            alignItems: 'center', justifyContent: 'center' }}
+        <button type="button"
           className="folder-add-btn"
-          onClick={(e) => { e.stopPropagation(); setCreating({ type: 'file', folder: name }) }}>
-          <Icon name="file-plus" size={10} />
+          data-tip="New file"
+          style={{ display: 'none', background: 'none', border: 'none', color: colors.textMuted,
+            cursor: 'pointer', padding: 3, marginRight: 2, borderRadius: 3,
+            alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+          onClick={(e) => { e.stopPropagation(); setCreating({ type: 'file', folder: fullPath }) }}>
+          <Icon name="file-plus" size={12} />
+        </button>
+        <button type="button"
+          className="folder-add-btn"
+          data-tip="New folder"
+          style={{ display: 'none', background: 'none', border: 'none', color: colors.textMuted,
+            cursor: 'pointer', padding: 3, marginRight: 6, borderRadius: 3,
+            alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+          onClick={(e) => { e.stopPropagation(); setCreating({ type: 'folder', folder: fullPath }) }}>
+          <Icon name="folder-plus" size={12} />
         </button>
       </div>
 
-      {/* Children: notes and subfolders */}
       {!isCollapsed && (
         <div>
-          {/* Notes in this folder */}
           {sortNotes(node.notes, sort).map(note => (
             <NoteRow key={note.id} note={note} depth={depth + 1} activeId={activeId}
-              onOpenNote={onOpenNote} />
+              onOpenNote={onOpenNote} renaming={renaming} onRename={onRename} />
           ))}
 
-          {/* Inline file creation */}
-          {creating && creating.folder === name && creating.type === 'file' && (
+          {creating && creating.folder === fullPath && creating.type === 'file' && (
             <div style={{ paddingLeft: 8 + (depth + 1) * 16 }}>
               <InlineInput isFolder={false} placeholder="Note name..."
-                onSubmit={(n) => onCreateFile(n, name)}
+                onSubmit={(n) => onCreateFile(n, fullPath)}
                 onCancel={() => setCreating(null)} />
             </div>
           )}
 
-          {/* Subfolders */}
+          {creating && creating.folder === fullPath && creating.type === 'folder' && (
+            <div style={{ paddingLeft: 8 + (depth + 1) * 16 }}>
+              <InlineInput isFolder={true} placeholder="Folder name..."
+                onSubmit={(n) => { if (onCreateFolder) onCreateFolder(n, fullPath); setCreating(null) }}
+                onCancel={() => setCreating(null)} />
+            </div>
+          )}
+
           {sortFolders(node.folders, sort).map(subName => (
             <FolderNode key={subName} name={subName} node={node.folders[subName]}
               depth={depth + 1} activeId={activeId} sort={sort}
               collapsed={collapsed} toggleFolder={toggleFolder}
               onOpenNote={onOpenNote} creating={creating}
-              setCreating={setCreating} onCreateFile={onCreateFile} />
+              setCreating={setCreating} onCreateFile={onCreateFile}
+              onCreateFolder={onCreateFolder} parentPath={fullPath}
+              renaming={renaming} onRename={onRename} />
           ))}
         </div>
       )}
@@ -147,13 +177,21 @@ function FolderNode({ name, node, depth, activeId, sort, collapsed, toggleFolder
   )
 }
 
-/* ------------------------------------------------------------------ */
-/* Note row                                                            */
-/* ------------------------------------------------------------------ */
+// --- Note row ---
 
-function NoteRow({ note, depth, activeId, onOpenNote }) {
+function NoteRow({ note, depth, activeId, onOpenNote, renaming, onRename }) {
   const active = note.id === activeId
-  const indent = depth * 16
+  const indent = depth * 12
+  const isRenaming = renaming && renaming.id === note.id
+
+  if (isRenaming) {
+    return (
+      <div style={{ padding: `4px ${8 + indent}px` }}>
+        <InlineInput isFolder={false} placeholder="New name..." initialValue={renaming.title}
+          onSubmit={onRename} onCancel={() => onRename(null)} />
+      </div>
+    )
+  }
 
   return (
     <button type="button" onClick={() => onOpenNote(note.id)}
@@ -169,7 +207,7 @@ function NoteRow({ note, depth, activeId, onOpenNote }) {
     >
       <StarIcon species={note.species} size="sm" />
       <span style={{ color: active ? colors.text : colors.textMuted, fontSize: 13,
-        flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        flex: 1, minWidth: 40, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         fontWeight: active ? 500 : 400 }}>
         {note.title}
       </span>
@@ -177,16 +215,45 @@ function NoteRow({ note, depth, activeId, onOpenNote }) {
   )
 }
 
-/* ------------------------------------------------------------------ */
-/* Main FileExplorer component                                         */
-/* ------------------------------------------------------------------ */
+// --- FileExplorer ---
 
 export default function FileExplorer({ notes, activeId, onOpenNote, skyName, skyPath,
   onCreateNote, onCreateFolder, onRefresh, onManageSky }) {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState('alpha')
   const [collapsed, setCollapsed] = useState({})
-  const [creating, setCreating] = useState(null) // { type: 'file'|'folder', folder: string }
+  const [creating, setCreating] = useState(null)
+  const [renaming, setRenaming] = useState(null) // { id, title, folder }
+  const [localFolders, setLocalFolders] = useState([])
+  const [refreshing, setRefreshing] = useState(false)
+
+  // F2 key to rename selected note
+  useEffect(() => {
+    function handleKey(e) {
+      if (e.key === 'F2' && activeId && !creating && !renaming) {
+        e.preventDefault()
+        const note = notes.find(n => n.id === activeId)
+        if (note) setRenaming({ id: note.id, title: note.title, folder: note.folder })
+      }
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [activeId, notes, creating, renaming])
+
+  // Fetch folders directly inside this component to bypass stale closures
+  const fetchFolders = async () => {
+    if (!wails) return
+    try {
+      const f = await wails.App.ListFolders()
+      setLocalFolders(f || [])
+    } catch { /* ignore */ }
+  }
+
+  // Load folders on mount
+  useEffect(() => { fetchFolders() }, [])
+
+  // Re-fetch folders whenever notes change (new file/folder created)
+  useEffect(() => { fetchFolders() }, [notes])
 
   const q = query.trim().toLowerCase()
 
@@ -195,7 +262,7 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
     return notes.filter(n => n.title.toLowerCase().includes(q))
   }, [notes, q])
 
-  const tree = useMemo(() => buildTree(filtered), [filtered])
+  const tree = useMemo(() => buildTree(filtered, localFolders), [filtered, localFolders])
 
   function toggleFolder(name) {
     setCollapsed(prev => ({ ...prev, [name]: !prev[name] }))
@@ -203,13 +270,14 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
 
   function collapseAll() {
     const all = {}
-    function walk(node) {
+    function walk(node, prefix) {
       for (const f of Object.keys(node.folders)) {
-        all[f] = true
-        walk(node.folders[f])
+        const path = prefix ? `${prefix}/${f}` : f
+        all[path] = true
+        walk(node.folders[f], path)
       }
     }
-    walk(tree)
+    walk(tree, '')
     setCollapsed(all)
   }
 
@@ -218,15 +286,40 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
     setCreating(null)
   }
 
+  function handleCreateFolder(name, parentPath) {
+    if (onCreateFolder) onCreateFolder(name, parentPath || '')
+    setCreating(null)
+    setTimeout(fetchFolders, 100)
+  }
+
+  function handleRename(newTitle) {
+    if (!renaming || !newTitle || newTitle === renaming.title) { setRenaming(null); return }
+    if (wails) {
+      wails.App.SaveNote(renaming.id, newTitle, '')
+        .then(() => onRefresh && onRefresh())
+        .catch(() => {})
+    }
+    setRenaming(null)
+  }
+
   const tb = { background: 'none', border: 'none', color: colors.textMuted,
     cursor: 'pointer', padding: 3, display: 'flex', alignItems: 'center',
     justifyContent: 'center', borderRadius: 4 }
   const tbHover = { background: 'rgba(90, 106, 122, 0.15)' }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       {/* Header */}
-      <div style={{ padding: `${space[2]}px ${space[2]}px 0` }}>
+      <div style={{ padding: `${space[2]}px ${space[2]}px 0`, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: colors.accent,
+              letterSpacing: '-0.02em' }}>
+              Glean
+            </span>
+          </div>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           marginBottom: 6 }}>
           <div style={{ ...typography.sectionLabel, color: colors.textMuted,
@@ -236,37 +329,41 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
         </div>
 
         {/* Toolbar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 6 }}>
-          <button type="button" title="New file" style={tb}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 6, minWidth: 0 }}>
+          <button type="button" data-tip="New file" style={tb}
             onMouseEnter={e => Object.assign(e.currentTarget.style, tbHover)}
             onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
             onClick={() => setCreating({ type: 'file', folder: '_root' })}>
             <Icon name="file-plus" size={13} />
           </button>
-          <button type="button" title="New folder" style={tb}
+          <button type="button" data-tip="New folder" style={tb}
             onMouseEnter={e => Object.assign(e.currentTarget.style, tbHover)}
             onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
-            onClick={() => { if (onCreateFolder) onCreateFolder() }}>
+            onClick={() => setCreating({ type: 'folder', folder: '_root' })}>
             <Icon name="folder-plus" size={13} />
           </button>
           {onRefresh && (
-            <button type="button" title="Refresh" style={tb}
+            <button type="button" data-tip="Refresh" style={{ ...tb, transition: 'transform 0.3s ease', transform: refreshing ? 'rotate(360deg)' : 'none' }}
               onMouseEnter={e => Object.assign(e.currentTarget.style, tbHover)}
               onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
-              onClick={onRefresh}>
+              onClick={async () => {
+                setRefreshing(true)
+                if (onRefresh) await onRefresh()
+                await fetchFolders()
+                setTimeout(() => setRefreshing(false), 300)
+              }}>
               <Icon name="refresh-cw" size={13} />
             </button>
           )}
-          <button type="button" title="Collapse all" style={tb}
+          <button type="button" data-tip="Collapse all" style={tb}
             onMouseEnter={e => Object.assign(e.currentTarget.style, tbHover)}
             onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
             onClick={collapseAll}>
             <Icon name="layout-list" size={13} />
           </button>
           <div style={{ flex: 1 }} />
-          <button type="button" style={{ ...tb, padding: 2 }}
-            onClick={() => setSort(s => s === 'alpha' ? 'recent' : 'alpha')}
-            title={sort === 'alpha' ? 'Sort by recent' : 'Sort alphabetically'}>
+          <button type="button" data-tip={sort === "alpha" ? "Sort by recent" : "Sort A-Z"} style={{ ...tb, padding: 2 }}
+            onClick={() => setSort(s => s === 'alpha' ? 'recent' : 'alpha')}>
             <Icon name={sort === 'alpha' ? 'star' : 'pencil'} size={11} />
           </button>
         </div>
@@ -287,27 +384,31 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
             onSubmit={(n) => handleCreateFile(n, '_root')}
             onCancel={() => setCreating(null)} />
         )}
+        {creating && creating.folder === '_root' && creating.type === 'folder' && (
+          <InlineInput isFolder={true} placeholder="Folder name..."
+            onSubmit={(n) => { if (onCreateFolder) onCreateFolder(n, ''); setCreating(null); setTimeout(fetchFolders, 100) }}
+            onCancel={() => setCreating(null)} />
+        )}
 
-
-        {filtered.length === 0 && !creating ? (
+        {filtered.length === 0 && Object.keys(tree.folders).length === 0 && !creating ? (
           <div style={{ padding: `0 ${space[2]}px`, fontSize: 12, color: colors.textDim }}>
             {q ? 'No matching files.' : 'No notes yet.'}
           </div>
         ) : (
           <>
-            {/* Root notes (no folder) */}
             {sortNotes(tree.notes, sort).map(note => (
               <NoteRow key={note.id} note={note} depth={0} activeId={activeId}
-                onOpenNote={onOpenNote} />
+                onOpenNote={onOpenNote} renaming={renaming} onRename={handleRename} />
             ))}
 
-            {/* Nested folders */}
             {sortFolders(tree.folders, sort).map(name => (
               <FolderNode key={name} name={name} node={tree.folders[name]}
                 depth={0} activeId={activeId} sort={sort}
                 collapsed={collapsed} toggleFolder={toggleFolder}
                 onOpenNote={onOpenNote} creating={creating}
-                setCreating={setCreating} onCreateFile={handleCreateFile} />
+                setCreating={setCreating} onCreateFile={handleCreateFile}
+                onCreateFolder={handleCreateFolder} parentPath=""
+                renaming={renaming} onRename={handleRename} />
             ))}
           </>
         )}
@@ -319,7 +420,6 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
         <div style={{ fontSize: 11, color: colors.textDim, marginBottom: 4 }}>
           {notes.length} {notes.length === 1 ? 'note' : 'notes'}
         </div>
-        {/* Sky picker row */}
         <button type="button" onClick={onManageSky}
           style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%',
             padding: '4px 6px', background: 'rgba(180, 140, 80, 0.06)',

@@ -216,10 +216,16 @@ export default function CustomizationPane() {
 
       {/* Editor section */}
       <Section title="Editor" icon="pencil">
-        <div style={{ ...typography.sectionLabel, color: colors.textMuted, marginBottom: 8 }}>
-          Cursor trail
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+        <Toggle label="Cursor trail"
+          checked={prefs.editor.cursor_trail_enabled}
+          onChange={(v) => updatePrefs({ editor: { cursor_trail_enabled: v } })} />
+
+        {prefs.editor.cursor_trail_enabled && (
+          <>
+            <div style={{ ...typography.sectionLabel, color: colors.textMuted, marginBottom: 8, marginTop: 12 }}>
+              Trail style
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
           {trailModes.map(mode => (
             <TrailCard key={mode.id} mode={mode}
               active={prefs.editor.cursor_trail_mode === mode.id}
@@ -254,6 +260,8 @@ export default function CustomizationPane() {
             ))}
           </div>
         </div>
+          </>
+        )}
       </Section>
     </div>
   )

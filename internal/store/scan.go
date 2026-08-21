@@ -38,6 +38,7 @@ func scanDir(dir, skyRoot string) (map[string]string, error) {
 		if !strings.EqualFold(filepath.Ext(e.Name()), ".md") {
 			continue
 		}
+
 		// Key is the lowercase relative path without extension.
 		key := strings.ToLower(strings.TrimSuffix(rel, filepath.Ext(rel)))
 		files[key] = rel
