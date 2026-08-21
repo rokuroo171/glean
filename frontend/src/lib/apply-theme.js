@@ -1,7 +1,9 @@
+import { colors } from './theme'
+
 /**
  * Applies a theme preset + accent color by setting CSS custom properties
- * on document.documentElement. Components can read these via
- * getComputedStyle or just use the theme.js tokens for static parts.
+ * on document.documentElement and mutating the JS colors object for
+ * immediate re-render pickup.
  */
 
 const presets = {
@@ -115,6 +117,7 @@ export function applyTheme(presetName, accentHex) {
   const root = document.documentElement
   const accent = accentHex || preset.accentDefault
 
+  // Update CSS custom properties
   root.style.setProperty('--bg', preset.bg)
   root.style.setProperty('--bg-elevated', preset.bgElevated)
   root.style.setProperty('--bg-translucent', preset.bgTranslucent)
@@ -131,6 +134,24 @@ export function applyTheme(presetName, accentHex) {
   root.style.setProperty('--star-hot', preset.starHot)
   root.style.setProperty('--star-neutral', preset.starNeutral)
   root.style.setProperty('--star-purple', preset.starPurple)
+
+  // Also mutate the JS colors object so components pick up new values on re-render
+  colors.bg = preset.bg
+  colors.bgElevated = preset.bgElevated
+  colors.bgTranslucent = preset.bgTranslucent
+  colors.bgCard = preset.bgCard
+  colors.border = preset.border
+  colors.borderStrong = preset.borderStrong
+  colors.text = preset.text
+  colors.textMuted = preset.textMuted
+  colors.textDim = preset.textDim
+  colors.accent = accent
+  colors.accentWarm = preset.accentWarm
+  colors.starCool = preset.starCool
+  colors.starWarm = preset.starWarm
+  colors.starHot = preset.starHot
+  colors.starNeutral = preset.starNeutral
+  colors.starPurple = preset.starPurple
 }
 
 export { presets }

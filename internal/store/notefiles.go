@@ -137,8 +137,8 @@ func FolderOf(file string) string {
 	return dir
 }
 
-// CreateFolder creates an empty .md file inside the given subfolder so
-// the folder appears in the file system and the explorer.
+// CreateFolder is deprecated; use App.CreateFolder which creates a real
+// directory on disk.
 func CreateFolder(skyDir, folder, name string) (string, error) {
 	return FileNameFor(skyDir, folder, name)
 }

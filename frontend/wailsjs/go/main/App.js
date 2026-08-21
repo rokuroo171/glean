@@ -6,8 +6,8 @@ export function CreateFolder(arg1, arg2) {
   return window['go']['main']['App']['CreateFolder'](arg1, arg2);
 }
 
-export function CreateNote(arg1, arg2) {
-  return window['go']['main']['App']['CreateNote'](arg1, arg2);
+export function CreateNote(arg1, arg2, arg3) {
+  return window['go']['main']['App']['CreateNote'](arg1, arg2, arg3);
 }
 
 export function DefaultSkyPath(arg1) {
@@ -58,6 +58,10 @@ export function GetWorkspaceState() {
   return window['go']['main']['App']['GetWorkspaceState']();
 }
 
+export function ListFolders() {
+  return window['go']['main']['App']['ListFolders']();
+}
+
 export function MigrateSky() {
   return window['go']['main']['App']['MigrateSky']();
 }
@@ -100,6 +104,10 @@ export function ScanSky() {
 
 export function SetWindowSize(arg1, arg2) {
   return window['go']['main']['App']['SetWindowSize'](arg1, arg2);
+}
+
+export function SetWindowTitle(arg1) {
+  return window['go']['main']['App']['SetWindowTitle'](arg1);
 }
 
 export function SetupSky(arg1, arg2) {

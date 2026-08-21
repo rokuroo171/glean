@@ -70,6 +70,8 @@ async function getSkyPath() {
   return 'local'
 }
 
+
+
 export default function App() {
   const [setup, setSetup] = useState('loading') // loading | setup | recovery | workspace
   const [skyState, setSkyState] = useState(null)
@@ -109,11 +111,17 @@ export default function App() {
   // setup gets its scan results instead of the empty pre-setup state.
   useEffect(() => {
     if (setup !== 'workspace') return
-    loadSky()
+    // Direct call to avoid stale useCallback closures
+    (async () => {
+      const [n, t] = await Promise.all([getNotes(), getTrails()])
+      setNotes(n)
+      setTrails(t)
+
+    })()
     loadStats()
     getSkyName().then(setSkyName)
     getSkyPath().then(setSkyPath)
-  }, [setup, loadSky, loadStats])
+  }, [setup])
 
   const handleOpenNote = useCallback(async (id) => {
     if (wails) {
@@ -177,10 +185,10 @@ export default function App() {
     loadSky()
   }, [loadSky])
 
-  const handleCreate = useCallback(async (title, contextId) => {
+  const handleCreate = useCallback(async (title, contextId, folder) => {
     let note
     if (wails) {
-      note = await wails.App.CreateNote(title, contextId || '')
+      note = await wails.App.CreateNote(title, contextId || '', folder || '')
     } else {
       note = {
         id: String(Date.now()),
@@ -238,7 +246,7 @@ export default function App() {
         stats={stats}
         skyName={skyName}
         skyPath={skyPath}
-        version="v1.0.0"
+        version="v1.1.0"
         onOpenNote={handleOpenNote}
         onNewNote={handleNewNote}
         onOpenStats={handleOpenStats}
