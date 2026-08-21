@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { colors, space } from '../lib/theme'
 import { usePreferences } from '../lib/preferences-context'
 import TabBar from './TabBar'
@@ -13,7 +13,6 @@ import CustomizationPane from './CustomizationPane'
 import FullSky from './FullSky'
 import CommandCenter from './CommandCenter'
 import Icon from './Icon'
-import NewFolderPrompt from './NewFolderPrompt'
 import ManageSky from './ManageSky'
 
 const wails = window.go?.main
@@ -37,11 +36,34 @@ export default function Workspace({
   const [dirty, setDirty] = useState({}) // { [noteId]: true }
   const [externalChanged, setExternalChanged] = useState(false)
   const [externalBody, setExternalBody] = useState(null)
-  const [showFolderPrompt, setShowFolderPrompt] = useState(false)
-
   const [showManageSky, setShowManageSky] = useState(false)
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 })
   const [editorMode, setEditorMode] = useState('preview')
+  const [sidebarWidth, setSidebarWidth] = useState(264)
+  const draggingRef = useRef(false)
+
+  function startResize(e) {
+    draggingRef.current = true
+    const startX = e.clientX
+    const startW = sidebarWidth
+    function onMove(ev) {
+      if (!draggingRef.current) return
+      const delta = ev.clientX - startX
+      const next = Math.min(Math.max(startW + delta, 180), 500)
+      setSidebarWidth(next)
+    }
+    function onUp() {
+      draggingRef.current = false
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }
 
   // Restore tabs once at mount.
   useEffect(() => {
@@ -163,6 +185,23 @@ export default function Workspace({
   const activeNote = notes.find(n => n.id === activeId) || null
   const body = activeNote ? (noteBodies[activeNote.id] || '') : ''
 
+  // Update window title and taskbar preview when active note or pseudo tab changes.
+  useEffect(() => {
+    if (wails?.App?.SetWindowTitle) {
+      if (pseudoTab === 'stats') {
+        wails.App.SetWindowTitle('Sky overview \u2014 glean')
+      } else if (pseudoTab === 'settings') {
+        wails.App.SetWindowTitle('Settings \u2014 glean')
+      } else if (pseudoTab === 'customization') {
+        wails.App.SetWindowTitle('Customization \u2014 glean')
+      } else if (activeNote) {
+        wails.App.SetWindowTitle(activeNote.title + ' - glean')
+      } else {
+        wails.App.SetWindowTitle('glean')
+      }
+    }
+  }, [activeNote, pseudoTab])
+
   // Backlinks: which other notes mention the current note's title.
   const backlinks = useMemo(() => {
     if (!activeNote) return 0
@@ -240,19 +279,33 @@ export default function Workspace({
         </div>
         {/* File explorer panel -- slides in/out next to the icon rail. */}
         {!skyCollapsed && (
-          <div style={{ width: 264, borderRight: `1px solid ${colors.border}`, display: 'flex', minHeight: 0,
-            background: colors.bgTranslucent, backdropFilter: 'blur(12px)' }}>
+          <>
+          <div style={{ width: sidebarWidth, borderRight: `1px solid ${colors.border}`, display: 'flex', minHeight: 0,
+            background: colors.bgTranslucent, backdropFilter: 'blur(12px)', flexShrink: 0, overflow: 'hidden' }}>
             <FileExplorer notes={notes} activeId={activeId} skyName={skyName}
               onOpenNote={openNote}
               onCreateNote={async (name, folder) => {
-                const note = await onCreateNote(name, '')
+                const note = await onCreateNote(name, '', folder)
                 if (note) openNote(note.id)
               }}
-              onCreateFolder={() => { setFolderName(''); setShowFolderPrompt(true) }}
+              onCreateFolder={async (name, parentPath) => {
+                try {
+                  await wails.App.CreateFolder(name, parentPath || '')
+                  onRescan()
+                } catch {}
+              }}
               onRefresh={onRescan}
               skyPath={skyPath}
               onManageSky={() => setShowManageSky(true)} />
           </div>
+          <div
+            onMouseDown={startResize}
+            style={{ width: 4, cursor: 'col-resize', flexShrink: 0, zIndex: 10,
+              background: 'transparent', transition: 'background 0.15s ease' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(180, 140, 80, 0.2)' }}
+            onMouseLeave={(e) => { if (!draggingRef.current) e.currentTarget.style.background = 'transparent' }}
+          />
+          </>
         )}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           {pseudoTab === 'stats' ? (
@@ -327,18 +380,7 @@ export default function Workspace({
           onClose={() => setShowManageSky(false)}
         />
       )}
-      {showFolderPrompt && (
-        <NewFolderPrompt
-          onSubmit={async (name) => {
-            try {
-              const note = await wails.App.CreateFolder(name, '')
-              if (note) openNote(note.id)
-            } catch {}
-            setShowFolderPrompt(false)
-          }}
-          onCancel={() => setShowFolderPrompt(false)}
-        />
-      )}
+
       {commandOpen && (
         <CommandCenter notes={notes} onOpen={openNote} onCreate={createAndOpen}
           onAction={handleCommandAction}

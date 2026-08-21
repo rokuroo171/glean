@@ -3,9 +3,9 @@
 import {main} from '../models';
 import {store} from '../models';
 
-export function CreateFolder(arg1:string,arg2:string):Promise<main.NoteView>;
+export function CreateFolder(arg1:string,arg2:string):Promise<void>;
 
-export function CreateNote(arg1:string,arg2:string):Promise<main.NoteView>;
+export function CreateNote(arg1:string,arg2:string,arg3:string):Promise<main.NoteView>;
 
 export function DefaultSkyPath(arg1:string):Promise<string>;
 
@@ -31,6 +31,8 @@ export function GetTrails():Promise<Array<main.TrailView>>;
 
 export function GetWorkspaceState():Promise<store.WorkspaceState>;
 
+export function ListFolders():Promise<Array<string>>;
+
 export function MigrateSky():Promise<store.MigrateReport>;
 
 export function MoveNote(arg1:string,arg2:string):Promise<void>;
@@ -52,6 +54,8 @@ export function SaveWorkspaceState(arg1:store.WorkspaceState):Promise<void>;
 export function ScanSky():Promise<Array<main.NoteView>>;
 
 export function SetWindowSize(arg1:number,arg2:number):Promise<void>;
+
+export function SetWindowTitle(arg1:string):Promise<void>;
 
 export function SetupSky(arg1:string,arg2:string):Promise<main.SkyStateView>;
 

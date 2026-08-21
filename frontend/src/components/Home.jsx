@@ -50,9 +50,9 @@ function HomeBackground() {
         style={{
           position: 'absolute',
           right: 0,
-          top: '10%',
+          top: 0,
           width: '55%',
-          height: '70%',
+          height: '100%',
           background: 'radial-gradient(ellipse at 70% 40%, rgba(60,80,120,0.12) 0%, transparent 70%)',
           pointerEvents: 'none',
         }}

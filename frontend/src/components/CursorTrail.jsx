@@ -1,6 +1,3 @@
-import { useEffect, useRef, useCallback } from 'react'
-import { usePreferences } from '../lib/preferences-context'
-
 /**
  * CursorTrail renders a canvas overlay on top of a textarea with three
  * animated cursor trail effects:
@@ -11,6 +8,10 @@ import { usePreferences } from '../lib/preferences-context'
  * - sparkle: Glowing star particles that emit and drift outward.
  * - ink:     Smooth bezier brush stroke that follows the cursor and fades.
  */
+
+// Work In Progress!
+import { useEffect, useRef, useCallback } from 'react'
+import { usePreferences } from '../lib/preferences-context'
 export default function CursorTrail({ textareaRef, containerRef }) {
   const canvasRef = useRef(null)
   const animRef = useRef(null)
@@ -20,6 +21,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
   const inkStroke = useRef({ points: [], active: false })
   const { prefs } = usePreferences()
 
+  const enabled = prefs.editor.cursor_trail_enabled !== false
   const mode = prefs.editor.cursor_trail_mode
   const intensity = prefs.editor.cursor_trail_intensity
   const trailColor =
@@ -30,7 +32,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
   const intensityMap = { subtle: 0.6, normal: 1, vivid: 1.6 }
   const mul = intensityMap[intensity] || 1
 
-  // ── helpers ───────────────────────────────────────────────────────
+  // --- helpers ---
 
   /** Convert textarea selection to pixel coordinates */
   const getCursorPixelPos = useCallback(() => {
@@ -62,7 +64,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
     }
   })()
 
-  // ── resize canvas ─────────────────────────────────────────────────
+  // resize canvas
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -76,7 +78,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
     return () => obs.disconnect()
   }, [containerRef])
 
-  // ── cursor tracking ───────────────────────────────────────────────
+  // cursor tracking
 
   useEffect(() => {
     const ta = textareaRef?.current
@@ -112,7 +114,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
     }
   }, [textareaRef, getCursorPixelPos, mode])
 
-  // ── kitty blob spawner ────────────────────────────────────────────
+  // kitty blob spawner
 
   function spawnBlob(from, to, dist) {
     blobs.current.push({
@@ -139,7 +141,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
     if (blobs.current.length > 6) blobs.current.shift()
   }
 
-  // ── sparkle spawner ───────────────────────────────────────────────
+  // sparkle spawner
 
   function spawnSparkles(pos, dist) {
     const count = Math.floor(5 + Math.min(dist / 30, 8)) * mul
@@ -163,7 +165,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
     if (sparkles.current.length > 120) sparkles.current.splice(0, sparkles.current.length - 120)
   }
 
-  // ── animation loop ────────────────────────────────────────────────
+  // animation loop
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -175,7 +177,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
       if (!running) return
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-      // ── draw kitty blobs ──
+      // draw kitty blobs
       for (let i = blobs.current.length - 1; i >= 0; i--) {
         const b = blobs.current[i]
 
@@ -270,7 +272,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
         }
       }
 
-      // ── draw sparkles ──
+      // draw sparkles
       for (let i = sparkles.current.length - 1; i >= 0; i--) {
         const p = sparkles.current[i]
         p.life -= p.decay
@@ -329,7 +331,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
         ctx.restore()
       }
 
-      // ── draw ink stroke ──
+      // draw ink stroke
       const pts = inkStroke.current.points
       if (pts.length > 1) {
         // Decay old points
@@ -389,6 +391,8 @@ export default function CursorTrail({ textareaRef, containerRef }) {
     return () => { running = false; if (animRef.current) cancelAnimationFrame(animRef.current) }
   }, [trailColor, mul, colorRGB])
 
+  if (!enabled) return null
+
   return (
     <canvas
       ref={canvasRef}
@@ -397,7 +401,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
   )
 }
 
-// ── utilities ─────────────────────────────────────────────────────
+// utilities
 
 function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3) }
 

@@ -6,7 +6,7 @@ const wails = window.go?.main
 const defaultPrefs = {
   theme: { preset: 'midnight', accent_hex: '#5b9fd4' },
   layout: { sidebar_position: 'left', density: 'comfortable', show_status_bar: true },
-  editor: { cursor_trail_mode: 'kitty', cursor_trail_color: 'accent', cursor_trail_intensity: 'normal' },
+  editor: { cursor_trail_enabled: true, cursor_trail_mode: 'kitty', cursor_trail_color: 'accent', cursor_trail_intensity: 'normal' },
 }
 
 const PreferencesContext = createContext({
