@@ -176,7 +176,7 @@ namespace GleanInstaller
             });
             p.Children.Add(new TextBlock
             {
-                Text = "v1.1.0",
+                Text = "v1.1.1",
                 Foreground = TM,
                 FontSize = 10,
                 HorizontalAlignment = HorizontalAlignment.Center
@@ -444,34 +444,13 @@ namespace GleanInstaller
                 System.Threading.Thread.Sleep(200);
                 try { Directory.CreateDirectory(installDir); } catch { }
 
-                string[] files = { "glean.exe" };
-                for (int i = 0; i < files.Length; i++)
-                {
-                    string src = Path.Combine(srcDir, files[i]);
-                    string dst = Path.Combine(installDir, files[i]);
-                    try
-                    {
-                        if (!File.Exists(src))
-                            src = Path.Combine(srcDir, "..", files[i]);
-                        if (File.Exists(src))
-                            File.Copy(src, dst, true);
-                    }
-                    catch { }
-                    update(15 + (i + 1) * 25, "Copying " + files[i] + "...");
-                    System.Threading.Thread.Sleep(200);
-                }
+                ExtractFile("glean.exe", "glean.exe", installDir);
+                update(40, "Copying glean.exe...");
+                System.Threading.Thread.Sleep(200);
 
+                ExtractFile("gleanUninstaller.exe", "gleanUninstaller.exe", installDir);
                 update(55, "Copying uninstaller...");
                 System.Threading.Thread.Sleep(200);
-                try
-                {
-                    string uninstallerSrc = Path.Combine(srcDir, "gleanUninstaller.exe");
-                    if (!File.Exists(uninstallerSrc))
-                        uninstallerSrc = Path.Combine(srcDir, "..", "gleanUninstaller.exe");
-                    if (File.Exists(uninstallerSrc))
-                        File.Copy(uninstallerSrc, Path.Combine(installDir, "gleanUninstaller.exe"), true);
-                }
-                catch { }
 
                 update(65, "Creating Start Menu shortcut...");
                 try
@@ -502,11 +481,11 @@ namespace GleanInstaller
                 update(80, "Writing registry entries...");
                 try
                 {
-                    string key = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Glean";
+                    string key = @"HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Glean";
                     string uninstallerPath = Path.Combine(installDir, "gleanUninstaller.exe");
                     string iconPath = Path.Combine(installDir, "glean.exe");
                     RunReg(key, "DisplayName", "Glean");
-                    RunReg(key, "DisplayVersion", "1.1.0");
+                    RunReg(key, "DisplayVersion", "1.1.1");
                     RunReg(key, "Publisher", "rokuroo171");
                     RunReg(key, "InstallLocation", installDir);
                     RunReg(key, "UninstallString", "\"" + uninstallerPath + "\"");
@@ -528,6 +507,36 @@ namespace GleanInstaller
             });
             t.IsBackground = true;
             t.Start();
+        }
+
+        // Extract an embedded resource for self-contained installs, falling
+        // back to a file next to the installer for local dev builds.
+        void ExtractFile(string name, string fileName, string destDir)
+        {
+            string dst = Path.Combine(destDir, fileName);
+            try
+            {
+                var asm = System.Reflection.Assembly.GetExecutingAssembly();
+                using (var rs = asm.GetManifestResourceStream(name))
+                {
+                    if (rs != null)
+                    {
+                        using (var fs = File.Create(dst))
+                            rs.CopyTo(fs);
+                        return;
+                    }
+                }
+            }
+            catch { }
+            try
+            {
+                string src = Path.Combine(srcDir, fileName);
+                if (!File.Exists(src))
+                    src = Path.Combine(srcDir, "..", fileName);
+                if (File.Exists(src))
+                    File.Copy(src, dst, true);
+            }
+            catch { }
         }
 
         void RunReg(string key, string name, string value)
