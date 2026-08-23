@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { colors, space, typography } from '../lib/theme'
 import { usePreferences } from '../lib/preferences-context'
 import { getPresets, getPreset } from '../lib/apply-theme'
@@ -141,6 +141,66 @@ function OptionGroup({ options, value, onChange }) {
   )
 }
 
+const FONT_OPTIONS = [
+  { value: 'monospace', label: 'Monospace' },
+  { value: 'Consolas, monospace', label: 'Consolas' },
+  { value: '"Fira Code", monospace', label: 'Fira Code' },
+  { value: '"JetBrains Mono", monospace', label: 'JetBrains Mono' },
+  { value: '"Source Code Pro", monospace', label: 'Source Code Pro' },
+  { value: 'ui-monospace, monospace', label: 'System Mono' },
+]
+
+function FontSelect({ value, onChange }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  const current = FONT_OPTIONS.find(f => f.value === value)
+
+  useEffect(() => {
+    if (!open) return
+    function onDown(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
+
+  return (
+    <div ref={ref} style={{ marginBottom: 10, position: 'relative' }}>
+      <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 4 }}>Font</div>
+      <button type="button" onClick={() => setOpen(v => !v)}
+        style={{ width: '100%', padding: '6px 10px', borderRadius: 6, fontSize: 12,
+          background: colors.bg, border: '1px solid ' + colors.border,
+          color: colors.text, cursor: 'pointer', textAlign: 'left',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          fontFamily: value }}>
+        <span>{current?.label || value}</span>
+        <span style={{ color: colors.textMuted, fontSize: 10 }}>{open ? '\u25B2' : '\u25BC'}</span>
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20,
+          marginTop: 4, background: colors.bgElevated, border: '1px solid ' + colors.border,
+          borderRadius: 6, overflow: 'hidden',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}>
+          {FONT_OPTIONS.map(f => (
+            <button key={f.value} type="button"
+              onClick={() => { onChange(f.value); setOpen(false) }}
+              style={{ display: 'block', width: '100%', padding: '8px 10px',
+                background: f.value === value ? colors.accent + '22' : 'transparent',
+                border: 'none', cursor: 'pointer', textAlign: 'left',
+                fontSize: 12, color: f.value === value ? colors.accent : colors.text,
+                fontFamily: f.value,
+                transition: 'background 100ms ease-out' }}
+              onMouseEnter={(e) => { if (f.value !== value) e.currentTarget.style.background = 'rgba(90,106,122,0.1)' }}
+              onMouseLeave={(e) => { if (f.value !== value) e.currentTarget.style.background = 'transparent' }}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function TrailCard({ mode, active, onClick }) {
   const icons = { beam: 'zap', sparkle: 'sparkles', ink: 'pencil' }
   return (
@@ -240,6 +300,31 @@ export default function CustomizationPane() {
 
       {/* Editor section */}
       <Section title="Editor" icon="pencil">
+        <FontSelect value={prefs.editor.font_family}
+          onChange={(v) => updatePrefs({ editor: { ...prefs.editor, font_family: v } })} />
+        <div style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 4 }}>Size</div>
+            <select value={String(prefs.editor.font_size)}
+              onChange={(e) => updatePrefs({ editor: { ...prefs.editor, font_size: Number(e.target.value) } })}
+              style={{ width: '100%', padding: '6px 8px', borderRadius: 6, fontSize: 12,
+                background: colors.bg, border: '1px solid ' + colors.border,
+                color: colors.text, cursor: 'pointer', outline: 'none' }}>
+              {[12, 13, 14, 15, 16, 18, 20].map(s => <option key={s} value={s}>{s}px</option>)}>
+            </select>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 4 }}>Line height</div>
+            <select value={String(prefs.editor.line_height)}
+              onChange={(e) => updatePrefs({ editor: { ...prefs.editor, line_height: Number(e.target.value) } })}
+              style={{ width: '100%', padding: '6px 8px', borderRadius: 6, fontSize: 12,
+                background: colors.bg, border: '1px solid ' + colors.border,
+                color: colors.text, cursor: 'pointer', outline: 'none' }}>
+              {['1.2', '1.4', '1.6', '1.8', '2.0'].map(v => <option key={v} value={v}>{v}</option>)}>
+            </select>
+          </div>
+        </div>
+
         <Toggle label="Spelling squiggles"
           hint="Red underlines under misspelled words while typing."
           checked={prefs.editor.spell_check_enabled !== false}

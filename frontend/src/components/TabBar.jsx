@@ -20,17 +20,6 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
 
       {/* Tabs */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, minWidth: 0, overflow: 'hidden' }}>
-        {pseudoTab && (
-          <div key="pseudo"
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px',
-              borderRadius: 6, whiteSpace: 'nowrap', flexShrink: 0,
-              background: colors.bg, border: `1px solid ${colors.borderStrong}`, ...noDrag }}>
-            <span style={{ color: colors.text, fontSize: 12 }}>{pseudoLabel}</span>
-            <span role="button" aria-label={`close ${pseudoTab}`}
-              onClick={onClosePseudo}
-              style={{ color: colors.textMuted, cursor: 'pointer', display: 'flex', padding: '0 2px' }}><Icon name="x" size={12} /></span>
-          </div>
-        )}
         <AnimatePresence initial={false} mode="popLayout">
           {tabs.map(t => {
             const active = t.id === activeId
@@ -57,6 +46,17 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
             )
           })}
         </AnimatePresence>
+        {pseudoTab && (
+          <div key="pseudo"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px',
+              borderRadius: 6, whiteSpace: 'nowrap', flexShrink: 0,
+              background: colors.bg, border: `1px solid ${colors.borderStrong}`, ...noDrag }}>
+            <span style={{ color: colors.text, fontSize: 12 }}>{pseudoLabel}</span>
+            <span role="button" aria-label={`close ${pseudoTab}`}
+              onClick={onClosePseudo}
+              style={{ color: colors.textMuted, cursor: 'pointer', display: 'flex', padding: '0 2px' }}><Icon name="x" size={12} /></span>
+          </div>
+        )}
         <button type="button" onClick={onNew} aria-label="open night" data-tip="Night"
           style={{ flexShrink: 0, background: 'none', border: `1px solid ${colors.border}`,
             color: colors.textMuted, borderRadius: 6, width: 26, height: 26, cursor: 'pointer',

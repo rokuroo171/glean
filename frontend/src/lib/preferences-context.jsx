@@ -7,6 +7,9 @@ const defaultPrefs = {
   theme: { preset: 'midnight', accent_hex: '#5b9fd4' },
   layout: { sidebar_position: 'left', density: 'comfortable', show_status_bar: true },
   editor: {
+    font_family: 'monospace',
+    font_size: 14,
+    line_height: 1.6,
     spell_check_enabled: true,
     cursor_trail_enabled: true,
     cursor_trail_mode: 'beam',

@@ -29,6 +29,9 @@ type LayoutPrefs struct {
 
 // EditorPrefs controls editor behavior and appearance.
 type EditorPrefs struct {
+	FontFamily                string `json:"font_family"`                  // CSS font-family value
+	FontSize                  int    `json:"font_size"`                    // px
+	LineHeight                float64 `json:"line_height"`                 // e.g. 1.6
 	SpellCheckEnabled         *bool  `json:"spell_check_enabled"`          // nil = true (default); native spelling squiggles
 	CursorTrailEnabled        *bool  `json:"cursor_trail_enabled"`         // nil = true (default)
 	CursorTrailMode           string `json:"cursor_trail_mode"`            // "beam" (default), "sparkle", "ink"
@@ -56,6 +59,9 @@ func DefaultPreferences() Preferences {
 			ShowStatusBar:   &showStatus,
 		},
 		Editor: EditorPrefs{
+			FontFamily:                "monospace",
+			FontSize:                  14,
+			LineHeight:                1.6,
 			SpellCheckEnabled:         &spell,
 			CursorTrailEnabled:        &enabled,
 			CursorTrailMode:           "beam",
@@ -114,6 +120,15 @@ func LoadPreferences() Preferences {
 	}
 	if p.Layout.ShowStatusBar == nil {
 		p.Layout.ShowStatusBar = def.Layout.ShowStatusBar
+	}
+	if p.Editor.FontFamily == "" {
+		p.Editor.FontFamily = def.Editor.FontFamily
+	}
+	if p.Editor.FontSize <= 0 {
+		p.Editor.FontSize = def.Editor.FontSize
+	}
+	if p.Editor.LineHeight <= 0 {
+		p.Editor.LineHeight = def.Editor.LineHeight
 	}
 	if p.Editor.SpellCheckEnabled == nil {
 		p.Editor.SpellCheckEnabled = def.Editor.SpellCheckEnabled
