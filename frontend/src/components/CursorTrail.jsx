@@ -153,7 +153,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
       lastMoveAtRef.current = performance.now()
       // Trail effects only when the toggle is on.
       if (enabled) {
-        if (mode === 'ink' && !fromScroll && dist > threshold) {
+        if (mode === 'ink' && !fromScroll && dist > 1) {
           inkPointsRef.current.push({ x: pos.x, y: pos.y + (pos.h || 22) / 2, t: performance.now() })
         }
         if (!fromScroll && dist > threshold && mode === 'sparkle') {
@@ -482,8 +482,9 @@ function drawSparkles(ctx, now, p, sparklesRef) {
 function drawInk(ctx, now, p, inkPointsRef) {
   const pts = inkPointsRef.current
   if (pts.length < 2) return
-  // Drop points older than the slow stage; cap by trail length.
-  const maxAge = p.slow * 3
+
+  // Duration scales with intensity: subtle = short, vivid = long.
+  const maxAge = p.slow * (1.5 + p.mul * 1.5)
   while (pts.length > 0 && now - pts[0].t > maxAge) pts.shift()
   const cap = Math.max(16, p.length * 8)
   if (pts.length > cap) pts.splice(0, pts.length - cap)
@@ -491,27 +492,85 @@ function drawInk(ctx, now, p, inkPointsRef) {
 
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
-  ctx.shadowColor = `rgba(${p.rgb.r},${p.rgb.g},${p.rgb.b},0.35)`
-  ctx.shadowBlur = 3
+  ctx.shadowColor = `rgba(${p.rgb.r},${p.rgb.g},${p.rgb.b},0.3)`
+  ctx.shadowBlur = 2
 
-  for (let i = 1; i < pts.length; i++) {
-    const p0 = pts[i - 1]
-    const p1 = pts[i]
-    const age = now - p1.t
-    const a = 0.8 * p.mul * (0.45 * Math.exp(-age / p.fast) + 0.55 * Math.exp(-age / p.slow))
-    if (a < 0.004) continue
-    const t = i / (pts.length - 1)
-    const width = (0.8 + t * 1.8) * p.mul
-    ctx.globalAlpha = Math.min(1, a)
-    ctx.strokeStyle = `rgb(${p.rgb.r},${p.rgb.g},${p.rgb.b})`
-    ctx.lineWidth = width
-    ctx.beginPath()
-    ctx.moveTo(p0.x, p0.y)
-    const mx = (p0.x + p1.x) / 2
-    const my = (p0.y + p1.y) / 2
-    ctx.quadraticCurveTo(p0.x, p0.y, mx, my)
-    ctx.stroke()
+  // Pre-compute speed for each point (inverse of time gap).
+  // Slow moves = thick, fast moves = thin.
+  const speeds = []
+  for (let i = 0; i < pts.length; i++) {
+    if (i === 0) { speeds.push(0); continue }
+    const dt = Math.max(1, pts[i].t - pts[i - 1].t)
+    const dd = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y)
+    speeds.push(dd / dt) // px/ms
   }
+
+  // Smooth the speeds so width transitions aren't jarring.
+  const smooth = []
+  for (let i = 0; i < speeds.length; i++) {
+    const prev = speeds[Math.max(0, i - 1)]
+    const curr = speeds[i]
+    const next = speeds[Math.min(speeds.length - 1, i + 1)]
+    smooth.push((prev + curr * 2 + next) / 4)
+  }
+
+  // Map speed to width: slow (0 px/ms) = thick, fast (>0.5 px/ms) = thin.
+  const THIN = 0.6 * p.mul
+  const THICK = 4.5 * p.mul
+  const SPEED_RANGE = 0.5
+
+  // Draw as a single continuous bezier stroke with varying width.
+  // Use cubic bezier segments for smoother curves than quadratic.
+  ctx.beginPath()
+  let started = false
+  let lastW = THIN
+
+  for (let i = 0; i < pts.length; i++) {
+    const age = now - pts[i].t
+    const a = 0.85 * p.mul * (0.4 * Math.exp(-age / p.fast) + 0.6 * Math.exp(-age / p.slow))
+    if (a < 0.004) continue
+
+    const spd = Math.min(1, smooth[i] / SPEED_RANGE)
+    const w = THICK + (THIN - THICK) * spd
+    const alpha = Math.min(1, a)
+
+    if (!started) {
+      ctx.moveTo(pts[i].x, pts[i].y)
+      started = true
+      lastW = w
+      continue
+    }
+
+    // Cubic bezier tension: control points pull toward the midpoint
+    // for smoother curves than raw quadratic.
+    const prev = pts[i - 1]
+    const curr = pts[i]
+    const tension = 0.35
+    const mx = (prev.x + curr.x) / 2
+    const my = (prev.y + curr.y) / 2
+
+    // Draw segment with interpolated width (average of prev and curr).
+    const segW = (lastW + w) / 2
+    ctx.globalAlpha = alpha
+    ctx.strokeStyle = `rgb(${p.rgb.r},${p.rgb.g},${p.rgb.b})`
+    ctx.lineWidth = segW
+    ctx.beginPath()
+    ctx.moveTo(prev.x, prev.y)
+    ctx.quadraticCurveTo(
+      prev.x + (mx - prev.x) * tension + (prev.x - mx) * 0,
+      prev.y + (my - prev.y) * tension + (prev.y - my) * 0,
+      mx, my
+    )
+    ctx.quadraticCurveTo(
+      curr.x + (mx - curr.x) * tension,
+      curr.y + (my - curr.y) * tension,
+      curr.x, curr.y
+    )
+    ctx.stroke()
+
+    lastW = w
+  }
+
   ctx.globalAlpha = 1
   ctx.shadowBlur = 0
 }
