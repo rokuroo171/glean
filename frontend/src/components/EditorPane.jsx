@@ -427,8 +427,8 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                 placeholder="Write, the night holds what you seek."
                 style={{ width: '100%', height: '100%', resize: 'none', outline: 'none',
                   background: 'transparent', border: 'none', color: '#d0e0d0',
-                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-                  fontSize: 14, lineHeight: 1.6, padding: space[3],
+                  fontFamily: prefs.editor.font_family || 'monospace',
+                  fontSize: prefs.editor.font_size || 14, lineHeight: prefs.editor.line_height || 1.6, padding: space[3],
                   transition: 'box-shadow 0.6s ease-out',
                   boxShadow: typing ? `inset 0 0 30px rgba(180, 140, 80, 0.06)` : 'none' }}
               />
@@ -436,7 +436,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
             </div>
             <div style={{ width: 1, background: colors.border, flexShrink: 0 }} />
             <div ref={previewRef} style={{ flex: 1, minWidth: 0, overflow: 'auto',
-              padding: space[3], color: colors.text, lineHeight: 1.6 }}>
+              padding: space[3], color: colors.text, lineHeight: prefs.editor.line_height || 1.6 }}>
               {renderMarkdown(body)}
             </div>
           </div>
@@ -468,8 +468,8 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                 placeholder="Write, the night holds what you seek."
                 style={{ width: '100%', height: '100%', resize: 'none', outline: 'none',
                   background: 'transparent', border: 'none', color: '#d0e0d0',
-                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-                  fontSize: 14, lineHeight: 1.6 }}
+                  fontFamily: prefs.editor.font_family || 'monospace',
+                  fontSize: prefs.editor.font_size || 14, lineHeight: prefs.editor.line_height || 1.6 }}
               />
               </ContextMenu>
               </>
