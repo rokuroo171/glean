@@ -4,7 +4,7 @@ const runtime = window.runtime
 
 function Control({ label, onClick, danger }) {
   return (
-    <button type="button" aria-label={label} title={label} onClick={onClick}
+    <button type="button" aria-label={label} data-tip={label} onClick={onClick}
       style={{ '--wails-draggable': 'no-drag', background: 'none', border: 'none', width: 42, height: '100%',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         color: colors.textMuted, cursor: 'pointer', padding: 0 }}

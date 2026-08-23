@@ -31,7 +31,7 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
               style={{ color: colors.textMuted, cursor: 'pointer', display: 'flex', padding: '0 2px' }}><Icon name="x" size={12} /></span>
           </div>
         )}
-        <AnimatePresence initial={false}>
+        <AnimatePresence initial={false} mode="popLayout">
           {tabs.map(t => {
             const active = t.id === activeId
             return (
@@ -80,13 +80,13 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
           <Icon name="search" size={13} />
         </button>
         <button type="button" onClick={onCustomize} aria-label="customization"
-          title="Customization"
+          data-tip="Customization"
           style={{ background: 'none', border: 'none', color: pseudoTab === 'customization' ? colors.accent : colors.textMuted,
             cursor: 'pointer', padding: 4, borderRadius: 4 }}>
           <Icon name="palette" size={15} />
         </button>
         <button type="button" onClick={onToggleDetails} aria-label="toggle details"
-          title={detailsOpen ? 'Hide details' : 'Show details'}
+          data-tip={detailsOpen ? 'Hide details' : 'Show details'}
           style={{ background: 'none', border: 'none',
             color: detailsOpen ? colors.accent : colors.textMuted,
             cursor: 'pointer', padding: 4 }}>

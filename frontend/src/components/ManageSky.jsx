@@ -42,10 +42,11 @@ export default function ManageSky({ currentSky, onSwitch, onClose }) {
     if (!wails) return
     const path = await wails.App.PickFolder()
     if (!path) return
-    // Switch to the picked folder
+    // Adopt the picked folder as a sky: writes sky.json with the folder's
+    // name and registers it in KnownSkies (SwitchSky only repoints).
     try {
-      const name = await wails.App.SwitchSky(path)
-      if (onSwitch) onSwitch(path, name)
+      const view = await wails.App.OpenSky(path)
+      if (onSwitch) onSwitch(path, view?.sky_name)
     } catch {}
     onClose()
   }
@@ -136,7 +137,7 @@ export default function ManageSky({ currentSky, onSwitch, onClose }) {
         }}>
           <StarIcon species="warm" size="lg" />
           <div style={{ fontSize: 20, fontWeight: 600, color: colors.text }}>glean</div>
-          <div style={{ fontSize: 12, color: colors.textMuted }}>v1.1.1</div>
+          <div style={{ fontSize: 12, color: colors.textMuted }}>v1.2.0</div>
 
           <div style={{ width: '100%', maxWidth: 300, display: 'flex', flexDirection: 'column', gap: 8, marginTop: space[2] }}>
             {/* Open existing folder */}

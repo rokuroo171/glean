@@ -18,7 +18,7 @@ export default function FullSky({ notes, trails, onNoteClick, onClose }) {
         onReturnHome={onClose}
         pendingNoteId={null} onPendingNoteHandled={() => {}}
         pendingNewNote={false} onPendingNewNoteHandled={() => {}}
-        onStageUp={null} onWishGlow={null} />
+        onStageUp={null} onWishGlow={null} hideHomeButton />
     </div>
   )
 }

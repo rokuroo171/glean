@@ -48,7 +48,7 @@ export default function SkyPanel({ notes, trails, activeId, onOpenNote, onExpand
       <div style={{ padding: space[2] }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <div style={{ ...typography.sectionLabel, color: colors.textMuted }}>{skyName || 'Sky'}</div>
-          <button type="button" onClick={onExpand} aria-label="expand sky" title="Full sky"
+          <button type="button" onClick={onExpand} aria-label="expand sky" data-tip="Full sky"
             style={{ background: 'none', border: 'none', color: colors.textMuted,
               cursor: 'pointer', padding: 2 }}><Icon name="maximize" size={13} /></button>
         </div>

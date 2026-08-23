@@ -23,7 +23,7 @@ export default function Workspace({
   fetchWorkspaceState, saveWorkspaceState,
   noteBodies, // map id -> body, filled by App via OpenNote
   onBodyChange, onSaveNow, onRefreshNote, onRescan,
-  onWish, onDelete,
+  onWish, onDelete, onReplayTour,
 }) {
   const { prefs } = usePreferences()
   const [pseudoTab, setPseudoTab] = useState(null) // null | 'stats' | 'settings' | 'customization'
@@ -124,6 +124,8 @@ export default function Workspace({
     else if (actionId === 'stats') { setPseudoTab('stats'); onOpenStats() }
     else if (actionId === 'new-note') onNewNote()
     else if (actionId === 'full-sky') setFullSky(true)
+    else if (actionId === 'refresh-window') window.location.reload()
+    else if (actionId === 'replay-tour') { if (onReplayTour) onReplayTour() }
   }
 
   function toggleSky() {
@@ -189,11 +191,11 @@ export default function Workspace({
   useEffect(() => {
     if (wails?.App?.SetWindowTitle) {
       if (pseudoTab === 'stats') {
-        wails.App.SetWindowTitle('Sky overview \u2014 glean')
+        wails.App.SetWindowTitle('Sky overview - glean')
       } else if (pseudoTab === 'settings') {
-        wails.App.SetWindowTitle('Settings \u2014 glean')
+        wails.App.SetWindowTitle('Settings - glean')
       } else if (pseudoTab === 'customization') {
-        wails.App.SetWindowTitle('Customization \u2014 glean')
+        wails.App.SetWindowTitle('Customization - glean')
       } else if (activeNote) {
         wails.App.SetWindowTitle(activeNote.title + ' - glean')
       } else {
@@ -253,7 +255,7 @@ export default function Workspace({
           display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: space[2], gap: space[2],
           background: colors.bgTranslucent, backdropFilter: 'blur(12px)' }}>
           <button type="button" onClick={toggleSky} aria-label={skyCollapsed ? 'show explorer' : 'hide explorer'}
-            title={skyCollapsed ? 'Show explorer' : 'Hide explorer'}
+            data-tip={skyCollapsed ? 'Show explorer' : 'Hide explorer'}
             style={{ background: 'none', border: 'none', color: skyCollapsed ? colors.textMuted : colors.accent,
               cursor: 'pointer', padding: 4, borderRadius: 4 }}>
             <span style={{ display: 'inline-block', transition: 'transform 0.2s ease',
@@ -261,17 +263,17 @@ export default function Workspace({
               <Icon name="chevron-right" size={16} />
             </span>
           </button>
-          <button type="button" onClick={() => setFullSky(true)} aria-label="sky view" title="Sky"
+          <button type="button" onClick={() => setFullSky(true)} aria-label="sky view" data-tip="Sky"
             style={{ background: 'none', border: 'none', color: colors.textMuted,
               cursor: 'pointer', padding: 4, borderRadius: 4 }}>
             <Icon name="sparkles" size={16} />
           </button>
-          <button type="button" onClick={() => setPseudoTab('customization')} aria-label="customization" title="Customization"
+          <button type="button" data-tour="customize" onClick={() => setPseudoTab('customization')} aria-label="customization" data-tip="Customization"
             style={{ background: 'none', border: 'none', color: pseudoTab === 'customization' ? colors.accent : colors.textMuted,
               cursor: 'pointer', padding: 4, borderRadius: 4 }}>
             <Icon name="palette" size={16} />
           </button>
-          <button type="button" onClick={() => { setPseudoTab('stats'); onOpenStats() }} aria-label="stats" title="Sky overview"
+          <button type="button" onClick={() => { setPseudoTab('stats'); onOpenStats() }} aria-label="stats" data-tip="Sky overview"
             style={{ background: 'none', border: 'none', color: pseudoTab === 'stats' ? colors.accent : colors.textMuted,
               cursor: 'pointer', padding: 4, borderRadius: 4 }}>
             <Icon name="bar-chart" size={16} />
@@ -296,7 +298,8 @@ export default function Workspace({
               }}
               onRefresh={onRescan}
               skyPath={skyPath}
-              onManageSky={() => setShowManageSky(true)} />
+              onManageSky={() => setShowManageSky(true)}
+              onDelete={onDelete} />
           </div>
           <div
             onMouseDown={startResize}

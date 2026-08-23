@@ -244,6 +244,7 @@ export default function Sky({
   pendingNewNote, onPendingNewNoteHandled,
   onStageUp,
   onWishGlow,
+  hideHomeButton = false,
 }) {
   const reducedMotion = useReducedMotion()
   const tapScale = reducedMotion ? 1 : motionTokens.scale.press
@@ -505,8 +506,8 @@ export default function Sky({
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
   }, [reducedMotion])
 
-  // ─── Show/hide home button ───────────────────────────────────────────
-  const showHomeButton = !selectedNote && !editingNote && !showNewPrompt && !showStats && !searchOpen
+  // --- Show/hide home button ---
+  const showHomeButton = !hideHomeButton && !selectedNote && !editingNote && !showNewPrompt && !showStats && !searchOpen
 
   // Search fly-to (Idea 18). Focus input when search opens.
   useEffect(() => {
