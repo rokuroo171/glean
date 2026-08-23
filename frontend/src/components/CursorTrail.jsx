@@ -31,7 +31,7 @@ const INTENSITY = { subtle: 0.6, normal: 1, vivid: 1.6 }
 const BAND_MIN = 1.2
 
 // "beam" is the default trail style. Older prefs may still hold the
-// original reference name ("kitty") - alias it so saved settings survive.
+// previous mode name - alias it so saved settings survive.
 function normalizeMode(m) {
   if (m === 'kitty') return 'beam'
   return m || 'beam'
@@ -224,7 +224,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
       const target = targetRef.current
 
       // Ease the drawn position toward the real caret for ALL modes,
-      // not just beam — otherwise sparkle/ink leave the caret stuck
+      // not just beam - otherwise sparkle/ink leave the caret stuck
       // at its initial plant position.
       const pos = posRef.current
       if (pos && target) {
