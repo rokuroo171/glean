@@ -1,149 +1,141 @@
 # Contributing to glean
 
-Thanks for looking at the source. Here's how to get a working copy on your
-machine and how to send changes back.
+Thanks for helping out. This file maps the project so you can find your way
+around, build, and ship without breaking the pieces that are easy to break.
 
-## Prerequisites
+## Quick start
 
-- [Go](https://go.dev/dl/) 1.22 or later
-- [Node.js](https://nodejs.org/) 20+
-- [Wails v2](https://wails.io/docs/gettingstarted/installation) CLI
-
-Linux contributors also need the webkit2gtk and GTK dev packages:
+Prerequisites: Go 1.21+, Node 18+, the [Wails v2 CLI](https://wails.io/docs/gettingstarted/installation).
 
 ```bash
-sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev
+# 1. The backend (Go) + frontend (React), one binary
+wails build          # output: build/bin/glean(.exe)
+
+# 2. Frontend-only hot reload (mock mode)
+cd frontend
+npm install
+npm run dev          # browser preview; app runs on mock data when the
+                     # wails runtime is absent, so most UI work needs no Go
 ```
 
-Windows and macOS ship everything Wails needs out of the box.
+`wails build` regenerates the bindings under `frontend/wailsjs/`. If the
+build complains about a non-empty `frontend/wailsjs/go`, delete that dir
+first (a stale vite dev server can lock it).
 
-## Getting started
-
-```bash
-git clone https://github.com/glean/glean.git
-cd glean
-wails dev
-```
-
-`wails dev` installs frontend dependencies, builds the React app, and starts
-the Go backend with hot reload. The window that opens is the live app. Changes
-to Go or frontend files rebuild automatically.
-
-## Building for production
-
-```bash
-wails build
-```
-
-This produces a single binary in `build/bin/`. On Windows that's `glean.exe`,
-on Linux a bare binary (or the AppImage if you run the AppImage build step),
-and on macOS a `.app` bundle.
-
-## Project layout
+## Architecture
 
 ```
-glean/
-  main.go, app.go, app_lifecycle.go
-    Go backend entry point and lifecycle hooks.
-  workspace.go, setup.go
-    File-based note storage and first-run wizard.
-  internal/
-    Backend modules (sky renderer, wizard helpers, sanitiser).
-  frontend/
-    React app. src/ holds components and styles.
-  packaging/
-    App icon, NSIS installer script, Linux .desktop file.
-  build/
-    Build artifacts and Windows resources (icon, manifest).
-  installer/
-    A second Wails project that builds the setup wizard
-    as a standalone app (builds to build/bin/gleanInstaller.exe).
+main.go          entry point; wires the App and window size/title
+app.go           wails-bound API: notes, skies, preferences, stats
+setup.go         first-run setup, sky adoption (OpenSky), default paths
+workspace.go     note CRUD, visits, streaks, trails
+internal/store/  all persistence (JSON) and config paths
+installer/       C# Installer.cs + Uninstaller.cs (Windows only)
+frontend/src/
+  App.jsx        root: tabs, provider wiring, command center
+  components/    every view: Home, Sky, EditorPane, FileExplorer,
+                 CustomizationPane, OnboardingTour, ...
+  lib/           theme.js (color tokens), apply-theme.js (presets),
+                 preferences-context.jsx (prefs store contract)
+  hooks/         useReducedMotion, etc.
+  wailsjs/       generated bindings, do not hand-edit
 ```
 
-## How storage works
+### Data model
 
-glean writes plain Markdown files into `~/.config/glean/sky/`. Each note is
-a `.md` file. Metadata (brightness, adjacency, activity) lives in JSON files
-alongside them. Nothing is compressed or encrypted. If you want to back up
-your notes, copy that folder.
+- A **sky** is a plain folder. Everything about it lives in a `.glean/`
+  sidecar: `notes.json`, `.md` bodies, `stats.json`, `trails.json`,
+  `sky.json`.
+- App-wide state (preferences, known skies list) lives in the platform
+  config dir (`%APPDATA%\glean` on Windows).
+- The frontend never touches disk; all persistence goes through the Go
+  API in `app.go` / `setup.go`.
 
-## Commit messages
+## Preferences pipeline
 
-The repo uses conventional commits. The format is:
+Adding a customization switch touches all of these, in order:
 
-```
-type(scope): short description
-```
+1. `internal/store/preferences.go` - add the field to the `*Prefs` struct
+   with its default in `DefaultPreferences()` and the nil-fallback in
+   `LoadPreferences`.
+2. `app.go` - mirror the field in the `*PrefsView` struct, map it in
+   `GetPreferences` and `SavePreferences`, and sanitize it in
+   `SavePreferences` validation.
+3. `frontend/src/lib/preferences-context.jsx` - add it to `defaultPrefs`
+   so the frontend has the same fallback.
+4. `frontend/src/components/CustomizationPane.jsx` - the UI control.
+5. Consume it where it matters (e.g. `EditorPane.jsx`).
 
-Types you'll see in the log:
+Use `*bool` with nil = default-true for on/off switches so old
+`preferences.json` files get the default instead of `false`.
 
-| Type | When to use |
-|------|-------------|
-| `feat` | New feature or user-facing behavior |
-| `fix` | Bug fix |
-| `refactor` | Code change that neither fixes a bug nor adds a feature |
-| `chore` | Build, CI, dependency, or tooling change |
-| `docs` | Documentation only |
-| `style` | Formatting, whitespace, no logic change |
+## Tooltips
 
-Scopes are lowercase and match the area of the codebase: `ui`, `ci`,
-`store`, `workspace`, `wizard`, `sky`, `editor`, `konva`, `featin`,
-and so on. Keep the description under 72 characters, imperative mood,
-no period at the end.
+There are no native browser tooltips. Any element can carry
+`data-tip="label"` and the portal-based `TooltipLayer` (mounted once in
+`App.jsx`) renders a styled tooltip that escapes overflow clipping. When
+converting a `title=` attribute, keep the `aria-label` for accessibility.
 
-Examples from the existing log:
+## Icons
 
-```
-feat(sky): full-screen sky mode over the workspace
-fix(ci): update webkit2gtk package and macOS artifact path
-chore: regenerate wails bindings for workspace methods
-```
+Use the project's `Icon` component (`src/components/Icon.jsx`), backed by
+an inline `paths` lookup. Do not add `lucide-react` or any new dependency
+without a maintainer approving it first.
 
-## Submitting a change
+## The Windows installer / uninstaller
 
-1. Fork the repo and create a branch off `main`.
-2. Make your changes. Run `wails dev` to test locally.
-3. If you touched Go code, run `go vet ./...` to catch obvious issues.
-4. Commit with a conventional commit message.
-5. Push and open a pull request against `main`.
+The old NSIS setup is gone. Installer and uninstaller are hand-written C#
+(`installer/Installer.cs`, `installer/Uninstaller.cs`) compiled with the
+.NET Framework C# compiler, so they run without a runtime install.
 
-Keep PRs focused. One logical change per PR is easier to review than a
-branch that mixes a refactor with a new feature.
+- Exact compile commands: `build/bin/Installer&UninstallerCompileGuide.txt`.
+- The compiled binaries land in `build/bin/gleanInstaller.exe` and
+  `build/bin/gleanUninstaller.exe` (the installer embeds the app binary).
+- The installer writes `DisplayVersion` to the registry and shows the
+  version on its UI - keep the string in sync with the app.
 
-## What counts as "done"
+## Versioning
 
-A change is done when:
+The version appears in four places - keep them in sync (they all say the
+current release):
 
-- It builds without errors on your platform.
-- It doesn't break existing behavior (unless that behavior was the bug).
-- The commit message explains *why* the change exists, not just what changed.
+- `frontend/src/App.jsx` (status bar)
+- `frontend/src/components/ManageSky.jsx` (footer)
+- `installer/Installer.cs` (UI text + `DisplayVersion` registry value)
+- the git tag (vX.Y.Z) that drives the release
 
-If your change adds a new note format, a new sky behavior, or touches the
-file storage layer, mention that in the PR description. Reviewers will want
-to understand the blast radius.
+We follow semver: minor for features, patch for fixes.
 
 ## Code style
 
-- Go: follow `gofmt`. No need for a linter; the formatter handles it.
-- TypeScript/React: the frontend uses Prettier with the config in
-  `frontend/package.json`. Run `npm run format` before committing if you
-  aren't sure.
-- Keep imports sorted. Go groups stdlib, then external, then internal.
-  Frontend groups React, then third-party, then local.
+Plain and boring is the goal:
 
-## Reporting bugs
+- Comments explain why, not what. No decorative section dividers
+  (`====`, `----`), no box-drawing, nothing that looks like a banner.
+  A one-line comment above a function is plenty.
+- No em/en dashes in comments or strings; a hyphen does the job.
+- Match surrounding style; inline styles are the norm in this codebase.
+- No `console.log` leftovers in committed code.
 
-Open an issue with:
+## Testing
 
-- What you expected to happen.
-- What actually happened.
-- Your OS and glean version (or commit hash if you're building from source).
+- `go build ./...` must pass.
+- `cd frontend && npm run build` must pass.
+- The repo uses `go test` for pure functions if applicable.
+- For visual features, run `wails build` and check the binary; the
+  frontend dev server mocks the Go backend, so most UI can be tested in a
+  browser first.
 
-If the bug involves note data, attach the relevant `.md` file from
-`~/.config/glean/sky/` (or paste its contents). The devs can't reproduce
-what they can't see.
+## Releases
+
+CI builds on every push to main (Windows, Linux AppImage, macOS) and
+produces the release assets.
+
+- Tag and push: `git tag vX.Y.Z && git push origin main --tags`.
+- The release body auto-lists commits since the last tag, so write commit
+  messages that read as notes.
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under
-the [GNU General Public License v3.0](../LICENSE).
+MIT (see `LICENSE`). Forking or vendoring from other projects? Keep the
+license comment and credits in the file you copied.
