@@ -57,15 +57,20 @@ export function timeGreeting() {
 }
 
 /**
- * pickGreeting. Extends timeGreeting() with contextual observations from activity data.
+ * pickGreeting. Returns { time, observation } so the greeting line and the
+ * tagline below it stay one source of truth -- the default phrase exists
+ * exactly once in the UI, never stacked twice.
  * All phrasing is observation, not notification: "Your sky has been quiet lately" ✓
  * "You haven't visited in 3 days!" ✗
  */
 export function pickGreeting(stats, notes) {
-  const timePart = timeGreeting()
+  const time = timeGreeting()
+  const defaultObservation = 'The night holds what you seek.'
 
   // No data yet, just time greeting
-  if (!stats || !notes || notes.length === 0) return timePart
+  if (!stats || !notes || notes.length === 0) {
+    return { time, observation: defaultObservation }
+  }
 
   const now = Date.now()
   const dayMs = 86400000
@@ -77,17 +82,15 @@ export function pickGreeting(stats, notes) {
     return (now - lv) < 7 * dayMs
   }).length
 
-  // Most-visited note in the last 14 days
-  const recentNotes = notes
-    .filter(n => {
-      const lv = new Date(n.last_visited || n.created_at).getTime()
-      return (now - lv) < 14 * dayMs && (n.visit_count || 0) > 1
-    })
-    .sort((a, b) => (b.visit_count || 0) - (a.visit_count || 0))
-  const brightNote = recentNotes[0]
+  // A well-visited star within the last 14 days gets a nameless nod.
+  // Filenames stay in the explorer, not in the sky voice.
+  const hasBrightStar = notes.some(n => {
+    const lv = new Date(n.last_visited || n.created_at).getTime()
+    return (now - lv) < 14 * dayMs && (n.visit_count || 0) >= 5
+  })
 
   // Pick observation. One sentence that captures a feeling.
-  let observation = 'The night holds what you seek.'
+  let observation = defaultObservation
 
   if (recentCount === 0 && notes.length > 2) {
     observation = 'Your sky has been quiet lately.'
@@ -97,11 +100,11 @@ export function pickGreeting(stats, notes) {
     observation = 'Your stars have been bright this week.'
   } else if (recentCount >= 3) {
     observation = `You revisited ${recentCount} stars recently.`
-  } else if (brightNote && (brightNote.visit_count || 0) >= 5) {
-    observation = `${brightNote.title} has been bright lately.`
+  } else if (hasBrightStar) {
+    observation = 'One of your stars keeps calling you back.'
   }
 
-  return `${timePart} ${observation}`
+  return { time, observation }
 }
 
 export function bodyPreview(body, maxLen = 56) {
