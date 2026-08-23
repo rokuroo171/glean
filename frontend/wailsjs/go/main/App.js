@@ -14,6 +14,10 @@ export function DefaultSkyPath(arg1) {
   return window['go']['main']['App']['DefaultSkyPath'](arg1);
 }
 
+export function DeleteFolder(arg1) {
+  return window['go']['main']['App']['DeleteFolder'](arg1);
+}
+
 export function DeleteNote(arg1) {
   return window['go']['main']['App']['DeleteNote'](arg1);
 }
@@ -84,6 +88,10 @@ export function PickFolder() {
 
 export function RemoveKnownSky(arg1) {
   return window['go']['main']['App']['RemoveKnownSky'](arg1);
+}
+
+export function RenameFolder(arg1, arg2) {
+  return window['go']['main']['App']['RenameFolder'](arg1, arg2);
 }
 
 export function SaveNote(arg1, arg2, arg3) {

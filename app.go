@@ -611,6 +611,133 @@ func (a *App) MoveNote(id, targetFolder string) error {
 	return a.store.Update(n)
 }
 
+// folderNameValid rejects names that are unsafe or illegal as a folder name.
+// Names must stay a single path segment and be usable on Windows too.
+func folderNameValid(name string) error {
+	if name == "" {
+		return fmt.Errorf("folder name is empty")
+	}
+	if name == "." || name == ".." {
+		return fmt.Errorf("invalid folder name: %s", name)
+	}
+	if strings.HasPrefix(name, ".") {
+		return fmt.Errorf("folder name cannot start with a dot")
+	}
+	if strings.ContainsAny(name, `/\:*?"<>|`) {
+		return fmt.Errorf("folder name cannot contain path or invalid characters")
+	}
+	return nil
+}
+
+// folderPathValid validates every segment of a relative folder path.
+func folderPathValid(folder string) error {
+	folder = strings.Trim(folder, "/")
+	if folder == "" {
+		return fmt.Errorf("folder is empty")
+	}
+	for _, seg := range strings.Split(folder, "/") {
+		if err := folderNameValid(seg); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// RenameFolder renames a folder inside the sky and updates the registry
+// paths of every note that lives under it.
+func (a *App) RenameFolder(folder, newName string) error {
+	if a.store == nil {
+		return fmt.Errorf("no sky configured")
+	}
+	newName = strings.TrimSpace(newName)
+	if err := folderNameValid(newName); err != nil {
+		return err
+	}
+	folder = filepath.ToSlash(folder)
+	if err := folderPathValid(folder); err != nil {
+		return err
+	}
+
+	oldAbs := filepath.Join(a.skyDir, filepath.FromSlash(folder))
+	if err := store.ValidateInsideDir(a.skyDir, oldAbs); err != nil {
+		return err
+	}
+	info, err := os.Stat(oldAbs)
+	if err != nil || !info.IsDir() {
+		return fmt.Errorf("folder not found: %s", folder)
+	}
+	newAbs := filepath.Join(filepath.Dir(oldAbs), newName)
+	if _, err := os.Stat(newAbs); err == nil {
+		return fmt.Errorf("a folder named %s already exists", newName)
+	}
+
+	relOld, _ := filepath.Rel(a.skyDir, oldAbs)
+	relNew, _ := filepath.Rel(a.skyDir, newAbs)
+	relOld = filepath.ToSlash(relOld)
+	relNew = filepath.ToSlash(relNew)
+
+	if err := os.Rename(oldAbs, newAbs); err != nil {
+		return fmt.Errorf("rename folder: %w", err)
+	}
+
+	// Update registry entries whose file lives under the renamed folder.
+	prefix := relOld + "/"
+	for _, n := range a.store.All() {
+		f := filepath.ToSlash(n.File)
+		if f != relOld && !strings.HasPrefix(f, prefix) {
+			continue
+		}
+		n.File = relNew + "/" + filepath.ToSlash(filepath.Base(n.File))
+		if err := a.store.Update(n); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// DeleteFolder removes a folder (and everything in it) from the sky and
+// drops the registry entries of every note it contained.
+func (a *App) DeleteFolder(folder string) error {
+	if a.store == nil {
+		return fmt.Errorf("no sky configured")
+	}
+	folder = filepath.ToSlash(folder)
+	if err := folderPathValid(folder); err != nil {
+		return err
+	}
+
+	folderAbs := filepath.Join(a.skyDir, filepath.FromSlash(folder))
+	if err := store.ValidateInsideDir(a.skyDir, folderAbs); err != nil {
+		return err
+	}
+	info, err := os.Stat(folderAbs)
+	if err != nil || !info.IsDir() {
+		return fmt.Errorf("folder not found: %s", folder)
+	}
+
+	rel, _ := filepath.Rel(a.skyDir, folderAbs)
+	rel = filepath.ToSlash(rel)
+	prefix := rel + "/"
+
+	if err := os.RemoveAll(folderAbs); err != nil {
+		return fmt.Errorf("delete folder: %w", err)
+	}
+
+	// Drop every registry entry under the deleted folder.
+	for _, n := range a.store.All() {
+		f := filepath.ToSlash(n.File)
+		if f != rel && !strings.HasPrefix(f, prefix) {
+			continue
+		}
+		_ = a.store.Delete(n.ID)
+		if a.lastNoteID == n.ID {
+			a.lastNoteID = ""
+			a.lastNoteOpen = time.Time{}
+		}
+	}
+	return nil
+}
+
 // SetWindowSize resizes the OS window. Used by the setup intro to show a
 // small welcome card, then expand to full size for the setup forms.
 func (a *App) SetWindowSize(width, height int) {
@@ -682,9 +809,15 @@ type LayoutPrefsView struct {
 }
 
 type EditorPrefsView struct {
-	CursorTrailMode      string `json:"cursor_trail_mode"`
-	CursorTrailColor     string `json:"cursor_trail_color"`
-	CursorTrailIntensity string `json:"cursor_trail_intensity"`
+	SpellCheckEnabled         bool   `json:"spell_check_enabled"`
+	CursorTrailEnabled        bool   `json:"cursor_trail_enabled"`
+	CursorTrailMode           string `json:"cursor_trail_mode"`
+	CursorTrailColor          string `json:"cursor_trail_color"`
+	CursorTrailIntensity      string `json:"cursor_trail_intensity"`
+	CursorTrailDecayFast      int    `json:"cursor_trail_decay_fast"`
+	CursorTrailDecaySlow      int    `json:"cursor_trail_decay_slow"`
+	CursorTrailLength         int    `json:"cursor_trail_length"`
+	CursorTrailStartThreshold int    `json:"cursor_trail_start_threshold"`
 }
 
 // GetPreferences returns the user's customization preferences.
@@ -705,9 +838,15 @@ func (a *App) GetPreferences() PreferencesView {
 			ShowStatusBar:   showStatus,
 		},
 		Editor: EditorPrefsView{
-			CursorTrailMode:      p.Editor.CursorTrailMode,
-			CursorTrailColor:     p.Editor.CursorTrailColor,
-			CursorTrailIntensity: p.Editor.CursorTrailIntensity,
+			SpellCheckEnabled:         p.Editor.SpellCheckEnabled != nil && *p.Editor.SpellCheckEnabled,
+			CursorTrailEnabled:        p.Editor.CursorTrailEnabled != nil && *p.Editor.CursorTrailEnabled,
+			CursorTrailMode:           p.Editor.CursorTrailMode,
+			CursorTrailColor:          p.Editor.CursorTrailColor,
+			CursorTrailIntensity:      p.Editor.CursorTrailIntensity,
+			CursorTrailDecayFast:      p.Editor.CursorTrailDecayFast,
+			CursorTrailDecaySlow:      p.Editor.CursorTrailDecaySlow,
+			CursorTrailLength:         p.Editor.CursorTrailLength,
+			CursorTrailStartThreshold: p.Editor.CursorTrailStartThreshold,
 		},
 	}
 }
@@ -722,9 +861,14 @@ func (a *App) SavePreferences(p PreferencesView) error {
 	if !isValidHex(p.Theme.AccentHex) {
 		p.Theme.AccentHex = "#5b9fd4"
 	}
-	validTrails := map[string]bool{"kitty": true, "sparkle": true, "ink": true, "off": true}
+	// "kitty" was the original reference name for the default trail;
+	// normalize it to "beam" so saved prefs keep working.
+	if p.Editor.CursorTrailMode == "kitty" {
+		p.Editor.CursorTrailMode = "beam"
+	}
+	validTrails := map[string]bool{"beam": true, "sparkle": true, "ink": true, "off": true}
 	if !validTrails[p.Editor.CursorTrailMode] {
-		p.Editor.CursorTrailMode = "kitty"
+		p.Editor.CursorTrailMode = "beam"
 	}
 	if p.Editor.CursorTrailColor != "accent" && !isValidHex(p.Editor.CursorTrailColor) {
 		p.Editor.CursorTrailColor = "accent"
@@ -733,16 +877,32 @@ func (a *App) SavePreferences(p PreferencesView) error {
 	if !validIntensity[p.Editor.CursorTrailIntensity] {
 		p.Editor.CursorTrailIntensity = "normal"
 	}
+	// Decay invariant: fast must be <= slow, or the two-stage fade inverts.
+	if p.Editor.CursorTrailDecayFast < 10 || p.Editor.CursorTrailDecayFast > 500 {
+		p.Editor.CursorTrailDecayFast = 80
+	}
+	if p.Editor.CursorTrailDecaySlow < 50 || p.Editor.CursorTrailDecaySlow > 2000 {
+		p.Editor.CursorTrailDecaySlow = 300
+	}
+	if p.Editor.CursorTrailDecaySlow < p.Editor.CursorTrailDecayFast {
+		p.Editor.CursorTrailDecaySlow = p.Editor.CursorTrailDecayFast
+	}
+	if p.Editor.CursorTrailLength < 4 || p.Editor.CursorTrailLength > 64 {
+		p.Editor.CursorTrailLength = 12
+	}
+	if p.Editor.CursorTrailStartThreshold < 1 || p.Editor.CursorTrailStartThreshold > 32 {
+		p.Editor.CursorTrailStartThreshold = 4
+	}
 	validDensity := map[string]bool{"comfortable": true, "compact": true, "dense": true}
 	if !validDensity[p.Layout.Density] {
 		p.Layout.Density = "comfortable"
 	}
 	validSidebar := map[string]bool{"left": true, "right": true}
 	if !validSidebar[p.Layout.SidebarPosition] {
-		p.Layout.SidebarPosition = "left"
-	}
-
+		p.Layout.SidebarPosition = "left"	}
 	showStatus := &p.Layout.ShowStatusBar
+	enabled := p.Editor.CursorTrailEnabled
+	spell := p.Editor.SpellCheckEnabled
 	return store.SavePreferences(store.Preferences{
 		Theme: store.ThemePrefs{
 			Preset:    p.Theme.Preset,
@@ -754,9 +914,15 @@ func (a *App) SavePreferences(p PreferencesView) error {
 			ShowStatusBar:   showStatus,
 		},
 		Editor: store.EditorPrefs{
-			CursorTrailMode:      p.Editor.CursorTrailMode,
-			CursorTrailColor:     p.Editor.CursorTrailColor,
-			CursorTrailIntensity: p.Editor.CursorTrailIntensity,
+			SpellCheckEnabled:         &spell,
+			CursorTrailEnabled:        &enabled,
+			CursorTrailMode:           p.Editor.CursorTrailMode,
+			CursorTrailColor:          p.Editor.CursorTrailColor,
+			CursorTrailIntensity:      p.Editor.CursorTrailIntensity,
+			CursorTrailDecayFast:      p.Editor.CursorTrailDecayFast,
+			CursorTrailDecaySlow:      p.Editor.CursorTrailDecaySlow,
+			CursorTrailLength:         p.Editor.CursorTrailLength,
+			CursorTrailStartThreshold: p.Editor.CursorTrailStartThreshold,
 		},
 	})
 }
