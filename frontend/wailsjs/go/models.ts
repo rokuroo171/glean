@@ -1,9 +1,15 @@
 export namespace main {
 	
 	export class EditorPrefsView {
+	    spell_check_enabled: boolean;
+	    cursor_trail_enabled: boolean;
 	    cursor_trail_mode: string;
 	    cursor_trail_color: string;
 	    cursor_trail_intensity: string;
+	    cursor_trail_decay_fast: number;
+	    cursor_trail_decay_slow: number;
+	    cursor_trail_length: number;
+	    cursor_trail_start_threshold: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new EditorPrefsView(source);
@@ -11,9 +17,15 @@ export namespace main {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.spell_check_enabled = source["spell_check_enabled"];
+	        this.cursor_trail_enabled = source["cursor_trail_enabled"];
 	        this.cursor_trail_mode = source["cursor_trail_mode"];
 	        this.cursor_trail_color = source["cursor_trail_color"];
 	        this.cursor_trail_intensity = source["cursor_trail_intensity"];
+	        this.cursor_trail_decay_fast = source["cursor_trail_decay_fast"];
+	        this.cursor_trail_decay_slow = source["cursor_trail_decay_slow"];
+	        this.cursor_trail_length = source["cursor_trail_length"];
+	        this.cursor_trail_start_threshold = source["cursor_trail_start_threshold"];
 	    }
 	}
 	export class KnownSkyView {
