@@ -27,6 +27,7 @@ export default function Workspace({
 }) {
   const { prefs } = usePreferences()
   const [pseudoTab, setPseudoTab] = useState(null) // null | 'stats' | 'settings' | 'customization'
+  const [nightOpen, setNightOpen] = useState(true)
   const [commandOpen, setCommandOpen] = useState(false)
   const [fullSky, setFullSky] = useState(false)
   const [skyCollapsed, setSkyCollapsed] = useState(false)
@@ -65,13 +66,15 @@ export default function Workspace({
     document.body.style.userSelect = 'none'
   }
 
-  // Restore tabs once at mount.
+  // Restore tabs once at mount. Night is always open.
   useEffect(() => {
     (async () => {
       const st = await fetchWorkspaceState()
       if (st && st.open_ids && st.open_ids.length > 0) {
         setOpenIds(st.open_ids)
         setActiveId(st.active_id || st.open_ids[0])
+      } else {
+        setActiveId('__night__')
       }
       setSkyCollapsed(!!st?.sky_collapsed)
     })()
@@ -79,10 +82,16 @@ export default function Workspace({
 
   const persist = (ids, active) => saveWorkspaceState({ open_ids: ids, active_id: active })
 
-  const tabs = useMemo(() => openIds
-    .map(id => notes.find(n => n.id === id))
-    .filter(Boolean)
-    .map(n => ({ id: n.id, title: n.title, species: n.species, dirty: !!dirty[n.id] })), [openIds, notes, dirty])
+  const tabs = useMemo(() => {
+    const noteTabs = openIds
+      .map(id => notes.find(n => n.id === id))
+      .filter(Boolean)
+      .map(n => ({ id: n.id, title: n.title, species: n.species, dirty: !!dirty[n.id] }))
+    if (nightOpen) {
+      noteTabs.unshift({ id: '__night__', title: 'Night', species: 'warm', dirty: false })
+    }
+    return noteTabs
+  }, [openIds, notes, dirty, nightOpen])
 
   function openNote(id) {
     setPseudoTab(null)
@@ -102,7 +111,7 @@ export default function Workspace({
     if (dirty[id]) onSaveNow(id)
     const next = openIds.filter(x => x !== id)
     setOpenIds(next)
-    const active = activeId === id ? (next[next.length - 1] || null) : activeId
+    const active = activeId === id ? (next[next.length - 1] || '__night__') : activeId
     setActiveId(active)
     persist(next, active)
     setDirty(prev => { const n = { ...prev }; delete n[id]; return n })
@@ -118,11 +127,30 @@ export default function Workspace({
     if (note) openNote(note.id)
   }
 
+  function openNight() {
+    setPseudoTab(null)
+    if (nightOpen) {
+      setActiveId('__night__')
+      return
+    }
+    setNightOpen(true)
+    setActiveId('__night__')
+  }
+
+  function closeNight() {
+    // Night is the home tab -- closing it just focuses the last note
+    if (activeId === '__night__') {
+      const next = openIds.length > 0 ? openIds[openIds.length - 1] : null
+      setActiveId(next)
+    }
+  }
+
   function handleCommandAction(actionId) {
     if (actionId === 'customize') setPseudoTab('customization')
     else if (actionId === 'settings') setPseudoTab('settings')
     else if (actionId === 'stats') { setPseudoTab('stats'); onOpenStats() }
     else if (actionId === 'new-note') onNewNote()
+    else if (actionId === 'night') openNight()
     else if (actionId === 'full-sky') setFullSky(true)
     else if (actionId === 'refresh-window') window.location.reload()
     else if (actionId === 'replay-tour') { if (onReplayTour) onReplayTour() }
@@ -196,6 +224,8 @@ export default function Workspace({
         wails.App.SetWindowTitle('Settings - glean')
       } else if (pseudoTab === 'customization') {
         wails.App.SetWindowTitle('Customization - glean')
+      } else if (activeId === '__night__') {
+        wails.App.SetWindowTitle('Night - glean')
       } else if (activeNote) {
         wails.App.SetWindowTitle(activeNote.title + ' - glean')
       } else {
@@ -230,7 +260,9 @@ export default function Workspace({
     <div style={{ width: '100vw', height: '100vh', background: colors.bg,
       display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <TabBar tabs={tabs} activeId={activeId}
-        onSelect={openNote} onClose={closeTab} onNew={onNewNote}
+        onSelect={(id) => id === '__night__' ? openNight() : openNote(id)}
+        onClose={(id) => id === '__night__' ? closeNight() : closeTab(id)}
+        onNew={openNight}
         onSettings={() => setPseudoTab('settings')}
         onCustomize={() => setPseudoTab('customization')}
         onCommand={() => setCommandOpen(true)}
@@ -322,6 +354,11 @@ export default function Workspace({
           ) : pseudoTab === 'customization' ? (
             <div style={{ flex: 1, overflow: 'auto' }}>
               <CustomizationPane />
+            </div>
+          ) : activeId === '__night__' ? (
+            <div style={{ flex: 1, overflow: 'auto', padding: space[4] }}>
+              <Home notes={notes} stats={stats} onNoteClick={(id) => { openNote(id) }}
+                onOpenStats={() => { setPseudoTab('stats'); onOpenStats() }} onNewNote={onNewNote} />
             </div>
           ) : !activeNote ? (
             <div style={{ flex: 1, overflow: 'auto', padding: space[4] }}>
