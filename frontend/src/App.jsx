@@ -3,10 +3,20 @@ import Workspace from './components/Workspace'
 import NewNotePrompt from './components/NewNotePrompt'
 import Setup from './components/Setup'
 import Recovery from './components/Recovery'
+import OnboardingTour from './components/OnboardingTour'
+import TooltipLayer from './components/Tooltip.jsx'
 import { PreferencesProvider } from './lib/preferences-context'
 import { colors } from './lib/theme'
 
 const wails = window.go?.main
+
+const ONBOARDING_STEPS = [
+  { title: 'Your Sky is ready', body: 'A few quick pointers before you make it yours. You can skip this anytime.' },
+  { title: 'Create your first note', body: 'Click the file icon with a plus to write your first thought. Notes live inside your Sky folder as markdown files.', target: '[data-tour="new-file"]' },
+  { title: 'Make it yours', body: 'Glean is built for customization. Themes, accent colors, and more all live in this pane.', target: '[data-tour="customize"]' },
+  { title: 'Manage your Sky', body: 'Your Sky is a folder on disk. Open the explorer footer to switch skies or add more.', target: '[data-tour="manage-sky"]' },
+  { title: 'The night is yours', body: 'Start writing. The more you visit a note, the brighter its star grows.' },
+]
 
 // Mock mode defaults to the workspace; #setup=1 and #recovery=1 force the
 // other gates so the screens can be reached from the browser dev server.
@@ -83,6 +93,7 @@ export default function App() {
   const [skyPath, setSkyPath] = useState('local')
   const [showNewPrompt, setShowNewPrompt] = useState(false)
   const [newNoteTitle, setNewNoteTitle] = useState('')
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   // The pointer gate: setup for a new user, recovery for a missing sky,
   // workspace for everyone else.
@@ -93,6 +104,8 @@ export default function App() {
       if (!st.configured) setSetup('setup')
       else if (st.sky_missing) setSetup('recovery')
       else setSetup('workspace')
+      // Dev flag to force the tour in mock mode: #tour=1
+      if (window.location.hash.includes('tour=1')) setShowOnboarding(true)
     })()
   }, [])
 
@@ -186,6 +199,18 @@ export default function App() {
   }, [loadSky])
 
   const handleCreate = useCallback(async (title, contextId, folder) => {
+    // Path-style creation: "Ideas/Deep/work" -> folder "Ideas/Deep", title "work".
+    if (!folder && title && title.includes('/')) {
+      const parts = title.split('/')
+      const filePart = parts.pop()
+      folder = parts.join('/')
+      title = filePart
+    } else if (title && title.includes('\\')) {
+      const parts = title.split('\\')
+      const filePart = parts.pop()
+      folder = parts.join('/')
+      title = filePart
+    }
     let note
     if (wails) {
       note = await wails.App.CreateNote(title, contextId || '', folder || '')
@@ -230,6 +255,7 @@ export default function App() {
       const st = await (wails ? wails.App.SkyState() : mockSkyState())
       setSkyState(st)
       setSetup(st.sky_missing ? 'recovery' : 'workspace')
+      if (!st.sky_missing) setShowOnboarding(true)
     }} />
   )
   if (setup === 'recovery') return (
@@ -240,13 +266,14 @@ export default function App() {
   return (
     <PreferencesProvider>
     <div style={{ width: '100vw', height: '100vh', background: colors.bg, position: 'relative', overflow: 'hidden' }}>
+      <TooltipLayer />
       <Workspace
         notes={notes}
         trails={trails}
         stats={stats}
         skyName={skyName}
         skyPath={skyPath}
-        version="v1.1.1"
+        version="v1.2.0"
         onOpenNote={handleOpenNote}
         onNewNote={handleNewNote}
         onOpenStats={handleOpenStats}
@@ -260,7 +287,14 @@ export default function App() {
         onRescan={handleRescan}
         onWish={handleWish}
         onDelete={handleDelete}
-      />      {showNewPrompt && (
+        onReplayTour={() => setShowOnboarding(true)}
+      />
+      {showOnboarding && (
+        <OnboardingTour steps={ONBOARDING_STEPS}
+          onDone={() => setShowOnboarding(false)}
+          onSkip={() => setShowOnboarding(false)} />
+      )}
+      {showNewPrompt && (
         <NewNotePrompt
           title={newNoteTitle}
           onTitleChange={setNewNoteTitle}
