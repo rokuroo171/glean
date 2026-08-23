@@ -426,7 +426,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                 onClick={updateCursor}                  onKeyUp={updateCursor}
                 placeholder="Write, the night holds what you seek."
                 style={{ width: '100%', height: '100%', resize: 'none', outline: 'none',
-                  background: 'transparent', border: 'none', color: '#d0e0d0',
+                  background: 'transparent', border: 'none', color: colors.text,
                   fontFamily: prefs.editor.font_family || 'monospace',
                   fontSize: prefs.editor.font_size || 14, lineHeight: prefs.editor.line_height || 1.6, padding: space[3],
                   transition: 'box-shadow 0.6s ease-out',
@@ -467,7 +467,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                 onKeyUp={updateCursor}
                 placeholder="Write, the night holds what you seek."
                 style={{ width: '100%', height: '100%', resize: 'none', outline: 'none',
-                  background: 'transparent', border: 'none', color: '#d0e0d0',
+                  background: 'transparent', border: 'none', color: colors.text,
                   fontFamily: prefs.editor.font_family || 'monospace',
                   fontSize: prefs.editor.font_size || 14, lineHeight: prefs.editor.line_height || 1.6 }}
               />

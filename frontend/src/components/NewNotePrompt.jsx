@@ -79,7 +79,7 @@ export default function NewNotePrompt({ title, onTitleChange, onSubmit, onCancel
           }}
           placeholder="Note name, or Ideas/name for a folder"
           style={{
-            width: '100%', background: '#151a24', color: '#d0e0d0',
+            width: '100%', background: colors.bg, color: colors.text,
             border: `1px solid ${colors.border}`, borderRadius: 6, padding: 10,
             fontSize: 14, outline: 'none',
             transition: 'border-color 160ms ease-out',
