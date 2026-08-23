@@ -29,14 +29,22 @@ type LayoutPrefs struct {
 
 // EditorPrefs controls editor behavior and appearance.
 type EditorPrefs struct {
-	CursorTrailMode  string `json:"cursor_trail_mode"`  // "kitty" (default), "sparkle", "ink"
-	CursorTrailColor string `json:"cursor_trail_color"` // "accent" (default), or hex
-	CursorTrailIntensity string `json:"cursor_trail_intensity"` // "subtle", "normal" (default), "vivid"
+	SpellCheckEnabled         *bool  `json:"spell_check_enabled"`          // nil = true (default); native spelling squiggles
+	CursorTrailEnabled        *bool  `json:"cursor_trail_enabled"`         // nil = true (default)
+	CursorTrailMode           string `json:"cursor_trail_mode"`            // "beam" (default), "sparkle", "ink"
+	CursorTrailColor          string `json:"cursor_trail_color"`           // "accent" (default), or hex
+	CursorTrailIntensity      string `json:"cursor_trail_intensity"`       // "subtle", "normal" (default), "vivid"
+	CursorTrailDecayFast      int    `json:"cursor_trail_decay_fast"`      // ms, fast fade stage
+	CursorTrailDecaySlow      int    `json:"cursor_trail_decay_slow"`      // ms, slow tail stage
+	CursorTrailLength         int    `json:"cursor_trail_length"`          // trail buffer size (points)
+	CursorTrailStartThreshold int    `json:"cursor_trail_start_threshold"` // px, movement needed to trigger
 }
 
 // DefaultPreferences returns the built-in defaults.
 func DefaultPreferences() Preferences {
 	showStatus := true
+	enabled := true
+	spell := true
 	return Preferences{
 		Theme: ThemePrefs{
 			Preset:    "midnight",
@@ -48,9 +56,15 @@ func DefaultPreferences() Preferences {
 			ShowStatusBar:   &showStatus,
 		},
 		Editor: EditorPrefs{
-			CursorTrailMode:      "kitty",
-			CursorTrailColor:     "accent",
-			CursorTrailIntensity: "normal",
+			SpellCheckEnabled:         &spell,
+			CursorTrailEnabled:        &enabled,
+			CursorTrailMode:           "beam",
+			CursorTrailColor:          "accent",
+			CursorTrailIntensity:      "normal",
+			CursorTrailDecayFast:      80,
+			CursorTrailDecaySlow:      300,
+			CursorTrailLength:         12,
+			CursorTrailStartThreshold: 4,
 		},
 	}
 }
@@ -101,6 +115,12 @@ func LoadPreferences() Preferences {
 	if p.Layout.ShowStatusBar == nil {
 		p.Layout.ShowStatusBar = def.Layout.ShowStatusBar
 	}
+	if p.Editor.SpellCheckEnabled == nil {
+		p.Editor.SpellCheckEnabled = def.Editor.SpellCheckEnabled
+	}
+	if p.Editor.CursorTrailEnabled == nil {
+		p.Editor.CursorTrailEnabled = def.Editor.CursorTrailEnabled
+	}
 	if p.Editor.CursorTrailMode == "" {
 		p.Editor.CursorTrailMode = def.Editor.CursorTrailMode
 	}
@@ -109,6 +129,18 @@ func LoadPreferences() Preferences {
 	}
 	if p.Editor.CursorTrailIntensity == "" {
 		p.Editor.CursorTrailIntensity = def.Editor.CursorTrailIntensity
+	}
+	if p.Editor.CursorTrailDecayFast <= 0 {
+		p.Editor.CursorTrailDecayFast = def.Editor.CursorTrailDecayFast
+	}
+	if p.Editor.CursorTrailDecaySlow <= 0 {
+		p.Editor.CursorTrailDecaySlow = def.Editor.CursorTrailDecaySlow
+	}
+	if p.Editor.CursorTrailLength <= 0 {
+		p.Editor.CursorTrailLength = def.Editor.CursorTrailLength
+	}
+	if p.Editor.CursorTrailStartThreshold <= 0 {
+		p.Editor.CursorTrailStartThreshold = def.Editor.CursorTrailStartThreshold
 	}
 	return p
 }
