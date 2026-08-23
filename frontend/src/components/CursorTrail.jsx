@@ -80,9 +80,15 @@ export default function CursorTrail({ textareaRef, containerRef }) {
   }, [containerRef, enabled])
 
   // Caret tracking. Threshold-gated: no sub-pixel jitter triggers bursts.
+  // Only hides the native caret when the trail is enabled; otherwise
+  // the native caret stays visible.
   useEffect(() => {
     const ta = textareaRef?.current
     if (!ta) return
+    if (!enabled) {
+      ta.style.caretColor = ''
+      return
+    }
 
     // We draw the caret ourselves from now on.
     const onFocus = () => { focusRef.current = true }
@@ -93,12 +99,13 @@ export default function CursorTrail({ textareaRef, containerRef }) {
 
     const spawnSparkles = (from, dist, mul) => {
       const count = Math.round((4 + Math.min(dist / 40, 6)) * mul)
+      const halfH = (from.h || 22) / 2
       for (let i = 0; i < count; i++) {
         const angle = Math.random() * Math.PI * 2
         const speed = 0.6 + Math.random() * 2.2
         sparklesRef.current.push({
           x: from.x + (Math.random() - 0.5) * 8,
-          y: from.y + (Math.random() - 0.5) * 8,
+          y: from.y + halfH + (Math.random() - 0.5) * 8,
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
           size: 1.5 + Math.random() * 3.5,
@@ -144,12 +151,13 @@ export default function CursorTrail({ textareaRef, containerRef }) {
         // new one, both captured as fixed points so the ghost persists
         // after the caret lands (typing right leaves `---o0|` behind).
         jumpRef.current = { fx: prev.x, fy: prev.y + (prev.h || 0) / 2, tx: pos.x, ty: pos.y + (pos.h || 0) / 2, fh: (prev.h || 22) / 2, th: (pos.h || 22) / 2, t: performance.now(), dist }
-        if (mode === 'beam') inkPointsRef.current.length = 0
-        samplesRef.current.length = 0
+        if (mode === 'beam') { inkPointsRef.current.length = 0; sparklesRef.current.length = 0; samplesRef.current.length = 0 }
+        if (mode === 'sparkle') { inkPointsRef.current.length = 0; samplesRef.current.length = 0 }
+        if (mode === 'ink') { samplesRef.current.length = 0; sparklesRef.current.length = 0 }
       }
       lastMoveAtRef.current = performance.now()
       if (mode === 'ink' && !fromScroll && dist > threshold) {
-        inkPointsRef.current.push({ x: pos.x, y: pos.y, t: performance.now() })
+        inkPointsRef.current.push({ x: pos.x, y: pos.y + (pos.h || 22) / 2, t: performance.now() })
       }
       if (!fromScroll && dist > threshold && mode === 'sparkle') {
         spawnSparkles(prev, dist, INTENSITY[e.cursor_trail_intensity] || 1)
@@ -187,7 +195,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
       ta.removeEventListener('scroll', onScroll)
       if (containerNode) containerNode.removeEventListener('scroll', onScroll, true)
     }
-  }, [textareaRef])
+  }, [textareaRef, enabled])
 
   // Animation loop. Reads live prefs from the ref every frame.
   useEffect(() => {
@@ -216,6 +224,16 @@ export default function CursorTrail({ textareaRef, containerRef }) {
       const length = e.cursor_trail_length || 12
       const rgb = parseHex(colorRef.current)
       const target = targetRef.current
+
+      // Ease the drawn position toward the real caret for ALL modes,
+      // not just beam — otherwise sparkle/ink leave the caret stuck
+      // at its initial plant position.
+      const pos = posRef.current
+      if (pos && target) {
+        const k = 1 - Math.pow(2, (-10 * dt) / 70)
+        pos.x += (target.x - pos.x) * k
+        pos.y += (target.y - pos.y) * k
+      }
 
       if (mode === 'beam') {
         drawBeam(ctx, now, dt, { fast, slow, length, mul, rgb },
@@ -274,14 +292,11 @@ function drawBeam(ctx, now, dt, p, refs) {
   const pos = posRef.current
   if (!target || !pos) return
 
-  // Ease the drawn head toward the real caret: fast, fluid, no overshoot.
-  const k = 1 - Math.pow(2, (-10 * dt) / 70)
+  // The animation loop eases posRef toward target for all modes.
+  // Here we only read the distance for band/tail decisions.
   const dx = target.x - pos.x
   const dy = target.y - pos.y
   const dist = Math.hypot(dx, dy)
-  const moved = dist * k
-  pos.x += dx * k
-  pos.y += dy * k
 
   // The 0o---o0 stretch band: a PERSISTENT ghost from the previous
   // caret to the new caret, fading purely on age (not on the head's
@@ -320,7 +335,7 @@ function drawBeam(ctx, now, dt, p, refs) {
   // Sample the head's actual path. The tail is capped to a short fixed
   // distance behind the head so a far teleport reads as a head sweeping
   // to the target, never a long streak spanning the whole jump.
-  if (moved > 1.2) {
+  if (dist > 1.2) {
     samplesRef.current.push({ x: pos.x, y: pos.y, t: now })
   }
   const tailLen = Math.max(24, Math.min(60, p.length * 3))
