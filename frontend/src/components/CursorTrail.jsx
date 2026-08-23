@@ -64,7 +64,6 @@ export default function CursorTrail({ textareaRef, containerRef }) {
 
   // Canvas sizing, devicePixelRatio aware.
   useEffect(() => {
-    if (!enabled) return
     const canvas = canvasRef.current
     const container = containerRef?.current
     if (!canvas || !container) return
@@ -79,18 +78,14 @@ export default function CursorTrail({ textareaRef, containerRef }) {
     return () => obs.disconnect()
   }, [containerRef, enabled])
 
-  // Caret tracking. Threshold-gated: no sub-pixel jitter triggers bursts.
-  // Only hides the native caret when the trail is enabled; otherwise
-  // the native caret stays visible.
+  // Caret tracking. Always hides the native caret and draws our own
+  // (the custom caret is always visible). Trail effects inside measure
+  // are gated on `enabled`.
   useEffect(() => {
     const ta = textareaRef?.current
     if (!ta) return
-    if (!enabled) {
-      ta.style.caretColor = ''
-      return
-    }
 
-    // We draw the caret ourselves from now on.
+    // Always draw our own caret.
     const onFocus = () => { focusRef.current = true }
     const onBlur = () => { focusRef.current = false }
     ta.style.caretColor = 'transparent'
@@ -156,11 +151,14 @@ export default function CursorTrail({ textareaRef, containerRef }) {
         if (mode === 'ink') { samplesRef.current.length = 0; sparklesRef.current.length = 0 }
       }
       lastMoveAtRef.current = performance.now()
-      if (mode === 'ink' && !fromScroll && dist > threshold) {
-        inkPointsRef.current.push({ x: pos.x, y: pos.y + (pos.h || 22) / 2, t: performance.now() })
-      }
-      if (!fromScroll && dist > threshold && mode === 'sparkle') {
-        spawnSparkles(prev, dist, INTENSITY[e.cursor_trail_intensity] || 1)
+      // Trail effects only when the toggle is on.
+      if (enabled) {
+        if (mode === 'ink' && !fromScroll && dist > threshold) {
+          inkPointsRef.current.push({ x: pos.x, y: pos.y + (pos.h || 22) / 2, t: performance.now() })
+        }
+        if (!fromScroll && dist > threshold && mode === 'sparkle') {
+          spawnSparkles(prev, dist, INTENSITY[e.cursor_trail_intensity] || 1)
+        }
       }
     }
 
@@ -195,11 +193,11 @@ export default function CursorTrail({ textareaRef, containerRef }) {
       ta.removeEventListener('scroll', onScroll)
       if (containerNode) containerNode.removeEventListener('scroll', onScroll, true)
     }
-  }, [textareaRef, enabled])
+  }, [textareaRef])
 
-  // Animation loop. Reads live prefs from the ref every frame.
+  // Animation loop. Always runs (custom caret is always visible).
+  // Trail effects are gated on `enabled` inside the frame.
   useEffect(() => {
-    if (!enabled) return
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -235,13 +233,16 @@ export default function CursorTrail({ textareaRef, containerRef }) {
         pos.y += (target.y - pos.y) * k
       }
 
-      if (mode === 'beam') {
-        drawBeam(ctx, now, dt, { fast, slow, length, mul, rgb },
-          { targetRef, posRef, samplesRef, jumpRef })
-      } else if (mode === 'sparkle') {
-        drawSparkles(ctx, now, { fast, slow, mul, rgb }, sparklesRef)
-      } else if (mode === 'ink') {
-        drawInk(ctx, now, { fast, slow, length, mul, rgb }, inkPointsRef)
+      // Trail effects only fire when the toggle is on.
+      if (enabled) {
+        if (mode === 'beam') {
+          drawBeam(ctx, now, dt, { fast, slow, length, mul, rgb },
+            { targetRef, posRef, samplesRef, jumpRef })
+        } else if (mode === 'sparkle') {
+          drawSparkles(ctx, now, { fast, slow, mul, rgb }, sparklesRef)
+        } else if (mode === 'ink') {
+          drawInk(ctx, now, { fast, slow, length, mul, rgb }, inkPointsRef)
+        }
       }
 
       // The caret always draws when a target exists. No focus gating:
@@ -273,8 +274,6 @@ export default function CursorTrail({ textareaRef, containerRef }) {
       if (animRef.current) cancelAnimationFrame(animRef.current)
     }
   }, [enabled])
-
-  if (!enabled) return null
 
   return (
     <canvas
