@@ -17,7 +17,8 @@ import { colors } from './theme'
 
 /* ── Styles ── */
 
-const s = {
+function getS() {
+  return {
   h1: { fontSize: 22, fontWeight: 600, lineHeight: 1.3, margin: '20px 0 10px', paddingBottom: 6, borderBottom: `1px solid ${colors.border}`, color: colors.text },
   h2: { fontSize: 18, fontWeight: 600, lineHeight: 1.3, margin: '18px 0 8px', paddingBottom: 5, borderBottom: `1px solid rgba(90,106,122,0.2)`, color: colors.text },
   h3: { fontSize: 15, fontWeight: 600, lineHeight: 1.4, margin: '14px 0 6px', color: colors.text },
@@ -28,7 +29,7 @@ const s = {
   strong: { fontWeight: 600, color: colors.text },
   em: { fontStyle: 'italic', color: colors.text },
   del: { textDecoration: 'line-through', color: colors.textMuted },
-  a: { color: '#5b9fd4', textDecoration: 'none', cursor: 'pointer' },
+  a: { color: colors.accent, textDecoration: 'none', cursor: 'pointer' },
   blockquote: {
     borderLeft: `3px solid ${colors.borderStrong}`,
     margin: '10px 0',
@@ -51,19 +52,19 @@ const s = {
     background: 'rgba(90,106,122,0.15)',
     padding: '1px 5px',
     borderRadius: 3,
-    color: '#d0d0d0',
+    color: colors.text,
   },
   pre: {
     position: 'relative',
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
     fontSize: 13,
-    background: '#151a24',
+    background: colors.bgElevated,
     border: `1px solid ${colors.border}`,
     borderRadius: 6,
     padding: '12px 16px',
     overflow: 'auto',
     margin: '10px 0',
-    color: '#d0e0d0',
+    color: colors.text,
     lineHeight: 1.5,
     whiteSpace: 'pre',
   },
@@ -82,6 +83,9 @@ const s = {
     fontWeight: 500,
   },
 }
+}
+
+let s = {}
 
 /* ── Interactive Components ── */
 
@@ -254,6 +258,7 @@ const components = {
 
 export function renderMarkdown(text) {
   if (!text) return null
+  s = getS()
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
