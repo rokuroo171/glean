@@ -5,6 +5,7 @@ import { usePreferences } from '../lib/preferences-context'
 import StarIcon from './StarIcon'
 import Icon from './Icon'
 import CursorTrail from './CursorTrail'
+import ContextMenu from './ContextMenu'
 
 const AUTOSAVE_DELAY = 1500
 const LINE_HEIGHT = 22
@@ -190,6 +191,113 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     }
   }
 
+  /** Commit an editor mutation produced by insertText/wrapSelection. */
+  function commitEdit(result) {
+    handleChange(result.value)
+    const ta = taRef.current
+    setTimeout(() => {
+      ta.selectionStart = result.start
+      ta.selectionEnd = result.end
+      ta.focus()
+    }, 0)
+  }
+
+  function applyWrap(prefix, suffix) {
+    const ta = taRef.current
+    if (!ta) return
+    commitEdit(wrapSelection(ta, prefix, suffix))
+  }
+
+  function insertLink() {
+    const ta = taRef.current
+    if (!ta) return
+    const { selectionStart: s, selectionEnd: e, value } = ta
+    const selected = value.slice(s, e)
+    const text = selected || 'text'
+    const result = insertText(ta, `[${text}](url)`, s, e)
+    handleChange(result.value)
+    setTimeout(() => {
+      ta.selectionStart = s + text.length + 3
+      ta.selectionEnd = s + text.length + 6
+      ta.focus()
+    }, 0)
+  }
+
+  function insertTable() {
+    const ta = taRef.current
+    if (!ta) return
+    const at = ta.selectionStart
+    const table = '| Header 1 | Header 2 |\n| --- | --- |\n| Cell | Cell |\n'
+    commitEdit(insertText(ta, table, at, at))
+  }
+
+  function insertCode() {
+    const ta = taRef.current
+    if (!ta) return
+    const { selectionStart: s, selectionEnd: e, value } = ta
+    const selected = value.slice(s, e)
+    if (selected) {
+      commitEdit(insertText(ta, '```\n' + selected + '\n```', s, e))
+    } else {
+      const result = insertText(ta, '```\n\n```', s, s)
+      handleChange(result.value)
+      setTimeout(() => {
+        ta.selectionStart = ta.selectionEnd = s + 4
+        ta.focus()
+      }, 0)
+    }
+  }
+
+  function insertQuote() {
+    const ta = taRef.current
+    if (!ta) return
+    const { selectionStart: s, selectionEnd: e, value } = ta
+    const before = value.slice(0, s)
+    const lineStart = before.lastIndexOf('\n') + 1
+    const selected = value.slice(lineStart, e)
+    const quoted = selected.split('\n').map(l => (l ? '> ' : '>') + l).join('\n')
+    commitEdit(insertText(ta, quoted, lineStart, e))
+  }
+
+  function runNativeEdit(cmd) {
+    const ta = taRef.current
+    if (!ta) return
+    ta.focus()
+    document.execCommand(cmd)
+  }
+
+  async function doPaste() {
+    const ta = taRef.current
+    if (!ta) return
+    ta.focus()
+    if (document.execCommand('paste')) return
+    try {
+      const text = await navigator.clipboard.readText()
+      if (text) commitEdit(insertText(ta, text, ta.selectionStart, ta.selectionEnd))
+    } catch { /* clipboard unavailable */ }
+  }
+
+  const editorMenuItems = [
+    { id: 'cut', label: 'Cut', icon: 'scissors', shortcut: 'Ctrl+X', onSelect: () => runNativeEdit('cut') },
+    { id: 'copy', label: 'Copy', icon: 'copy', shortcut: 'Ctrl+C',
+      onSelect: () => {
+        const ta = taRef.current; if (!ta) return
+        ta.focus()
+        document.execCommand('copy')
+      } },
+    { id: 'paste', label: 'Paste', icon: 'paste', shortcut: 'Ctrl+V', onSelect: doPaste },
+    { id: 'sep1', type: 'separator' },
+    { id: 'bold', label: 'Bold', icon: 'bold', shortcut: 'Ctrl+B', onSelect: () => applyWrap('**', '**') },
+    { id: 'italic', label: 'Italic', icon: 'italic', shortcut: 'Ctrl+I', onSelect: () => applyWrap('*', '*') },
+    { id: 'link', label: 'Insert link', icon: 'link', shortcut: 'Ctrl+K', onSelect: insertLink },
+    { id: 'table', label: 'Insert table', icon: 'table', onSelect: insertTable },
+    { id: 'code', label: 'Code block', icon: 'code', onSelect: insertCode },
+    { id: 'quote', label: 'Blockquote', icon: 'quote', onSelect: insertQuote },
+    { id: 'sep2', type: 'separator' },
+    { id: 'select-all', label: 'Select all', shortcut: 'Ctrl+A',
+      onSelect: () => { const ta = taRef.current; if (!ta) return; ta.focus(); ta.select() } },
+  ]
+
   /** Sync textarea scroll with preview scroll in split mode. */
   function handleTextareaScroll() {
     onScroll()
@@ -252,7 +360,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
         <div style={{ display: 'flex', border: `1px solid ${colors.border}`, borderRadius: 6,
           overflow: 'hidden', flexShrink: 0 }}>
           {[['edit', 'pencil'], ['split', 'columns'], ['preview', 'eye']].map(([m, icon]) => (
-            <button key={m} type="button" onClick={() => setModeAndNotify(m)} title={m}
+            <button key={m} type="button" onClick={() => setModeAndNotify(m)} data-tip={m}
               style={{ ...toolbarBtn,
                 background: mode === m ? colors.bgElevated : 'none',
                 color: mode === m ? colors.text : colors.textMuted }}>
@@ -306,15 +414,16 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
               {(mode === 'edit' || mode === 'split') && prefs.editor.cursor_trail_mode !== 'off' && (
                 <CursorTrail textareaRef={taRef} containerRef={editorContainerRef} />
               )}
+              <ContextMenu items={editorMenuItems} triggerStyle={{ display: 'contents' }}>
               <textarea
                 ref={taRef}
                 value={body}
+                spellCheck={prefs.editor.spell_check_enabled !== false}
                 onChange={(e) => handleChange(e.target.value)}
                 onScroll={handleTextareaScroll}
                 onKeyDown={handleKeyDown}
                 onSelect={updateCursor}
-                onClick={updateCursor}
-                onKeyUp={updateCursor}
+                onClick={updateCursor}                  onKeyUp={updateCursor}
                 placeholder="Write, the night holds what you seek."
                 style={{ width: '100%', height: '100%', resize: 'none', outline: 'none',
                   background: 'transparent', border: 'none', color: '#d0e0d0',
@@ -323,6 +432,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                   transition: 'box-shadow 0.6s ease-out',
                   boxShadow: typing ? `inset 0 0 30px rgba(180, 140, 80, 0.06)` : 'none' }}
               />
+              </ContextMenu>
             </div>
             <div style={{ width: 1, background: colors.border, flexShrink: 0 }} />
             <div ref={previewRef} style={{ flex: 1, minWidth: 0, overflow: 'auto',
@@ -344,9 +454,11 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
               {(mode === 'edit') && prefs.editor.cursor_trail_mode !== 'off' && (
                 <CursorTrail textareaRef={taRef} containerRef={editorContainerRef} />
               )}
+              <ContextMenu items={editorMenuItems} triggerStyle={{ display: 'contents' }}>
               <textarea
                 ref={taRef}
                 value={body}
+                spellCheck={prefs.editor.spell_check_enabled !== false}
                 onChange={(e) => handleChange(e.target.value)}
                 onScroll={onScroll}
                 onKeyDown={handleKeyDown}
@@ -359,6 +471,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                   fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
                   fontSize: 14, lineHeight: 1.6 }}
               />
+              </ContextMenu>
               </>
             )}
           </div>

@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, useEffect } from 'react'
 import { colors, space, typography } from '../lib/theme'
 import StarIcon from './StarIcon'
 import Icon from './Icon'
-import './Tooltip.js'
+import ContextMenu from './ContextMenu'
 
 const wails = window.go?.main
 
@@ -89,15 +89,42 @@ function InlineInput({ isFolder, placeholder, initialValue, onSubmit, onCancel }
 // --- Folder tree node ---
 
 function FolderNode({ name, node, depth, activeId, sort, collapsed, toggleFolder,
-  onOpenNote, creating, setCreating, onCreateFile, onCreateFolder, parentPath, renaming, onRename }) {
+  onOpenNote, creating, setCreating, onCreateFile, onCreateFolder, parentPath,
+  renaming, onRename, onStartRename, onDelete, moveItems,
+  folderRenaming, setFolderRenaming, onRenameFolder, onDeleteFolder }) {
   const fullPath = parentPath ? `${parentPath}/${name}` : name
   const isCollapsed = collapsed[fullPath]
   const children = sortFolders(node.folders, sort)
   const notes = sortNotes(node.notes, sort)
   const indent = depth * 12
+  const isRenamingFolder = folderRenaming && folderRenaming.path === fullPath
 
   return (
     <div>
+      <ContextMenu items={[
+        { id: 'open', label: isCollapsed ? 'Expand' : 'Collapse', icon: 'folder-open',
+          onSelect: () => toggleFolder(fullPath) },
+        { id: 'sep1', type: 'separator' },
+        { id: 'new-file', label: 'New note here', icon: 'file-plus',
+          onSelect: () => setCreating({ type: 'file', folder: fullPath }) },
+        { id: 'new-folder', label: 'New folder here', icon: 'folder-plus',
+          onSelect: () => setCreating({ type: 'folder', folder: fullPath }) },
+        { id: 'sep2', type: 'separator' },
+        { id: 'rename', label: 'Rename', icon: 'pencil',
+          onSelect: () => setFolderRenaming({ path: fullPath, name }) },
+        { id: 'copy-name', label: 'Copy name', icon: 'copy',
+          onSelect: () => navigator.clipboard?.writeText(name).catch(() => {}) },
+        { id: 'sep3', type: 'separator' },
+        { id: 'delete', label: 'Delete folder', icon: 'trash',
+          onSelect: () => onDeleteFolder(fullPath) },
+      ]}>
+      {isRenamingFolder ? (
+        <div style={{ padding: `4px ${8 + indent}px` }}>
+          <InlineInput isFolder={true} placeholder="Folder name..." initialValue={name}
+            onSubmit={(n) => onRenameFolder(fullPath, n)}
+            onCancel={() => setFolderRenaming(null)} />
+        </div>
+      ) : (
       <div style={{ display: 'flex', alignItems: 'center', overflow: 'hidden' }}
         className="folder-row"
         onMouseEnter={(e) => { e.currentTarget.querySelectorAll('.folder-add-btn').forEach(b => b.style.display = 'flex') }}
@@ -138,12 +165,15 @@ function FolderNode({ name, node, depth, activeId, sort, collapsed, toggleFolder
           <Icon name="folder-plus" size={12} />
         </button>
       </div>
+      )}
+      </ContextMenu>
 
       {!isCollapsed && (
         <div>
-          {sortNotes(node.notes, sort).map(note => (
-            <NoteRow key={note.id} note={note} depth={depth + 1} activeId={activeId}
-              onOpenNote={onOpenNote} renaming={renaming} onRename={onRename} />
+          {sortNotes(node.notes, sort).map(note => (            <NoteRow key={note.id} note={note} depth={depth + 1} activeId={activeId}
+              onOpenNote={onOpenNote} renaming={renaming} onRename={onRename}
+              onStartRename={onStartRename} onDelete={onDelete}
+              moveItems={moveItems} />
           ))}
 
           {creating && creating.folder === fullPath && creating.type === 'file' && (
@@ -156,7 +186,7 @@ function FolderNode({ name, node, depth, activeId, sort, collapsed, toggleFolder
 
           {creating && creating.folder === fullPath && creating.type === 'folder' && (
             <div style={{ paddingLeft: 8 + (depth + 1) * 16 }}>
-              <InlineInput isFolder={true} placeholder="Folder name..."
+              <InlineInput isFolder={true} placeholder="Folder name, or A/B/C for nested"
                 onSubmit={(n) => { if (onCreateFolder) onCreateFolder(n, fullPath); setCreating(null) }}
                 onCancel={() => setCreating(null)} />
             </div>
@@ -169,7 +199,11 @@ function FolderNode({ name, node, depth, activeId, sort, collapsed, toggleFolder
               onOpenNote={onOpenNote} creating={creating}
               setCreating={setCreating} onCreateFile={onCreateFile}
               onCreateFolder={onCreateFolder} parentPath={fullPath}
-              renaming={renaming} onRename={onRename} />
+              renaming={renaming} onRename={onRename}
+              onStartRename={onStartRename} onDelete={onDelete}
+              folderRenaming={folderRenaming} setFolderRenaming={setFolderRenaming}
+              onRenameFolder={onRenameFolder} onDeleteFolder={onDeleteFolder}
+              moveItems={moveItems} />
           ))}
         </div>
       )}
@@ -179,21 +213,33 @@ function FolderNode({ name, node, depth, activeId, sort, collapsed, toggleFolder
 
 // --- Note row ---
 
-function NoteRow({ note, depth, activeId, onOpenNote, renaming, onRename }) {
+function NoteRow({ note, depth, activeId, onOpenNote, renaming, onRename, onStartRename, onDelete, moveItems }) {
   const active = note.id === activeId
   const indent = depth * 12
   const isRenaming = renaming && renaming.id === note.id
 
-  if (isRenaming) {
-    return (
-      <div style={{ padding: `4px ${8 + indent}px` }}>
-        <InlineInput isFolder={false} placeholder="New name..." initialValue={renaming.title}
-          onSubmit={onRename} onCancel={() => onRename(null)} />
-      </div>
-    )
+  const items = [
+    { id: 'open', label: 'Open', icon: 'file-text', onSelect: () => onOpenNote(note.id) },
+    { id: 'rename', label: 'Rename', icon: 'pencil', shortcut: 'F2',
+      onSelect: () => onStartRename && onStartRename(note) },
+    { id: 'copy-name', label: 'Copy name', icon: 'copy',
+      onSelect: () => navigator.clipboard?.writeText(note.title).catch(() => {}) },
+  ]
+  const moveList = typeof moveItems === 'function' ? (moveItems(note) || []) : []
+  if (moveList.length > 0) {
+    items.push({ id: 'sep-move', type: 'separator' })
+    items.push(...moveList.map((m, i) => ({
+      ...m,
+      id: `move-${i}`,
+      label: `Move to ${m.label}`,
+    })))
   }
+  items.push({ id: 'sep', type: 'separator' })
+  items.push({ id: 'delete', label: 'Delete', icon: 'trash',
+    onSelect: () => onDelete && onDelete(note.id) })
 
   return (
+    <ContextMenu items={items} triggerStyle={{ display: 'contents' }}>
     <button type="button" onClick={() => onOpenNote(note.id)}
       style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%',
         padding: `4px ${8 + indent}px`,
@@ -212,20 +258,24 @@ function NoteRow({ note, depth, activeId, onOpenNote, renaming, onRename }) {
         {note.title}
       </span>
     </button>
+    </ContextMenu>
   )
-}
+} 
 
 // --- FileExplorer ---
 
 export default function FileExplorer({ notes, activeId, onOpenNote, skyName, skyPath,
-  onCreateNote, onCreateFolder, onRefresh, onManageSky }) {
+  onCreateNote, onCreateFolder, onRefresh, onManageSky, onDelete, folders }) {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState('alpha')
   const [collapsed, setCollapsed] = useState({})
   const [creating, setCreating] = useState(null)
   const [renaming, setRenaming] = useState(null) // { id, title, folder }
+  const [folderRenaming, setFolderRenaming] = useState(null) // { path, name }
   const [localFolders, setLocalFolders] = useState([])
   const [refreshing, setRefreshing] = useState(false)
+  // Prefer the folder list passed from the parent; fall back to our own scan.
+  const folderList = folders || localFolders
 
   // F2 key to rename selected note
   useEffect(() => {
@@ -292,6 +342,19 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
     setTimeout(fetchFolders, 100)
   }
 
+  // Move-to targets for a note: every folder except its current one.
+  function moveItemsFor(note) {
+    if (!wails) return []
+    const current = (note.folder || '').replace(/\\/g, '/')
+    return folderList
+      .filter(f => f !== current)
+      .map(f => ({ label: f, onSelect: () => {
+        wails.App.MoveNote(note.id, f)
+          .then(() => { if (onRefresh) onRefresh() })
+          .catch(err => { if (window.alert) window.alert(String(err)) })
+      } }))
+  }
+
   function handleRename(newTitle) {
     if (!renaming || !newTitle || newTitle === renaming.title) { setRenaming(null); return }
     if (wails) {
@@ -300,6 +363,33 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
         .catch(() => {})
     }
     setRenaming(null)
+  }
+
+  function handleRenameFolder(path, newName) {
+    setFolderRenaming(null)
+    if (!wails || !newName || newName === path.split('/').pop()) return
+    wails.App.RenameFolder(path, newName)
+      .then(async () => { await fetchFolders(); if (onRefresh) onRefresh() })
+      .catch((err) => { if (window.confirm && err && err.length) window.alert(String(err)) })
+  }
+
+  function handleDeleteFolder(path) {
+    const name = path.split('/').pop()
+    const ok = window.confirm(`Delete folder \u201c${name}\u201d and everything inside it?`)
+    if (!ok) return
+    if (wails) {
+      wails.App.DeleteFolder(path)
+        .then(async () => { await fetchFolders(); if (onRefresh) onRefresh() })
+        .catch((err) => { if (window.alert) window.alert(String(err)) })
+    }
+  }
+
+  async function handleRefresh() {
+    if (!onRefresh && !wails) return
+    setRefreshing(true)
+    if (onRefresh) await onRefresh()
+    await fetchFolders()
+    setTimeout(() => setRefreshing(false), 300)
   }
 
   const tb = { background: 'none', border: 'none', color: colors.textMuted,
@@ -323,14 +413,14 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           marginBottom: 6 }}>
           <div style={{ ...typography.sectionLabel, color: colors.textMuted,
-            textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: 11 }}>
+            letterSpacing: '0.08em', fontSize: 11, textTransform: 'none' }}>
             {skyName || 'Sky'}
           </div>
         </div>
 
         {/* Toolbar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 6, minWidth: 0 }}>
-          <button type="button" data-tip="New file" style={tb}
+          <button type="button" data-tip="New file" data-tour="new-file" style={tb}
             onMouseEnter={e => Object.assign(e.currentTarget.style, tbHover)}
             onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
             onClick={() => setCreating({ type: 'file', folder: '_root' })}>
@@ -346,12 +436,7 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
             <button type="button" data-tip="Refresh" style={{ ...tb, transition: 'transform 0.3s ease', transform: refreshing ? 'rotate(360deg)' : 'none' }}
               onMouseEnter={e => Object.assign(e.currentTarget.style, tbHover)}
               onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
-              onClick={async () => {
-                setRefreshing(true)
-                if (onRefresh) await onRefresh()
-                await fetchFolders()
-                setTimeout(() => setRefreshing(false), 300)
-              }}>
+              onClick={handleRefresh}>
               <Icon name="refresh-cw" size={13} />
             </button>
           )}
@@ -377,6 +462,24 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
       </div>
 
       {/* File tree */}
+      <ContextMenu triggerStyle={{ display: 'contents' }} items={[
+        { id: 'new-file', label: 'New note', icon: 'file-plus',
+          onSelect: () => setCreating({ type: 'file', folder: '_root' }) },
+        { id: 'new-folder', label: 'New folder', icon: 'folder-plus',
+          onSelect: () => setCreating({ type: 'folder', folder: '_root' }) },
+        { id: 'sep1', type: 'separator' },
+        { id: 'sort-alpha', label: 'Sort A-Z',
+          onSelect: () => setSort('alpha'),
+          shortcut: sort === 'alpha' ? '\u2022' : '' },
+        { id: 'sort-recent', label: 'Sort by recent',
+          onSelect: () => setSort('recent'),
+          shortcut: sort === 'recent' ? '\u2022' : '' },
+        { id: 'sep2', type: 'separator' },
+        { id: 'collapse', label: 'Collapse all', icon: 'layout-list',
+          onSelect: collapseAll },
+        { id: 'refresh', label: 'Refresh', icon: 'refresh-cw',
+          onSelect: handleRefresh },
+      ]}>
       <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: `${space[1]}px 0` }}>
         {/* Inline creation at root */}
         {creating && creating.folder === '_root' && creating.type === 'file' && (
@@ -385,7 +488,7 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
             onCancel={() => setCreating(null)} />
         )}
         {creating && creating.folder === '_root' && creating.type === 'folder' && (
-          <InlineInput isFolder={true} placeholder="Folder name..."
+          <InlineInput isFolder={true} placeholder="Folder name, or A/B/C for nested"
             onSubmit={(n) => { if (onCreateFolder) onCreateFolder(n, ''); setCreating(null); setTimeout(fetchFolders, 100) }}
             onCancel={() => setCreating(null)} />
         )}
@@ -398,7 +501,9 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
           <>
             {sortNotes(tree.notes, sort).map(note => (
               <NoteRow key={note.id} note={note} depth={0} activeId={activeId}
-                onOpenNote={onOpenNote} renaming={renaming} onRename={handleRename} />
+                onOpenNote={onOpenNote} renaming={renaming} onRename={handleRename}
+                onStartRename={(n) => setRenaming({ id: n.id, title: n.title, folder: n.folder })}
+                onDelete={onDelete} moveItems={moveItemsFor} />
             ))}
 
             {sortFolders(tree.folders, sort).map(name => (
@@ -408,11 +513,17 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
                 onOpenNote={onOpenNote} creating={creating}
                 setCreating={setCreating} onCreateFile={handleCreateFile}
                 onCreateFolder={handleCreateFolder} parentPath=""
-                renaming={renaming} onRename={handleRename} />
+                renaming={renaming} onRename={handleRename}
+                onStartRename={(n) => setRenaming({ id: n.id, title: n.title, folder: n.folder })}
+                onDelete={onDelete}
+                folderRenaming={folderRenaming} setFolderRenaming={setFolderRenaming}
+                onRenameFolder={handleRenameFolder} onDeleteFolder={handleDeleteFolder}
+                moveItems={moveItemsFor} />
             ))}
           </>
         )}
       </div>
+      </ContextMenu>
 
       {/* Footer */}
       <div style={{ padding: `${space[1]}px ${space[2]}px`,
@@ -420,7 +531,7 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
         <div style={{ fontSize: 11, color: colors.textDim, marginBottom: 4 }}>
           {notes.length} {notes.length === 1 ? 'note' : 'notes'}
         </div>
-        <button type="button" onClick={onManageSky}
+        <button type="button" data-tour="manage-sky" onClick={onManageSky}
           style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%',
             padding: '4px 6px', background: 'rgba(180, 140, 80, 0.06)',
             border: `1px solid ${colors.border}`, borderRadius: 6,
