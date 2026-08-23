@@ -412,7 +412,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
           <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
             <div ref={editorContainerRef} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', position: 'relative' }}>
               {(mode === 'edit' || mode === 'split') && prefs.editor.cursor_trail_mode !== 'off' && (
-                <CursorTrail textareaRef={taRef} containerRef={editorContainerRef} />
+                <CursorTrail key={note?.path} textareaRef={taRef} containerRef={editorContainerRef} />
               )}
               <ContextMenu items={editorMenuItems} triggerStyle={{ display: 'contents' }}>
               <textarea
@@ -452,7 +452,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
             ) : (
               <>
               {(mode === 'edit') && prefs.editor.cursor_trail_mode !== 'off' && (
-                <CursorTrail textareaRef={taRef} containerRef={editorContainerRef} />
+                <CursorTrail key={note?.path} textareaRef={taRef} containerRef={editorContainerRef} />
               )}
               <ContextMenu items={editorMenuItems} triggerStyle={{ display: 'contents' }}>
               <textarea
