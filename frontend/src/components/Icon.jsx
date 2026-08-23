@@ -231,6 +231,10 @@ const paths = {
     'M21 18H8',
     'M3 12v6',
   ],
+  // Lucide moon -- night/home tab icon.
+  moon: [
+    'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z',
+  ],
 }
 
 export default function Icon({ name, size = 16, className, style, ...rest }) {

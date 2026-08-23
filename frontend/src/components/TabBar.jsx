@@ -46,8 +46,8 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
                   background: active ? colors.bg : 'transparent',
                   border: `1px solid ${active ? colors.borderStrong : 'transparent'}`,
                   boxShadow: active ? `inset 0 -2px 0 ${colors.accentWarm}` : 'none', ...noDrag }}>
-                <StarIcon species={t.species} size="sm" />
-                <span style={{ color: colors.text, fontSize: 12, maxWidth: 160, overflow: 'hidden',
+                {t.id === '__night__' ? <Icon name="moon" size={13} style={{ color: colors.accent }} /> : <StarIcon species={t.species} size="sm" />}
+                <span style={{ color: t.id === '__night__' ? colors.accent : colors.text, fontSize: 12, maxWidth: 160, overflow: 'hidden',
                   textOverflow: 'ellipsis' }}>{t.title}</span>
                 {t.dirty && <span style={{ width: 6, height: 6, borderRadius: 3, background: colors.accentWarm }} />}
                 <span role="button" aria-label={`close ${t.title}`}
@@ -57,10 +57,10 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
             )
           })}
         </AnimatePresence>
-        <button type="button" onClick={onNew} aria-label="new star"
+        <button type="button" onClick={onNew} aria-label="open night" data-tip="Night"
           style={{ flexShrink: 0, background: 'none', border: `1px solid ${colors.border}`,
             color: colors.textMuted, borderRadius: 6, width: 26, height: 26, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', ...noDrag }}><Icon name="plus" size={14} /></button>
+            display: 'flex', alignItems: 'center', justifyContent: 'center', ...noDrag }}><Icon name="moon" size={14} /></button>
       </div>
 
       {/* Center: logo */}
