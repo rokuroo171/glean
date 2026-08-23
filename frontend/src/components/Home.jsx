@@ -148,12 +148,19 @@ export default function Home({ notes, stats, onNoteClick, onOpenStats, onNewNote
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
           style={{ marginBottom: space[5], pointerEvents: 'none' }}>
-          <h1 style={{ ...typography.greeting, color: colors.text, margin: 0 }}>
-            {pickGreeting(stats, notes)}
-          </h1>
-          <p style={{ ...typography.tagline, color: colors.textMuted, margin: `${space[1]}px 0 0` }}>
-            The night holds what you seek.
-          </p>
+          {(() => {
+            const g = pickGreeting(stats, notes)
+            return (
+              <>
+                <h1 style={{ ...typography.greeting, color: colors.text, margin: 0 }}>
+                  {g.time}
+                </h1>
+                <p style={{ ...typography.tagline, color: colors.textMuted, margin: `${space[1]}px 0 0` }}>
+                  {g.observation}
+                </p>
+              </>
+            )
+          })()}
         </motion.div>
 
         {/* Recent notes */}

@@ -77,7 +77,7 @@ export default function StatsOverlay({ stats }) {
             {chartData.map((day, i) => (
               <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                 <div
-                  title={`${day.label}: ${day.count}`}
+                  data-tip={`${day.label}: ${day.count} ${day.count === 1 ? 'note' : 'notes'}`}
                   style={{
                     width: '100%',
                     height: `${Math.max(2, (day.count / yMax) * 100)}%`,
