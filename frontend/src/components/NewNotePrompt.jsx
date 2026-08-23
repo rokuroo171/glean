@@ -43,6 +43,10 @@ export default function NewNotePrompt({ title, onTitleChange, onSubmit, onCancel
   const reducedMotion = useReducedMotion()
   const tapScale = reducedMotion ? 1 : motionTokens.scale.press
 
+  // Detect a path-style title: "Ideas/Deep/work" -> folder "Ideas/Deep", name "work".
+  const pathParts = (title || '').split(/[/\\]/).filter(Boolean)
+  const pathFolder = pathParts.length > 1 ? pathParts.slice(0, -1).join('/') : ''
+
   return (
     <motion.div
       initial={safeMotion.initial}
@@ -61,15 +65,19 @@ export default function NewNotePrompt({ title, onTitleChange, onSubmit, onCancel
         borderRadius: 12, padding: space[3], color: colors.text,
         width: 340,
       }}>
-        <div style={{ fontSize: 13, color: colors.textMuted, marginBottom: space[2] }}>title</div>
+        <div style={{ fontSize: 13, color: colors.textMuted, marginBottom: space[2] }}>
+          title{pathFolder && <span style={{ color: colors.accent }}> -> {pathFolder}/</span>}
+        </div>
         <input
           autoFocus
           value={title}
+          spellCheck={false}
           onChange={(e) => onTitleChange(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') onSubmit()
             if (e.key === 'Escape') onCancel()
           }}
+          placeholder="Note name, or Ideas/name for a folder"
           style={{
             width: '100%', background: '#151a24', color: '#d0e0d0',
             border: `1px solid ${colors.border}`, borderRadius: 6, padding: 10,
@@ -85,7 +93,7 @@ export default function NewNotePrompt({ title, onTitleChange, onSubmit, onCancel
             whileHover={{ scale: motionTokens.scale.pop }}
             whileTap={{ scale: tapScale }}
             onClick={onCancel}
-            title="Cancel"
+            data-tip="Cancel"
             aria-label="Cancel"
             style={{ ...iconBtn }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(90,106,122,0.12)' }}
@@ -97,7 +105,7 @@ export default function NewNotePrompt({ title, onTitleChange, onSubmit, onCancel
             whileHover={{ scale: motionTokens.scale.pop }}
             whileTap={{ scale: tapScale }}
             onClick={onSubmit}
-            title="Create note"
+            data-tip="Create note"
             aria-label="Create note"
             style={{ ...iconBtn, background: `${colors.accent}22` }}
             onMouseEnter={(e) => { e.currentTarget.style.background = `${colors.accent}33` }}

@@ -5,6 +5,7 @@ import { colors, space } from '../lib/theme'
 import { formatDate, wordCount, relativeTime } from '../lib/format'
 import { springs, motionTokens } from '../lib/motion-tokens'
 import { useSafeMotion, useReducedMotion } from '../hooks/useReducedMotion'
+import { usePreferences } from '../lib/preferences-context'
 
 /* ── Toolbar icons (SVG, 16px) ─────────────────────────── */
 
@@ -65,7 +66,7 @@ function ToolbarBtn({ children, onClick, title, active = false, reducedMotion })
       whileHover={{ scale: motionTokens.scale.pop }}
       whileTap={{ scale: reducedMotion ? 1 : motionTokens.scale.press }}
       onClick={onClick}
-      title={title}
+      data-tip={title}
       aria-label={title}
       style={{ ...iconBtn, background: active ? `${colors.accent}22` : undefined }}
       onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'rgba(90,106,122,0.12)' }}
@@ -81,6 +82,7 @@ function ToolbarBtn({ children, onClick, title, active = false, reducedMotion })
 export default function EditOverlay({ note, body, onBodyChange, onSave, onAutoSave, onCancel, onDelete }) {
   const safeMotion = useSafeMotion(motionTokens.distance.md)
   const reducedMotion = useReducedMotion()
+  const { prefs } = usePreferences()
 
   // ─── Debounced autosave ──────────────────────────────────────────────
   // 'saved' | 'unsaved' | 'saving'
@@ -196,6 +198,7 @@ export default function EditOverlay({ note, body, onBodyChange, onSave, onAutoSa
           <textarea
             autoFocus
             value={body || ''}
+            spellCheck={prefs.editor.spell_check_enabled !== false}
             onChange={(e) => handleBodyChange(e.target.value)}
             style={{
               width: '100%',
