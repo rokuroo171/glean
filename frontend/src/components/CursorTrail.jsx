@@ -604,29 +604,22 @@ function getCursorPixelPos(ta, container) {
   const pl = parseFloat(s.paddingLeft) || 0
   const pr = parseFloat(s.paddingRight) || 0
 
-  // The scroller is where the text lives: the textarea itself (split
-  // mode) or a scrollable ancestor wrapper (single-edit mode). The
-  // mirror must be inside it so it scrolls with the text.
-  const scroller = findScroller(ta)
-
-  // The mirror must align to the TEXTAREA's text box, not the scroller's
-  // padding: in single-edit mode the textarea sits inside the scrollable
-  // wrapper with its own padding, so the text starts scroller-padding +
-  // textarea-padding. Compute the textarea's offset relative to the
-  // scroller and offset the mirror by that plus the textarea's padding.
+  // The mirror is always inside the container (which has position:relative)
+  // so its coordinate system matches the canvas. The textarea's scroll is
+  // subtracted from the final position to handle both single and split modes.
   const trect = ta.getBoundingClientRect()
-  const srect = scroller.getBoundingClientRect()
+  const srect = container.getBoundingClientRect()
   const mLeft = trect.left - srect.left + (parseFloat(getComputedStyle(ta).paddingLeft) || 0)
   const mTop = trect.top - srect.top + (parseFloat(getComputedStyle(ta).paddingTop) || 0)
 
   let mirror = ta._gleanMirror
-  if (mirror && mirror._c !== scroller) {
+  if (mirror && mirror._c !== container) {
     mirror.remove()
     mirror = null
   }
   if (!mirror) {
     mirror = document.createElement('div')
-    mirror._c = scroller
+    mirror._c = container
     Object.assign(mirror.style, {
       position: 'absolute',
       left: mLeft + 'px',
@@ -645,7 +638,7 @@ function getCursorPixelPos(ta, container) {
       lineHeight: s.lineHeight,
       tabSize: s.tabSize,
     })
-    scroller.appendChild(mirror)
+    container.appendChild(mirror)
     ta._gleanMirror = mirror
   } else {
     mirror.style.width = Math.max(1, ta.clientWidth - pl - pr) + 'px'

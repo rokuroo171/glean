@@ -1,7 +1,7 @@
 import {
-  BarChart3, ChevronLeft, ChevronRight, FilePlus, FolderPlus,
+  BarChart3, ChevronLeft, ChevronRight, Columns3, Eye, FilePlus, FolderPlus,
   Folder, FolderOpen, LayoutList, Maximize, Moon, Palette,
-  PanelRight, Plus, RefreshCw, Search, Settings, Sparkle, Sparkles,
+  PanelRight, Pencil, Plus, RefreshCw, Search, Settings, Sparkle, Sparkles,
   Trash, X, Zap, FileText, Scissors, Copy, ClipboardPaste,
   Bold, Italic, Link, Table, Code, Quote,
 } from 'lucide-react'
@@ -38,6 +38,9 @@ const iconMap = {
   'table': Table,
   'code': Code,
   'quote': Quote,
+  'pencil': Pencil,
+  'columns': Columns3,
+  'eye': Eye,
 }
 
 export default function Icon({ name, size = 16, className, style, ...rest }) {

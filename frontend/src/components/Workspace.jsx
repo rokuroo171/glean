@@ -368,6 +368,7 @@ export default function Workspace({
           ) : (
             <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
               <EditorPane
+                key={activeNote?.id}
                 note={activeNote}
                 body={body}
                 onBodyChange={(newBody) => onBodyChange(activeNote.id, newBody)}
