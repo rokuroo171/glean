@@ -809,6 +809,9 @@ type LayoutPrefsView struct {
 }
 
 type EditorPrefsView struct {
+	FontFamily                string `json:"font_family"`
+	FontSize                  int    `json:"font_size"`
+	LineHeight                float64 `json:"line_height"`
 	SpellCheckEnabled         bool   `json:"spell_check_enabled"`
 	CursorTrailEnabled        bool   `json:"cursor_trail_enabled"`
 	CursorTrailMode           string `json:"cursor_trail_mode"`
@@ -838,6 +841,9 @@ func (a *App) GetPreferences() PreferencesView {
 			ShowStatusBar:   showStatus,
 		},
 		Editor: EditorPrefsView{
+			FontFamily:                p.Editor.FontFamily,
+			FontSize:                  p.Editor.FontSize,
+			LineHeight:                p.Editor.LineHeight,
 			SpellCheckEnabled:         p.Editor.SpellCheckEnabled != nil && *p.Editor.SpellCheckEnabled,
 			CursorTrailEnabled:        p.Editor.CursorTrailEnabled != nil && *p.Editor.CursorTrailEnabled,
 			CursorTrailMode:           p.Editor.CursorTrailMode,
@@ -914,6 +920,9 @@ func (a *App) SavePreferences(p PreferencesView) error {
 			ShowStatusBar:   showStatus,
 		},
 		Editor: store.EditorPrefs{
+			FontFamily:                p.Editor.FontFamily,
+			FontSize:                  p.Editor.FontSize,
+			LineHeight:                p.Editor.LineHeight,
 			SpellCheckEnabled:         &spell,
 			CursorTrailEnabled:        &enabled,
 			CursorTrailMode:           p.Editor.CursorTrailMode,
