@@ -860,7 +860,7 @@ func (a *App) GetPreferences() PreferencesView {
 // SavePreferences persists the user's customization preferences.
 func (a *App) SavePreferences(p PreferencesView) error {
 	// Validate and sanitize inputs.
-	validPresets := map[string]bool{"midnight": true, "aurora": true, "ember": true, "ocean": true, "lavender": true}
+	validPresets := map[string]bool{"midnight": true, "aurora": true, "ember": true, "ocean": true, "lavender": true, "nord": true, "gruvbox": true, "tokyo-night": true, "catppuccin-mocha": true, "paper": true, "catppuccin-latte": true}
 	if !validPresets[p.Theme.Preset] {
 		p.Theme.Preset = "midnight"
 	}
