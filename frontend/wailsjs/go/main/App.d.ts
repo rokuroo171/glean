@@ -9,6 +9,8 @@ export function CreateNote(arg1:string,arg2:string,arg3:string):Promise<main.Not
 
 export function DefaultSkyPath(arg1:string):Promise<string>;
 
+export function DeleteFolder(arg1:string):Promise<void>;
+
 export function DeleteNote(arg1:string):Promise<void>;
 
 export function GetKnownSkies():Promise<Array<main.KnownSkyView>>;
@@ -44,6 +46,8 @@ export function OpenSky(arg1:string):Promise<main.SkyStateView>;
 export function PickFolder():Promise<string>;
 
 export function RemoveKnownSky(arg1:string):Promise<void>;
+
+export function RenameFolder(arg1:string,arg2:string):Promise<void>;
 
 export function SaveNote(arg1:string,arg2:string,arg3:string):Promise<void>;
 
