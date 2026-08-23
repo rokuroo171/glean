@@ -1,6 +1,9 @@
 export namespace main {
 	
 	export class EditorPrefsView {
+	    font_family: string;
+	    font_size: number;
+	    line_height: number;
 	    spell_check_enabled: boolean;
 	    cursor_trail_enabled: boolean;
 	    cursor_trail_mode: string;
@@ -17,6 +20,9 @@ export namespace main {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.font_family = source["font_family"];
+	        this.font_size = source["font_size"];
+	        this.line_height = source["line_height"];
 	        this.spell_check_enabled = source["spell_check_enabled"];
 	        this.cursor_trail_enabled = source["cursor_trail_enabled"];
 	        this.cursor_trail_mode = source["cursor_trail_mode"];

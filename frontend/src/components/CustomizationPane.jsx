@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import * as SliderPrimitive from '@radix-ui/react-slider'
 import { colors, space, typography } from '../lib/theme'
 import { usePreferences } from '../lib/preferences-context'
 import { getPresets, getPreset } from '../lib/apply-theme'
@@ -115,11 +116,32 @@ function Slider({ label, value, min, max, step = 1, unit = '', onChange }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         fontSize: 12, color: colors.textMuted, marginBottom: 4 }}>
         <span>{label}</span>
-        <span style={{ color: colors.text }}>{value}{unit}</span>
+        <span style={{ color: colors.text, fontFamily: 'monospace' }}>{value}{unit}</span>
       </div>
-      <input type="range" min={min} max={max} step={step} value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        style={{ width: '100%', accentColor: colors.accent, cursor: 'pointer', background: 'transparent' }} />
+      <SliderPrimitive.Root
+        value={[value]}
+        onValueChange={(v) => onChange(v[0])}
+        min={min} max={max} step={step}
+        style={{ position: 'relative', display: 'flex', alignItems: 'center',
+          width: '100%', height: 20, cursor: 'pointer',
+          touchAction: 'none', userSelect: 'none' }}>
+        <SliderPrimitive.Track
+          style={{ position: 'relative', flex: 1, height: 4, borderRadius: 2,
+            background: 'rgba(90, 106, 122, 0.25)' }}>
+          <SliderPrimitive.Range
+            style={{ position: 'absolute', height: '100%', borderRadius: 2,
+              background: colors.accent }} />
+        </SliderPrimitive.Track>
+        <SliderPrimitive.Thumb
+          style={{ display: 'block', width: 16, height: 16, borderRadius: 8,
+            background: colors.accent, border: '2px solid ' + colors.bgElevated,
+            boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+            transition: 'background 150ms ease-out, box-shadow 150ms ease-out',
+            outline: 'none' }}
+          onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 3px ' + colors.accent + '44' }}
+          onBlur={(e) => { e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.3)' }}
+        />
+      </SliderPrimitive.Root>
     </div>
   )
 }
@@ -325,7 +347,7 @@ export default function CustomizationPane() {
           </div>
         </div>
 
-        <Toggle label="Spelling squiggles"
+        <Toggle label="Spell check"
           hint="Red underlines under misspelled words while typing."
           checked={prefs.editor.spell_check_enabled !== false}
           onChange={(v) => updatePrefs({ editor: { spell_check_enabled: v } })} />
