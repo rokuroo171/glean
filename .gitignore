@@ -16,3 +16,4 @@ build/bin/
 # Installer dependencies
 installer/frontend/node_modules/
 installer/frontend/dist/
+frontend/package.json.md5
