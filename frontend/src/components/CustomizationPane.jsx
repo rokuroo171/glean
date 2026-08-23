@@ -14,7 +14,7 @@ const accentSwatches = [
 ]
 
 const trailModes = [
-  { id: 'kitty', label: 'Kitty blob', desc: 'Smooth morphing blob follows cursor jumps' },
+  { id: 'beam', label: 'Default', desc: 'Smooth morphing blob follows cursor jumps' },
   { id: 'sparkle', label: 'Particle sparkle', desc: 'Star particles emit and fade behind cursor' },
   { id: 'ink', label: 'Ink stroke', desc: 'Colored line trail that follows and fades' },
 ]
@@ -75,7 +75,7 @@ function ThemeCard({ name, active, onClick }) {
 function AccentSwatch({ hex, active, onClick }) {
   return (
     <button type="button" onClick={onClick}
-      title={hex}
+      data-tip={hex}
       style={{ width: 28, height: 28, borderRadius: 14, background: hex,
         border: `2px solid ${active ? colors.text : 'transparent'}`,
         cursor: 'pointer', transition: 'border-color 0.15s ease',
@@ -83,11 +83,20 @@ function AccentSwatch({ hex, active, onClick }) {
   )
 }
 
-function Toggle({ label, checked, onChange }) {
+function Toggle({ label, checked, onChange, hint }) {
   return (
     <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '8px 0', cursor: 'pointer', fontSize: 13, color: colors.text }}>
-      <span>{label}</span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {label}
+        {hint && (
+          <span data-tip={hint}
+            style={{ width: 15, height: 15, borderRadius: 8,
+              background: 'rgba(90, 106, 122, 0.25)', color: colors.textMuted,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 10, cursor: 'help' }}>?</span>
+        )}
+      </span>
       <div onClick={() => onChange(!checked)}
         style={{ width: 36, height: 20, borderRadius: 10, position: 'relative',
           background: checked ? colors.accent : 'rgba(90, 106, 122, 0.3)',
@@ -97,6 +106,21 @@ function Toggle({ label, checked, onChange }) {
           transition: 'left 0.2s ease' }} />
       </div>
     </label>
+  )
+}
+
+function Slider({ label, value, min, max, step = 1, unit = '', onChange }) {
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        fontSize: 12, color: colors.textMuted, marginBottom: 4 }}>
+        <span>{label}</span>
+        <span style={{ color: colors.text }}>{value}{unit}</span>
+      </div>
+      <input type="range" min={min} max={max} step={step} value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        style={{ width: '100%', accentColor: colors.accent, cursor: 'pointer', background: 'transparent' }} />
+    </div>
   )
 }
 
@@ -118,7 +142,7 @@ function OptionGroup({ options, value, onChange }) {
 }
 
 function TrailCard({ mode, active, onClick }) {
-  const icons = { kitty: 'zap', sparkle: 'sparkles', ink: 'pencil' }
+  const icons = { beam: 'zap', sparkle: 'sparkles', ink: 'pencil' }
   return (
     <button type="button" onClick={onClick}
       style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%',
@@ -216,7 +240,13 @@ export default function CustomizationPane() {
 
       {/* Editor section */}
       <Section title="Editor" icon="pencil">
+        <Toggle label="Spelling squiggles"
+          hint="Red underlines under misspelled words while typing."
+          checked={prefs.editor.spell_check_enabled !== false}
+          onChange={(v) => updatePrefs({ editor: { spell_check_enabled: v } })} />
+
         <Toggle label="Cursor trail"
+          hint="The blinking text caret leaves a trail when it jumps between positions."
           checked={prefs.editor.cursor_trail_enabled}
           onChange={(v) => updatePrefs({ editor: { cursor_trail_enabled: v } })} />
 
@@ -259,6 +289,24 @@ export default function CustomizationPane() {
                   cursor: 'pointer' }} />
             ))}
           </div>
+        </div>
+
+        <div style={{ marginTop: 14 }}>
+          <div style={{ ...typography.sectionLabel, color: colors.textMuted, marginBottom: 10 }}>
+            Trail physics
+          </div>
+          <Slider label="Fast fade" value={prefs.editor.cursor_trail_decay_fast ?? 80}
+            min={10} max={500} step={10} unit=" ms"
+            onChange={(v) => updatePrefs({ editor: { cursor_trail_decay_fast: v } })} />
+          <Slider label="Tail decay" value={prefs.editor.cursor_trail_decay_slow ?? 300}
+            min={50} max={2000} step={10} unit=" ms"
+            onChange={(v) => updatePrefs({ editor: { cursor_trail_decay_slow: v } })} />
+          <Slider label="Trail length" value={prefs.editor.cursor_trail_length ?? 12}
+            min={4} max={64} step={1} unit=" pts"
+            onChange={(v) => updatePrefs({ editor: { cursor_trail_length: v } })} />
+          <Slider label="Trigger distance" value={prefs.editor.cursor_trail_start_threshold ?? 4}
+            min={1} max={32} step={1} unit=" px"
+            onChange={(v) => updatePrefs({ editor: { cursor_trail_start_threshold: v } })} />
         </div>
           </>
         )}
