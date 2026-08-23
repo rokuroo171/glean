@@ -34,10 +34,10 @@ export default function DetailsPanel({ note, linked, noteBodies, notes, onWish, 
 
       <div style={{ marginTop: space[2] }}>Actions</div>
       <div style={{ display: 'flex', gap: 6, margin: '6px 0 14px' }}>
-        <button type="button" onClick={wish} title="Wish (once per day)"
+        <button type="button" onClick={wish} data-tip="Wish (once per day)"
           style={{ background: 'none', border: `1px solid ${colors.border}`, color: colors.textMuted,
             borderRadius: 4, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="sparkle" size={13} /></button>
-        <button type="button" onClick={() => onDelete(note.id)} title="Delete note"
+        <button type="button" onClick={() => onDelete(note.id)} data-tip="Delete note"
           style={{ background: 'none', border: `1px solid ${colors.border}`, color: '#b06060',
             borderRadius: 4, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="trash" size={13} /></button>
       </div>
