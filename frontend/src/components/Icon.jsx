@@ -170,6 +170,67 @@ const paths = {
   zap: [
     'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
   ],
+  // Lucide scissors -- cut icon.
+  // https://lucide.dev/icons/scissors
+  scissors: [
+    'M6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+    'M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+    'M20 4 8.12 15.88',
+    'M14.47 14.48 20 20',
+    'M8.12 8.12 12 12',
+  ],
+  // Lucide copy -- copy icon.
+  // https://lucide.dev/icons/copy
+  copy: [
+    'M8 8h10a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2z',
+    'M4 4h10a2 2 0 0 1 2 2v1',
+  ],
+  // Lucide clipboard -- paste icon.
+  // https://lucide.dev/icons/clipboard
+  paste: [
+    'M9 5h6a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z',
+    'M8 4H6a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2',
+  ],
+  // Lucide bold -- bold icon.
+  // https://lucide.dev/icons/bold
+  bold: [
+    'M14 12a4 4 0 0 0 0-8H6v8',
+    'M15 20a4 4 0 0 0 0-8H6v8',
+  ],
+  // Lucide italic -- italic icon.
+  // https://lucide.dev/icons/italic
+  italic: [
+    'M19 4h-9',
+    'M14 20H5',
+    'M15 4 9 20',
+  ],
+  // Lucide link -- insert link icon.
+  // https://lucide.dev/icons/link
+  link: [
+    'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71',
+    'M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71',
+  ],
+  // Lucide table -- insert table icon.
+  // https://lucide.dev/icons/table
+  table: [
+    'M3 3h18v18H3z',
+    'M3 12h18',
+    'M12 3v18',
+  ],
+  // Lucide code -- code block icon.
+  // https://lucide.dev/icons/code
+  code: [
+    'M16 18l6-6-6-6',
+    'M8 6l-6 6 6 6',
+  ],
+  // Lucide text-quote -- blockquote icon.
+  // https://lucide.dev/icons/text-quote
+  quote: [
+    'M17 7H3',
+    'M21 12H8',
+    'M21 18H8',
+    'M3 12v6',
+  ],
 }
 
 export default function Icon({ name, size = 16, className, style, ...rest }) {
