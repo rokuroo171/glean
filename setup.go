@@ -100,7 +100,10 @@ func (a *App) SetupSky(name, dir string) (SkyStateView, error) {
 	if err := store.CreateSky(dir, clean); err != nil {
 		return SkyStateView{}, err
 	}
-	if err := store.SavePointer(store.SkyPointer{SkyPath: dir}); err != nil {
+	// Preserve the known-skies list instead of wiping it with a fresh pointer.
+	p, _, _ := store.LoadPointer()
+	p.SkyPath = dir
+	if err := store.SavePointer(p); err != nil {
 		return SkyStateView{}, err
 	}
 	store.AddKnownSky(clean, dir)
@@ -134,7 +137,10 @@ func (a *App) OpenSky(dir string) (SkyStateView, error) {
 	} else if err := store.CreateSky(dir, name); err != nil {
 		return SkyStateView{}, err
 	}
-	if err := store.SavePointer(store.SkyPointer{SkyPath: dir}); err != nil {
+	// Preserve the known-skies list instead of wiping it with a fresh pointer.
+	p, _, _ := store.LoadPointer()
+	p.SkyPath = dir
+	if err := store.SavePointer(p); err != nil {
 		return SkyStateView{}, err
 	}
 	store.AddKnownSky(name, dir)
