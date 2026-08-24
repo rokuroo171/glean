@@ -23,7 +23,7 @@ trap 'rm -rf "$TMP"' INT TERM EXIT
 
 tail -n +"$((LINE + 1))" "$0" | tar -xzf - -C "$TMP"
 
-"$TMP/install.sh"
+sh "$TMP/install.sh"
 
 rm -rf "$TMP"
 trap - INT TERM EXIT

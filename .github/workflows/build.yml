@@ -137,6 +137,7 @@ jobs:
           cp packaging/icon.png staging/glean.png
           cp packaging/linux/glean.desktop staging/glean.desktop
           cp packaging/linux/install.sh staging/install.sh
+          chmod +x staging/install.sh
           { cat packaging/linux/glean-desktop.sh; tar -czf - -C staging glean glean.png glean.desktop install.sh; } > glean-desktop
           chmod +x glean-desktop
 
