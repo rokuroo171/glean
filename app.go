@@ -821,6 +821,7 @@ type EditorPrefsView struct {
 	CursorTrailDecaySlow      int    `json:"cursor_trail_decay_slow"`
 	CursorTrailLength         int    `json:"cursor_trail_length"`
 	CursorTrailStartThreshold int    `json:"cursor_trail_start_threshold"`
+	AnimatedTextEnabled        bool   `json:"animated_text_enabled"`
 }
 
 // GetPreferences returns the user's customization preferences.
@@ -853,6 +854,7 @@ func (a *App) GetPreferences() PreferencesView {
 			CursorTrailDecaySlow:      p.Editor.CursorTrailDecaySlow,
 			CursorTrailLength:         p.Editor.CursorTrailLength,
 			CursorTrailStartThreshold: p.Editor.CursorTrailStartThreshold,
+			AnimatedTextEnabled:        p.Editor.AnimatedTextEnabled != nil && *p.Editor.AnimatedTextEnabled,
 		},
 	}
 }
@@ -909,6 +911,7 @@ func (a *App) SavePreferences(p PreferencesView) error {
 	showStatus := &p.Layout.ShowStatusBar
 	enabled := p.Editor.CursorTrailEnabled
 	spell := p.Editor.SpellCheckEnabled
+	animated := p.Editor.AnimatedTextEnabled
 	return store.SavePreferences(store.Preferences{
 		Theme: store.ThemePrefs{
 			Preset:    p.Theme.Preset,
@@ -932,6 +935,7 @@ func (a *App) SavePreferences(p PreferencesView) error {
 			CursorTrailDecaySlow:      p.Editor.CursorTrailDecaySlow,
 			CursorTrailLength:         p.Editor.CursorTrailLength,
 			CursorTrailStartThreshold: p.Editor.CursorTrailStartThreshold,
+			AnimatedTextEnabled:        &animated,
 		},
 	})
 }
