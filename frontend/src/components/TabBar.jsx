@@ -1,3 +1,4 @@
+import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { colors } from '../lib/theme'
 import StarIcon from './StarIcon'
@@ -9,6 +10,22 @@ const noDrag = { '--wails-draggable': 'no-drag' }
 
 export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSettings, onCustomize, onCommand, pseudoTab, onClosePseudo, detailsOpen, onToggleDetails }) {
   const pseudoLabel = pseudoTab === 'stats' ? 'Sky overview' : pseudoTab === 'customization' ? 'Customization' : 'Settings'
+  const [closing, setClosing] = useState(new Set())
+  const timers = useRef({})
+
+  const handleClose = useCallback((id) => {
+    // Mark as closing — tab stays in layout so others don't shift
+    setClosing(prev => new Set([...prev, id]))
+    // Actually close after 300ms delay
+    timers.current[id] = setTimeout(() => {
+      onClose(id)
+      setClosing(prev => { const n = new Set(prev); n.delete(id); return n })
+      delete timers.current[id]
+    }, 300)
+  }, [onClose])
+
+  // Visible tabs = all tabs (closing ones stay for layout)
+  const visibleCount = tabs.length
 
   return (
     <div
@@ -18,31 +35,34 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
       {/* Left: sidebar toggle */}
       <div style={{ flexShrink: 0, ...noDrag }}>{/* sidebar icon lives in Workspace */}</div>
 
-      {/* Tabs — Chrome-style: equal width, shrink together */}
+      {/* Tabs — equal width, share space evenly */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0, overflow: 'hidden' }}>
-        <AnimatePresence initial={false} mode="popLayout">
+        <AnimatePresence initial={false}>
           {tabs.map(t => {
             const active = t.id === activeId
+            const isClosing = closing.has(t.id)
             return (
-              <motion.div key={t.id} layout
+              <motion.div key={t.id}
                 initial={{ opacity: 0, scaleX: 0.8 }}
-                animate={{ opacity: 1, scaleX: 1 }}
+                animate={{ opacity: isClosing ? 0.5 : 1, scaleX: 1 }}
                 exit={{ opacity: 0, scaleX: 0.8 }}
                 transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                onClick={() => onSelect(t.id)}
+                onClick={() => !isClosing && onSelect(t.id)}
                 style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 8px',
-                  borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap',
-                  flex: '1 1 0', minWidth: 60, maxWidth: 160,
+                  borderRadius: 6, cursor: isClosing ? 'default' : 'pointer', whiteSpace: 'nowrap',
+                  flex: '1 1 0', minWidth: 0,
                   background: active ? colors.bg : 'transparent',
                   border: `1px solid ${active ? colors.borderStrong : 'transparent'}`,
                   boxShadow: active ? `inset 0 -2px 0 ${colors.accentWarm}` : 'none', ...noDrag }}>
                 {t.id === '__night__' ? <Icon name="moon" size={13} style={{ color: colors.accent, flexShrink: 0 }} /> : <StarIcon species={t.species} size="sm" />}
                 <span style={{ color: t.id === '__night__' ? colors.accent : colors.text, fontSize: 12, overflow: 'hidden',
                   textOverflow: 'ellipsis' }}>{t.title}</span>
-                {t.dirty && <span style={{ width: 6, height: 6, borderRadius: 3, background: colors.accentWarm, flexShrink: 0 }} />}
-                <span role="button" aria-label={`close ${t.title}`}
-                  onClick={(e) => { e.stopPropagation(); onClose(t.id) }}
-                  style={{ color: colors.textMuted, cursor: 'pointer', display: 'flex', padding: '0 2px', flexShrink: 0 }}><Icon name="x" size={12} /></span>
+                {t.dirty && !isClosing && <span style={{ width: 6, height: 6, borderRadius: 3, background: colors.accentWarm, flexShrink: 0 }} />}
+                {!isClosing && (
+                  <span role="button" aria-label={`close ${t.title}`}
+                    onClick={(e) => { e.stopPropagation(); handleClose(t.id) }}
+                    style={{ color: colors.textMuted, cursor: 'pointer', display: 'flex', padding: '0 2px', flexShrink: 0 }}><Icon name="x" size={12} /></span>
+                )}
               </motion.div>
             )
           })}
@@ -64,7 +84,7 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
             display: 'flex', alignItems: 'center', justifyContent: 'center', ...noDrag }}><Icon name="moon" size={14} /></button>
       </div>
 
-      {/* Center: logo — flex item, never overlapped */}
+      {/* Center: logo — flex item */}
       <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: colors.text,
         fontSize: 13, fontWeight: 600, flexShrink: 0, ...noDrag }}>
         <StarIcon species="warm" size="sm" />
