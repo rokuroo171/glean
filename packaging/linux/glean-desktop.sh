@@ -28,6 +28,27 @@ sh "$TMP/install.sh"
 rm -rf "$TMP"
 trap - INT TERM EXIT
 
+# Check for webkit2gtk before launching. The binary is built against a
+# specific webkit ABI; if the library is missing, print distro-specific
+# install instructions instead of a cryptic linker error.
+WK_LIB="libwebkit2gtk-4.1.so"
+if ! ldconfig -p 2>/dev/null | grep -q "$WK_LIB"; then
+  echo ""
+  echo "glean needs webkit2gtk to run. Install it:"
+  echo ""
+  if command -v dnf >/dev/null 2>&1; then
+    echo "  sudo dnf install webkit2gtk4.1"
+  elif command -v apt >/dev/null 2>&1; then
+    echo "  sudo apt install libwebkit2gtk-4.1-dev"
+  elif command -v pacman >/dev/null 2>&1; then
+    echo "  sudo pacman -S webkit2gtk"
+  else
+    echo "  Install webkit2gtk for your distribution"
+  fi
+  echo ""
+  exit 1
+fi
+
 exec "$HOME/.local/bin/glean" "$@"
 
 __GLEAN_ARCHIVE__
