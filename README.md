@@ -50,7 +50,7 @@ Prebuilt installers are attached to every GitHub release:
 Build from source:
 
 ```bash
-git clone https://github.com/glean/glean.git
+git clone https://github.com/rokuroo171/glean.git
 cd glean
 wails build
 ```
@@ -58,8 +58,7 @@ wails build
 This produces a native binary per platform: `.exe` on Windows, a plain
 binary on Linux, `.app`/`.dmg` on macOS. The Windows installer and
 uninstaller are separate C# programs under `installer/` - see
-`build/bin/Installer&UninstallerCompileGuide.txt` for the exact compile
-commands, or `CONTRIBUTING.md` for the full build workflow.
+`CONTRIBUTING.md` for the build workflow and compile commands.
 
 ## Usage
 
@@ -88,10 +87,10 @@ macOS, where the app is placed on `PATH` by a package manager or a symlink).
 Passing any argument skips the GUI and dispatches a subcommand:
 
 ```bash
-glean quick "call the dentist"   # create a note from text instantly
+glean quick "note-1"             # create a note from text instantly
 glean list                       # list notes with their brightness stage
-glean export <note-id>          # write one note's body to <title>.md
-glean import <folder>           # import every .md in a folder as notes
+glean export <note-id>           # write one note's body to <title>.md
+glean import <folder>            # import every .md in a folder as notes
 glean -h, --help                 # show usage
 ```
 
