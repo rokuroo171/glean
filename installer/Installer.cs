@@ -176,7 +176,7 @@ namespace GleanInstaller
             });
             p.Children.Add(new TextBlock
             {
-                Text = "v1.3.4",
+                Text = "v1.3.5",
                 Foreground = TM,
                 FontSize = 10,
                 HorizontalAlignment = HorizontalAlignment.Center
@@ -485,7 +485,7 @@ namespace GleanInstaller
                     string uninstallerPath = Path.Combine(installDir, "gleanUninstaller.exe");
                     string iconPath = Path.Combine(installDir, "glean.exe");
                     RunReg(key, "DisplayName", "Glean");
-                    RunReg(key, "DisplayVersion", "1.3.4");
+                    RunReg(key, "DisplayVersion", "1.3.5");
                     RunReg(key, "Publisher", "rokuroo171");
                     RunReg(key, "InstallLocation", installDir);
                     RunReg(key, "UninstallString", "\"" + uninstallerPath + "\"");
