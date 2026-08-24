@@ -1,5 +1,7 @@
 # glean
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+
 A notes app where every note is a star. Position, brightness, and the lines
 between stars are never authored: they're inferred from what you actually
 open, revisit, and dwell on.
