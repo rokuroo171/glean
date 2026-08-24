@@ -117,20 +117,23 @@ jobs:
           path: build/bin/glean.app
           if-no-files-found: error
 
-      # Linux AppImage: wrap the binary so the release page carries a
-      # single runnable file. GTK and webkit2gtk stay system dependencies.
+      # Linux AppImage: the release carries a single runnable file.
+      # GTK and webkit2gtk stay system dependencies. The icon is the
+      # real 512px squircle PNG (packaging/icon.png); the old ico-to-png
+      # conversion misread the DIB header and shipped a transparent icon
+      # while still passing CI, so it is gone and the PNG is required.
       - name: Build Linux AppImage
         if: matrix.target == 'linux'
         env:
           APPIMAGE_EXTRACT_AND_RUN: '1'
         run: |
           set -ex
-          mkdir -p AppDir/usr/bin AppDir/usr/share/icons/hicolor/256x256/apps
+          test -f packaging/icon.png || { echo 'packaging/icon.png missing'; exit 1; }
+          mkdir -p AppDir/usr/bin AppDir/usr/share/icons/hicolor/512x512/apps
           cp build/bin/glean AppDir/usr/bin/glean
           cp packaging/linux/glean.desktop AppDir/glean.desktop
-          # Convert .ico to .png for the AppImage icon
-          python3 packaging/linux/ico-to-png.py packaging/icon.ico AppDir/glean.png
-          cp AppDir/glean.png AppDir/usr/share/icons/hicolor/256x256/apps/glean.png
+          cp packaging/icon.png AppDir/glean.png
+          cp packaging/icon.png AppDir/usr/share/icons/hicolor/512x512/apps/glean.png
           wget --tries=3 --waitretry=5 https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           chmod +x linuxdeploy-x86_64.AppImage
           export LDAI_OUTPUT=glean.AppImage
