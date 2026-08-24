@@ -14,18 +14,13 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
   const timers = useRef({})
 
   const handleClose = useCallback((id) => {
-    // Mark as closing — tab stays in layout so others don't shift
     setClosing(prev => new Set([...prev, id]))
-    // Actually close after 300ms delay
     timers.current[id] = setTimeout(() => {
       onClose(id)
       setClosing(prev => { const n = new Set(prev); n.delete(id); return n })
       delete timers.current[id]
-    }, 300)
+    }, 1000)
   }, [onClose])
-
-  // Visible tabs = all tabs (closing ones stay for layout)
-  const visibleCount = tabs.length
 
   return (
     <div
@@ -33,9 +28,9 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
         borderBottom: `1px solid ${colors.border}`, background: colors.bgElevated,
         flexShrink: 0, WebkitUserSelect: 'none', ...drag }}>
       {/* Left: sidebar toggle */}
-      <div style={{ flexShrink: 0, ...noDrag }}>{/* sidebar icon lives in Workspace */}</div>
+      <div style={{ flexShrink: 0, ...noDrag }} />
 
-      {/* Tabs — equal width, share space evenly */}
+      {/* Tabs */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0, overflow: 'hidden' }}>
         <AnimatePresence initial={false}>
           {tabs.map(t => {
@@ -43,14 +38,14 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
             const isClosing = closing.has(t.id)
             return (
               <motion.div key={t.id}
-                initial={{ opacity: 0, scaleX: 0.8 }}
-                animate={{ opacity: isClosing ? 0.5 : 1, scaleX: 1 }}
-                exit={{ opacity: 0, scaleX: 0.8 }}
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: isClosing ? 0.4 : 1, width: 'auto' }}
+                exit={{ opacity: 0, width: 0 }}
                 transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                 onClick={() => !isClosing && onSelect(t.id)}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 8px',
-                  borderRadius: 6, cursor: isClosing ? 'default' : 'pointer', whiteSpace: 'nowrap',
-                  flex: '1 1 0', minWidth: 0,
+                style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '5px 28px 5px 8px', borderRadius: 6, cursor: isClosing ? 'default' : 'pointer',
+                  whiteSpace: 'nowrap', flexShrink: 0, maxWidth: 160,
                   background: active ? colors.bg : 'transparent',
                   border: `1px solid ${active ? colors.borderStrong : 'transparent'}`,
                   boxShadow: active ? `inset 0 -2px 0 ${colors.accentWarm}` : 'none', ...noDrag }}>
@@ -58,10 +53,14 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
                 <span style={{ color: t.id === '__night__' ? colors.accent : colors.text, fontSize: 12, overflow: 'hidden',
                   textOverflow: 'ellipsis' }}>{t.title}</span>
                 {t.dirty && !isClosing && <span style={{ width: 6, height: 6, borderRadius: 3, background: colors.accentWarm, flexShrink: 0 }} />}
+                {/* X fixed to right edge */}
                 {!isClosing && (
                   <span role="button" aria-label={`close ${t.title}`}
                     onClick={(e) => { e.stopPropagation(); handleClose(t.id) }}
-                    style={{ color: colors.textMuted, cursor: 'pointer', display: 'flex', padding: '0 2px', flexShrink: 0 }}><Icon name="x" size={12} /></span>
+                    style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)',
+                      color: colors.textMuted, cursor: 'pointer', display: 'flex', padding: '2px' }}>
+                    <Icon name="x" size={12} />
+                  </span>
                 )}
               </motion.div>
             )
@@ -84,14 +83,14 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
             display: 'flex', alignItems: 'center', justifyContent: 'center', ...noDrag }}><Icon name="moon" size={14} /></button>
       </div>
 
-      {/* Center: logo — flex item */}
+      {/* Center: logo */}
       <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: colors.text,
         fontSize: 13, fontWeight: 600, flexShrink: 0, ...noDrag }}>
         <StarIcon species="warm" size="sm" />
         glean
       </span>
 
-      {/* Spacer — balances tabs so logo stays centered */}
+      {/* Spacer */}
       <div style={{ flex: 1, minWidth: 0 }} />
 
       {/* Right: search, actions, controls */}
