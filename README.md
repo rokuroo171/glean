@@ -42,7 +42,9 @@ that accumulates.
 Prebuilt installers are attached to every GitHub release:
 
 - Windows: `gleanInstaller.exe` (custom C# installer + `gleanUninstaller.exe`)
-- Linux: `glean-desktop` (single self-extracting file, installs to `~/.local/bin` then launches)
+- Linux: `glean-desktop` (self-extracting: installs to `~/.local/bin`, adds
+  a desktop entry so glean shows in your app menu or wofi/rofi, then launches
+  into the first-run setup screen, "Welcome to your Night Sky")
 - macOS: `.app`/`.dmg`
 
 Build from source:
