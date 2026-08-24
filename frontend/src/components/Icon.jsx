@@ -3,7 +3,7 @@ import {
   Folder, FolderOpen, LayoutList, Maximize, Moon, Palette,
   PanelRight, Pencil, Plus, RefreshCw, Search, Settings, Sparkle, Sparkles,
   Trash, X, Zap, FileText, Scissors, Copy, ClipboardPaste,
-  Bold, Italic, Link, Table, Code, Quote,
+  Bold, Italic, Link, Table, Code, Quote, Undo2, Redo2,
 } from 'lucide-react'
 
 const iconMap = {
@@ -41,6 +41,8 @@ const iconMap = {
   'pencil': Pencil,
   'columns': Columns3,
   'eye': Eye,
+  'undo': Undo2,
+  'redo': Redo2,
 }
 
 export default function Icon({ name, size = 16, className, style, ...rest }) {

@@ -39,6 +39,8 @@ function wrapSelection(ta, prefix, suffix) {
   return insertText(ta, wrapped, start, end)
 }
 
+const MAX_HISTORY = 200
+
 export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty, setDirty,
   linked, onOpenNote, skyName, onCursorChange, editorMode, onEditorModeChange }) {
   const { prefs } = usePreferences()
@@ -50,6 +52,75 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const debounceRef = useRef(null)
   const taRef = useRef(null)
   const previewRef = useRef(null)
+
+  // --- Undo / Redo history ---
+  const historyRef = useRef([])
+  const historyIndexRef = useRef(-1)
+  const isUndoRedoRef = useRef(false)
+  const [historyInfo, setHistoryInfo] = useState({ canUndo: false, canRedo: false })
+
+  // Initialise history when note changes
+  useEffect(() => {
+    historyRef.current = [body]
+    historyIndexRef.current = 0
+    isUndoRedoRef.current = false
+    setHistoryInfo({ canUndo: false, canRedo: false })
+  }, [note?.id])
+
+  /** Push a new state onto the undo stack (call only for user-initiated edits). */
+  const pushHistory = useCallback((newBody) => {
+    if (isUndoRedoRef.current) return          // skip undo/redo restores
+    const idx = historyIndexRef.current
+    const stack = historyRef.current
+    // Truncate any redo states ahead of the cursor
+    const next = stack.slice(0, idx + 1)
+    next.push(newBody)
+    if (next.length > MAX_HISTORY) next.shift()
+    historyRef.current = next
+    historyIndexRef.current = next.length - 1
+    setHistoryInfo({
+      canUndo: next.length > 1,
+      canRedo: false,
+    })
+  }, [])
+
+  const undo = useCallback(() => {
+    const idx = historyIndexRef.current
+    if (idx <= 0) return
+    isUndoRedoRef.current = true
+    const prev = historyRef.current[idx - 1]
+    historyIndexRef.current = idx - 1
+    onBodyChange(prev)
+    setHistoryInfo({
+      canUndo: idx - 1 > 0,
+      canRedo: true,
+    })
+    // Restore cursor to end of restored text
+    setTimeout(() => {
+      const ta = taRef.current
+      if (ta) { ta.selectionStart = ta.selectionEnd = prev.length; ta.focus() }
+      isUndoRedoRef.current = false
+    }, 0)
+  }, [onBodyChange])
+
+  const redo = useCallback(() => {
+    const idx = historyIndexRef.current
+    const stack = historyRef.current
+    if (idx >= stack.length - 1) return
+    isUndoRedoRef.current = true
+    const next = stack[idx + 1]
+    historyIndexRef.current = idx + 1
+    onBodyChange(next)
+    setHistoryInfo({
+      canUndo: true,
+      canRedo: idx + 1 < stack.length - 1,
+    })
+    setTimeout(() => {
+      const ta = taRef.current
+      if (ta) { ta.selectionStart = ta.selectionEnd = next.length; ta.focus() }
+      isUndoRedoRef.current = false
+    }, 0)
+  }, [onBodyChange])
 
   // Sync mode with parent
   useEffect(() => { setMode(editorMode || 'preview') }, [editorMode])
@@ -71,6 +142,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const headings = useMemo(() => parseHeadings(body), [body])
 
   function handleChange(newBody) {
+    pushHistory(newBody)
     onBodyChange(newBody)
     setDirty(true)
     setTyping(true)
@@ -126,6 +198,18 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
       return
     }
 
+    // Ctrl+Z undo, Ctrl+Shift+Z / Ctrl+Y redo
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && mode === 'edit') {
+      e.preventDefault()
+      if (e.shiftKey) { redo() } else { undo() }
+      return
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y') && mode === 'edit') {
+      e.preventDefault()
+      redo()
+      return
+    }
+
     // Tab indent/outdent
     if (e.key === 'Tab' && mode === 'edit') {
       e.preventDefault()
@@ -141,6 +225,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
         const outdented = selected.replace(/^ {1,2}/gm, '')
         const diff = selected.length - outdented.length
         const newVal = value.slice(0, lineStart) + outdented + value.slice(end)
+        pushHistory(newVal)
         onBodyChange(newVal)
         setDirty(true)
         setTimeout(() => {
@@ -155,6 +240,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
         const indented = '  ' + selected.replace(/\n/g, '\n  ')
         const diff = indented.length - selected.length
         const newVal = value.slice(0, lineStart) + indented + value.slice(end)
+        pushHistory(newVal)
         onBodyChange(newVal)
         setDirty(true)
         setTimeout(() => {
@@ -180,6 +266,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
         result = wrapSelection(ta, '[', '](url)')
       }
       if (result) {
+        pushHistory(result.value)
         onBodyChange(result.value)
         setDirty(true)
         setTimeout(() => {
@@ -296,6 +383,9 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     { id: 'sep2', type: 'separator' },
     { id: 'select-all', label: 'Select all', shortcut: 'Ctrl+A',
       onSelect: () => { const ta = taRef.current; if (!ta) return; ta.focus(); ta.select() } },
+    { id: 'sep3', type: 'separator' },
+    { id: 'undo', label: 'Undo', icon: 'undo', shortcut: 'Ctrl+Z', onSelect: undo },
+    { id: 'redo', label: 'Redo', icon: 'redo', shortcut: 'Ctrl+Shift+Z', onSelect: redo },
   ]
 
   /** Sync textarea scroll with preview scroll in split mode. */
@@ -355,6 +445,21 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
             {note.title}
           </h2>
         </div>
+
+        {/* Undo / Redo */}
+        {(mode === 'edit' || mode === 'split') && (
+          <div style={{ display: 'flex', border: `1px solid ${colors.border}`, borderRadius: 6,
+            overflow: 'hidden', flexShrink: 0 }}>
+            <button type="button" onClick={undo} disabled={!historyInfo.canUndo}
+              style={{ ...toolbarBtn, opacity: historyInfo.canUndo ? 1 : 0.3 }}>
+              <Icon name="undo" size={14} />
+            </button>
+            <button type="button" onClick={redo} disabled={!historyInfo.canRedo}
+              style={{ ...toolbarBtn, opacity: historyInfo.canRedo ? 1 : 0.3 }}>
+              <Icon name="redo" size={14} />
+            </button>
+          </div>
+        )}
 
         {/* Mode toggle: edit | split | preview */}
         <div style={{ display: 'flex', border: `1px solid ${colors.border}`, borderRadius: 6,
