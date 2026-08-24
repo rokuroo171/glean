@@ -11,7 +11,7 @@ const defaultPrefs = {
     font_size: 14,
     line_height: 1.6,
     spell_check_enabled: true,
-    cursor_trail_enabled: true,
+    cursor_trail_enabled: false,
     cursor_trail_mode: 'beam',
     cursor_trail_color: 'accent',
     cursor_trail_intensity: 'normal',
@@ -19,6 +19,7 @@ const defaultPrefs = {
     cursor_trail_decay_slow: 300,
     cursor_trail_length: 12,
     cursor_trail_start_threshold: 4,
+    animated_text_enabled: false,
   },
 }
 
