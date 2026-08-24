@@ -153,7 +153,9 @@ jobs:
           cmd /c "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:winexe /win32icon:packaging\icon.ico /reference:C:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF\PresentationFramework.dll /reference:C:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF\PresentationCore.dll /reference:C:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF\WindowsBase.dll /reference:C:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Xaml.dll /out:build\bin\gleanUninstaller.exe installer\Uninstaller.cs"
           cmd /c "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:winexe /win32icon:packaging\icon.ico /resource:build\bin\glean.exe,glean.exe /resource:build\bin\gleanUninstaller.exe,gleanUninstaller.exe /reference:C:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF\PresentationFramework.dll /reference:C:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF\PresentationCore.dll /reference:C:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF\WindowsBase.dll /reference:C:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Xaml.dll /out:build\bin\gleanInstaller.exe installer\Installer.cs"
 
-      # Generate release body: commit message + changelog with clickable hashes.
+      # Generate release body: commit message + changelog.
+      # Changelog style matches the raind releases: short 7-char hashes
+      # prefixed with *, no markdown links.
       - name: Generate changelog
         if: startsWith(github.ref, 'refs/tags/')
         id: changelog
@@ -162,15 +164,14 @@ jobs:
           CUR_TAG=${GITHUB_REF_NAME}
           # Newest v* tag that is not the tag being released.
           PREV_TAG=$(git tag --sort=-v:refname | grep '^v' | grep -v "^${CUR_TAG}$" | head -1)
-          REPO_URL=$(git remote get-url origin | sed 's/\.git$//')
           # Commit message body (skip first line = title)
           BODY=$(git log -1 --pretty=format:'%b' HEAD | sed '/^$/d')
-          # Changelog with clickable hashes.
+          # Changelog: short hashes, no hyperlinks.
           # git pretty-format uses a single % (%% would print literally).
           if [ -n "$PREV_TAG" ]; then
-            LOG=$(git log --pretty=format:'- [%h]($REPO_URL/commit/%h) %s' ${PREV_TAG}..HEAD)
+            LOG=$(git log --pretty=format:'* %h %s' ${PREV_TAG}..HEAD)
           else
-            LOG=$(git log --pretty=format:'- [%h]($REPO_URL/commit/%h) %s')
+            LOG=$(git log --pretty=format:'* %h %s')
           fi
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
           echo "body<<$EOF" >> "$GITHUB_OUTPUT"
