@@ -97,4 +97,4 @@ style conventions.
 
 ## License
 
-MIT
+[GPL-3.0](LICENSE)
