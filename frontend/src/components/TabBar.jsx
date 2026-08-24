@@ -7,15 +7,8 @@ import Icon from './Icon'
 const drag = { '--wails-draggable': 'drag' }
 const noDrag = { '--wails-draggable': 'no-drag' }
 
-function tabDensity(count) {
-  if (count <= 5) return { padV: 5, padH: 10, gap: 6, maxW: 140, icon: 13, close: 12 }
-  if (count <= 8) return { padV: 4, padH: 6, gap: 4, maxW: 100, icon: 12, close: 11 }
-  return { padV: 3, padH: 4, gap: 3, maxW: 80, icon: 11, close: 10 }
-}
-
 export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSettings, onCustomize, onCommand, pseudoTab, onClosePseudo, detailsOpen, onToggleDetails }) {
   const pseudoLabel = pseudoTab === 'stats' ? 'Sky overview' : pseudoTab === 'customization' ? 'Customization' : 'Settings'
-  const d = tabDensity(tabs.length)
 
   return (
     <div
@@ -25,43 +18,44 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
       {/* Left: sidebar toggle */}
       <div style={{ flexShrink: 0, ...noDrag }}>{/* sidebar icon lives in Workspace */}</div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: d.gap, flex: 1, minWidth: 0, overflow: 'hidden' }}>
+      {/* Tabs — Chrome-style: equal width, shrink together */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0, overflow: 'hidden' }}>
         <AnimatePresence initial={false} mode="popLayout">
           {tabs.map(t => {
             const active = t.id === activeId
             return (
               <motion.div key={t.id} layout
-                initial={{ opacity: 0, width: 0, scaleX: 0.8 }}
-                animate={{ opacity: 1, width: 'auto', scaleX: 1 }}
-                exit={{ opacity: 0, width: 0, scaleX: 0.8 }}
+                initial={{ opacity: 0, scaleX: 0.8 }}
+                animate={{ opacity: 1, scaleX: 1 }}
+                exit={{ opacity: 0, scaleX: 0.8 }}
                 transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                 onClick={() => onSelect(t.id)}
-                style={{ display: 'flex', alignItems: 'center', gap: d.gap, padding: `${d.padV}px ${d.padH}px`,
-                  borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 8px',
+                  borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap',
+                  flex: '1 1 0', minWidth: 60, maxWidth: 160,
                   background: active ? colors.bg : 'transparent',
                   border: `1px solid ${active ? colors.borderStrong : 'transparent'}`,
                   boxShadow: active ? `inset 0 -2px 0 ${colors.accentWarm}` : 'none', ...noDrag }}>
-                {t.id === '__night__' ? <Icon name="moon" size={d.icon} style={{ color: colors.accent }} /> : <StarIcon species={t.species} size="sm" />}
-                <span style={{ color: t.id === '__night__' ? colors.accent : colors.text, fontSize: 12, maxWidth: d.maxW, overflow: 'hidden',
+                {t.id === '__night__' ? <Icon name="moon" size={13} style={{ color: colors.accent, flexShrink: 0 }} /> : <StarIcon species={t.species} size="sm" />}
+                <span style={{ color: t.id === '__night__' ? colors.accent : colors.text, fontSize: 12, overflow: 'hidden',
                   textOverflow: 'ellipsis' }}>{t.title}</span>
-                {t.dirty && <span style={{ width: 6, height: 6, borderRadius: 3, background: colors.accentWarm }} />}
+                {t.dirty && <span style={{ width: 6, height: 6, borderRadius: 3, background: colors.accentWarm, flexShrink: 0 }} />}
                 <span role="button" aria-label={`close ${t.title}`}
                   onClick={(e) => { e.stopPropagation(); onClose(t.id) }}
-                  style={{ color: colors.textMuted, cursor: 'pointer', display: 'flex', padding: '0 2px' }}><Icon name="x" size={d.close} /></span>
+                  style={{ color: colors.textMuted, cursor: 'pointer', display: 'flex', padding: '0 2px', flexShrink: 0 }}><Icon name="x" size={12} /></span>
               </motion.div>
             )
           })}
         </AnimatePresence>
         {pseudoTab && (
           <div key="pseudo"
-            style={{ display: 'flex', alignItems: 'center', gap: d.gap, padding: `${d.padV}px ${d.padH}px`,
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 8px',
               borderRadius: 6, whiteSpace: 'nowrap', flexShrink: 0,
               background: colors.bg, border: `1px solid ${colors.borderStrong}`, ...noDrag }}>
             <span style={{ color: colors.text, fontSize: 12 }}>{pseudoLabel}</span>
             <span role="button" aria-label={`close ${pseudoTab}`}
               onClick={onClosePseudo}
-              style={{ color: colors.textMuted, cursor: 'pointer', display: 'flex', padding: '0 2px' }}><Icon name="x" size={d.close} /></span>
+              style={{ color: colors.textMuted, cursor: 'pointer', display: 'flex', padding: '0 2px' }}><Icon name="x" size={12} /></span>
           </div>
         )}
         <button type="button" onClick={onNew} aria-label="open night" data-tip="Night"
@@ -70,14 +64,14 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
             display: 'flex', alignItems: 'center', justifyContent: 'center', ...noDrag }}><Icon name="moon" size={14} /></button>
       </div>
 
-      {/* Center: logo — normal flex item, never overlaps */}
+      {/* Center: logo — flex item, never overlapped */}
       <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: colors.text,
         fontSize: 13, fontWeight: 600, flexShrink: 0, ...noDrag }}>
         <StarIcon species="warm" size="sm" />
         glean
       </span>
 
-      {/* Spacer — pushes controls right, balances the tabs left */}
+      {/* Spacer — balances tabs so logo stays centered */}
       <div style={{ flex: 1, minWidth: 0 }} />
 
       {/* Right: search, actions, controls */}
