@@ -11,6 +11,8 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
   const pseudoLabel = pseudoTab === 'stats' ? 'Sky overview' : pseudoTab === 'customization' ? 'Customization' : 'Settings'
 
   return (
+    <>
+    <style>{`.tab-scroll::-webkit-scrollbar { display: none; } .tab-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
     <div
       style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 10px', height: 40,
         borderBottom: `1px solid ${colors.border}`, background: colors.bgElevated,
@@ -19,7 +21,7 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
       <div style={{ flexShrink: 0, ...noDrag }}>{/* sidebar icon lives in Workspace */}</div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, minWidth: 0, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, minWidth: 0, overflow: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }} className="tab-scroll">
         <AnimatePresence initial={false} mode="popLayout">
           {tabs.map(t => {
             const active = t.id === activeId
@@ -31,7 +33,7 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
                 transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                 onClick={() => onSelect(t.id)}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px',
-                  borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                  borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, minWidth: 0,
                   background: active ? colors.bg : 'transparent',
                   border: `1px solid ${active ? colors.borderStrong : 'transparent'}`,
                   boxShadow: active ? `inset 0 -2px 0 ${colors.accentWarm}` : 'none', ...noDrag }}>
@@ -101,5 +103,6 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
       </div>
       <WindowControls />
     </div>
+    </>
   )
 }
