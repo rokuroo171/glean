@@ -122,27 +122,23 @@ jobs:
           path: build/bin/glean.app
           if-no-files-found: error
 
-      # Linux AppImage: the release carries a single runnable file.
-      # GTK and webkit2gtk stay system dependencies. The icon is the
-      # real 512px squircle PNG (packaging/icon.png); the old ico-to-png
-      # conversion misread the DIB header and shipped a transparent icon
-      # while still passing CI, so it is gone and the PNG is required.
-      - name: Build Linux AppImage
+      # Linux single-file bundle: glean-desktop is a self-extracting
+      # installer. The tar.gz (binary + icon + desktop entry + install.sh)
+      # is appended to a small POSIX sh header, so it needs no FUSE and no
+      # AppImage runtime, just sh + tar, which every distro has. The real
+      # 512px squircle (packaging/icon.png) is required.
+      - name: Build Linux desktop bundle
         if: matrix.target == 'linux'
-        env:
-          APPIMAGE_EXTRACT_AND_RUN: '1'
         run: |
           set -ex
           test -f packaging/icon.png || { echo 'packaging/icon.png missing'; exit 1; }
-          mkdir -p AppDir/usr/bin AppDir/usr/share/icons/hicolor/512x512/apps
-          cp build/bin/glean AppDir/usr/bin/glean
-          cp packaging/linux/glean.desktop AppDir/glean.desktop
-          cp packaging/icon.png AppDir/glean.png
-          cp packaging/icon.png AppDir/usr/share/icons/hicolor/512x512/apps/glean.png
-          wget --tries=3 --waitretry=5 https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-          chmod +x linuxdeploy-x86_64.AppImage
-          export LDAI_OUTPUT=glean.AppImage
-          ./linuxdeploy-x86_64.AppImage --appdir AppDir --output appimage
+          mkdir -p staging
+          cp build/bin/glean staging/glean
+          cp packaging/icon.png staging/glean.png
+          cp packaging/linux/glean.desktop staging/glean.desktop
+          cp packaging/linux/install.sh staging/install.sh
+          { cat packaging/linux/glean-desktop.sh; tar -czf - -C staging glean glean.png glean.desktop install.sh; } > glean-desktop
+          chmod +x glean-desktop
 
       # Windows installer: compile the C# uninstaller first, then embed
       # glean.exe + gleanUninstaller.exe into the installer so the release
@@ -197,7 +193,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/') && matrix.target == 'linux'
         uses: softprops/action-gh-release@v2
         with:
-          files: glean.AppImage
+          files: glean-desktop
           body: ${{ steps.changelog.outputs.body }}
 
       - name: Publish Windows to Release
