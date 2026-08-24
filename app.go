@@ -138,7 +138,13 @@ func (a *App) GetNotes() []NoteView {
 	notes := a.store.All()
 	views := make([]NoteView, len(notes))
 	for i, n := range notes {
-		views[i] = noteToView(n)
+		v := noteToView(n)
+		if path, err := a.notePath(n); err == nil {
+			if body, err := store.ReadNoteFile(path); err == nil {
+				v.Body = body
+			}
+		}
+		views[i] = v
 	}
 	return views
 }
@@ -156,7 +162,13 @@ func (a *App) ScanSky() []NoteView {
 	notes := a.store.All()
 	views := make([]NoteView, len(notes))
 	for i, n := range notes {
-		views[i] = noteToView(n)
+		v := noteToView(n)
+		if path, err := a.notePath(n); err == nil {
+			if body, err := store.ReadNoteFile(path); err == nil {
+				v.Body = body
+			}
+		}
+		views[i] = v
 	}
 	return views
 }
