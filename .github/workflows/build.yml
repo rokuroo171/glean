@@ -36,6 +36,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history + tags so the changelog step can diff against
+          # the previous release tag (shallow checkout left it empty).
+          fetch-depth: 0
+          fetch-tags: true
 
       - uses: actions/setup-go@v5
         with:
@@ -154,15 +159,18 @@ jobs:
         id: changelog
         shell: bash
         run: |
-          PREV_TAG=$(git tag --sort=-v:refname | grep '^v' | head -2 | tail -1)
+          CUR_TAG=${GITHUB_REF_NAME}
+          # Newest v* tag that is not the tag being released.
+          PREV_TAG=$(git tag --sort=-v:refname | grep '^v' | grep -v "^${CUR_TAG}$" | head -1)
           REPO_URL=$(git remote get-url origin | sed 's/\.git$//')
           # Commit message body (skip first line = title)
           BODY=$(git log -1 --pretty=format:'%b' HEAD | sed '/^$/d')
-          # Changelog with clickable hashes
+          # Changelog with clickable hashes.
+          # git pretty-format uses a single % (%% would print literally).
           if [ -n "$PREV_TAG" ]; then
-            LOG=$(git log --pretty=format:'- [%%h]($REPO_URL/commit/%%h) %%s' ${PREV_TAG}..HEAD)
+            LOG=$(git log --pretty=format:'- [%h]($REPO_URL/commit/%h) %s' ${PREV_TAG}..HEAD)
           else
-            LOG=$(git log --pretty=format:'- [%%h]($REPO_URL/commit/%%h) %%s')
+            LOG=$(git log --pretty=format:'- [%h]($REPO_URL/commit/%h) %s')
           fi
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
           echo "body<<$EOF" >> "$GITHUB_OUTPUT"
