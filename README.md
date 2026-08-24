@@ -42,7 +42,7 @@ that accumulates.
 Prebuilt installers are attached to every GitHub release:
 
 - Windows: `gleanInstaller.exe` (custom C# installer + `gleanUninstaller.exe`)
-- Linux: `glean.AppImage`
+- Linux: `glean-desktop` (single self-extracting file, installs to `~/.local/bin` then launches)
 - macOS: `.app`/`.dmg`
 
 Build from source:
@@ -53,8 +53,8 @@ cd glean
 wails build
 ```
 
-This produces a native binary per platform: `.exe` on Windows, a binary or
-`.AppImage` on Linux, `.app`/`.dmg` on macOS. The Windows installer and
+This produces a native binary per platform: `.exe` on Windows, a plain
+binary on Linux, `.app`/`.dmg` on macOS. The Windows installer and
 uninstaller are separate C# programs under `installer/` - see
 `build/bin/Installer&UninstallerCompileGuide.txt` for the exact compile
 commands, or `CONTRIBUTING.md` for the full build workflow.
