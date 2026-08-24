@@ -35,11 +35,24 @@ func stageLabel(s growth.Stage) string {
 
 const titleMaxLen = 60
 
+// printUsage prints the top-level help text to stdout.
+func printUsage() {
+	fmt.Fprintln(os.Stdout, "glean - a notes app with lots of customization")
+	fmt.Fprintln(os.Stdout)
+	fmt.Fprintln(os.Stdout, "Usage:")
+	fmt.Fprintln(os.Stdout, "  glean                     launch the app")
+	fmt.Fprintln(os.Stdout, "  glean quick \"text\"      create a note instantly from text")
+	fmt.Fprintln(os.Stdout, "  glean list                list notes with their brightness stage")
+	fmt.Fprintln(os.Stdout, "  glean export <id>         write a note's body to <Title>.md")
+	fmt.Fprintln(os.Stdout, "  glean import <folder>     import every .md in a folder as notes")
+	fmt.Fprintln(os.Stdout, "  glean -h, --help          show this help")
+}
+
 // Run dispatches a CLI subcommand. Returns exit code.
 func Run(args []string) int {
-	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: glean quick|list|export|import ...")
-		return 1
+	if len(args) == 0 || args[0] == "-h" || args[0] == "--help" || args[0] == "help" {
+		printUsage()
+		return 0
 	}
 
 	skyDir, err := resolveSkyDir()
