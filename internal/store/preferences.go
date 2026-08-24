@@ -33,7 +33,7 @@ type EditorPrefs struct {
 	FontSize                  int    `json:"font_size"`                    // px
 	LineHeight                float64 `json:"line_height"`                 // e.g. 1.6
 	SpellCheckEnabled         *bool  `json:"spell_check_enabled"`          // nil = true (default); native spelling squiggles
-	CursorTrailEnabled        *bool  `json:"cursor_trail_enabled"`         // nil = true (default)
+	CursorTrailEnabled        *bool  `json:"cursor_trail_enabled"`         // nil = false (default)
 	CursorTrailMode           string `json:"cursor_trail_mode"`            // "beam" (default), "sparkle", "ink"
 	CursorTrailColor          string `json:"cursor_trail_color"`           // "accent" (default), or hex
 	CursorTrailIntensity      string `json:"cursor_trail_intensity"`       // "subtle", "normal" (default), "vivid"
@@ -41,12 +41,12 @@ type EditorPrefs struct {
 	CursorTrailDecaySlow      int    `json:"cursor_trail_decay_slow"`      // ms, slow tail stage
 	CursorTrailLength         int    `json:"cursor_trail_length"`          // trail buffer size (points)
 	CursorTrailStartThreshold int    `json:"cursor_trail_start_threshold"` // px, movement needed to trigger
+	AnimatedTextEnabled        *bool  `json:"animated_text_enabled"`          // nil = false (default)
 }
 
 // DefaultPreferences returns the built-in defaults.
 func DefaultPreferences() Preferences {
 	showStatus := true
-	enabled := true
 	spell := true
 	return Preferences{
 		Theme: ThemePrefs{
@@ -63,7 +63,7 @@ func DefaultPreferences() Preferences {
 			FontSize:                  14,
 			LineHeight:                1.6,
 			SpellCheckEnabled:         &spell,
-			CursorTrailEnabled:        &enabled,
+			CursorTrailEnabled:        nil,
 			CursorTrailMode:           "beam",
 			CursorTrailColor:          "accent",
 			CursorTrailIntensity:      "normal",

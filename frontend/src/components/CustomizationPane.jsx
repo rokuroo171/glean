@@ -331,8 +331,11 @@ export default function CustomizationPane() {
               onChange={(e) => updatePrefs({ editor: { ...prefs.editor, font_size: Number(e.target.value) } })}
               style={{ width: '100%', padding: '6px 8px', borderRadius: 6, fontSize: 12,
                 background: colors.bg, border: '1px solid ' + colors.border,
-                color: colors.text, cursor: 'pointer', outline: 'none' }}>
-              {[12, 13, 14, 15, 16, 18, 20].map(s => <option key={s} value={s}>{s}px</option>)}>
+                color: colors.text, cursor: 'pointer', outline: 'none',
+                appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='${encodeURIComponent(colors.textMuted)}' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center', paddingRight: 28 }}>
+              {[12, 13, 14, 15, 16, 18, 20].map(s => <option key={s} value={s} style={{ background: colors.bg, color: colors.text }}>{s}px</option>)}>
             </select>
           </div>
           <div style={{ flex: 1 }}>
@@ -341,8 +344,11 @@ export default function CustomizationPane() {
               onChange={(e) => updatePrefs({ editor: { ...prefs.editor, line_height: Number(e.target.value) } })}
               style={{ width: '100%', padding: '6px 8px', borderRadius: 6, fontSize: 12,
                 background: colors.bg, border: '1px solid ' + colors.border,
-                color: colors.text, cursor: 'pointer', outline: 'none' }}>
-              {['1.2', '1.4', '1.6', '1.8', '2.0'].map(v => <option key={v} value={v}>{v}</option>)}>
+                color: colors.text, cursor: 'pointer', outline: 'none',
+                appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='${encodeURIComponent(colors.textMuted)}' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center', paddingRight: 28 }}>
+              {['1.2', '1.4', '1.6', '1.8', '2.0'].map(v => <option key={v} value={v} style={{ background: colors.bg, color: colors.text }}>{v}</option>)}>
             </select>
           </div>
         </div>
@@ -417,6 +423,11 @@ export default function CustomizationPane() {
         </div>
           </>
         )}
+
+        <Toggle label="Animated text"
+          hint="Characters fade in when typed and sparkle on backspace (Issue #2)."
+          checked={prefs.editor.animated_text_enabled}
+          onChange={(v) => updatePrefs({ editor: { animated_text_enabled: v } })} />
       </Section>
     </div>
   )
