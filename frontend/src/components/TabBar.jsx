@@ -25,8 +25,8 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
       {/* Left: sidebar toggle */}
       <div style={{ flexShrink: 0, ...noDrag }}>{/* sidebar icon lives in Workspace */}</div>
 
-      {/* Tabs — capped at 55% so logo always has room */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: d.gap, flex: '1 1 0', minWidth: 0, maxWidth: '55%', overflow: 'hidden' }}>
+      {/* Tabs */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: d.gap, flex: 1, minWidth: 0, overflow: 'hidden' }}>
         <AnimatePresence initial={false} mode="popLayout">
           {tabs.map(t => {
             const active = t.id === activeId
@@ -70,13 +70,15 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
             display: 'flex', alignItems: 'center', justifyContent: 'center', ...noDrag }}><Icon name="moon" size={14} /></button>
       </div>
 
-      {/* Center: logo — always visible */}
+      {/* Center: logo — normal flex item, never overlaps */}
       <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: colors.text,
-        fontSize: 13, fontWeight: 600, position: 'absolute', left: '50%', transform: 'translateX(-50%)',
-        pointerEvents: 'none', zIndex: 10, ...noDrag }}>
+        fontSize: 13, fontWeight: 600, flexShrink: 0, ...noDrag }}>
         <StarIcon species="warm" size="sm" />
         glean
       </span>
+
+      {/* Spacer — pushes controls right, balances the tabs left */}
+      <div style={{ flex: 1, minWidth: 0 }} />
 
       {/* Right: search, actions, controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, ...noDrag }}>
