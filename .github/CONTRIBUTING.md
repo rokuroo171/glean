@@ -88,11 +88,21 @@ The old NSIS setup is gone. Installer and uninstaller are hand-written C#
 (`installer/Installer.cs`, `installer/Uninstaller.cs`) compiled with the
 .NET Framework C# compiler, so they run without a runtime install.
 
-- Exact compile commands: `build/bin/Installer&UninstallerCompileGuide.txt`.
 - The compiled binaries land in `build/bin/gleanInstaller.exe` and
   `build/bin/gleanUninstaller.exe` (the installer embeds the app binary).
 - The installer writes `DisplayVersion` to the registry and shows the
   version on its UI - keep the string in sync with the app.
+- Compile both with the .NET Framework C# compiler (same invocation the
+  CI uses). From the repo root on Windows:
+
+  ```cmd
+  set CSC=C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe
+  %CSC% /target:winexe /win32icon:packaging\icon.ico /out:build\bin\gleanUninstaller.exe installer\Uninstaller.cs
+  %CSC% /target:winexe /win32icon:packaging\icon.ico /resource:build\bin\glean.exe,glean.exe /resource:build\bin\gleanUninstaller.exe,gleanUninstaller.exe /out:build\bin\gleanInstaller.exe installer\Installer.cs
+  ```
+
+  (The CI build step adds the WPF references the installer UI needs;
+  include them if you get type-not-found errors.)
 
 ## Versioning
 
@@ -106,17 +116,6 @@ current release):
 
 We follow semver: minor for features, patch for fixes.
 
-## Code style
-
-Plain and boring is the goal:
-
-- Comments explain why, not what. No decorative section dividers
-  (`====`, `----`), no box-drawing, nothing that looks like a banner.
-  A one-line comment above a function is plenty.
-- No em/en dashes in comments or strings; a hyphen does the job.
-- Match surrounding style; inline styles are the norm in this codebase.
-- No `console.log` leftovers in committed code.
-
 ## Testing
 
 - `go build ./...` must pass.
@@ -128,8 +127,8 @@ Plain and boring is the goal:
 
 ## Releases
 
-CI builds on every push to main (Windows, Linux AppImage, macOS) and
-produces the release assets.
+CI builds on every push to main (Windows, Linux `glean-desktop`, macOS)
+and produces the release assets.
 
 - Tag and push: `git tag vX.Y.Z && git push origin main --tags`.
 - The release body auto-lists commits since the last tag, so write commit
@@ -137,5 +136,5 @@ produces the release assets.
 
 ## License
 
-MIT (see `LICENSE`). Forking or vendoring from other projects? Keep the
+GPLv3 (see `LICENSE`). Forking or vendoring from other projects? Keep the
 license comment and credits in the file you copied.
