@@ -81,9 +81,20 @@ you can give a star once a day, separate from the passive counting.
 
 ### CLI
 
+The same binary doubles as a small command-line tool (primary on Linux and
+macOS, where the app is placed on `PATH` by a package manager or a symlink).
+Passing any argument skips the GUI and dispatches a subcommand:
+
 ```bash
-to be implemented...
+glean quick "call the dentist"   # create a note from text instantly
+glean list                       # list notes with their brightness stage
+glean export <note-id>          # write one note's body to <title>.md
+glean import <folder>           # import every .md in a folder as notes
+glean -h, --help                 # show usage
 ```
+
+`glean quick` is the capture flow for terminal people; `glean import` is a
+convenient migration path from another markdown app.
 
 ## Storage
 
