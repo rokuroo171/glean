@@ -8,9 +8,9 @@ const drag = { '--wails-draggable': 'drag' }
 const noDrag = { '--wails-draggable': 'no-drag' }
 
 function tabDensity(count) {
-  if (count <= 5) return { padV: 5, padH: 10, gap: 6, maxW: 160, icon: 13, close: 12 }
-  if (count <= 8) return { padV: 4, padH: 6, gap: 4, maxW: 120, icon: 12, close: 11 }
-  return { padV: 3, padH: 4, gap: 3, maxW: 90, icon: 11, close: 10 }
+  if (count <= 5) return { padV: 5, padH: 10, gap: 6, maxW: 140, icon: 13, close: 12 }
+  if (count <= 8) return { padV: 4, padH: 6, gap: 4, maxW: 100, icon: 12, close: 11 }
+  return { padV: 3, padH: 4, gap: 3, maxW: 80, icon: 11, close: 10 }
 }
 
 export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSettings, onCustomize, onCommand, pseudoTab, onClosePseudo, detailsOpen, onToggleDetails }) {
@@ -25,8 +25,8 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
       {/* Left: sidebar toggle */}
       <div style={{ flexShrink: 0, ...noDrag }}>{/* sidebar icon lives in Workspace */}</div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: d.gap, flex: 1, minWidth: 0, overflow: 'hidden' }}>
+      {/* Tabs — capped at 55% so logo always has room */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: d.gap, flex: '1 1 0', minWidth: 0, maxWidth: '55%', overflow: 'hidden' }}>
         <AnimatePresence initial={false} mode="popLayout">
           {tabs.map(t => {
             const active = t.id === activeId
@@ -70,7 +70,7 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
             display: 'flex', alignItems: 'center', justifyContent: 'center', ...noDrag }}><Icon name="moon" size={14} /></button>
       </div>
 
-      {/* Center: logo */}
+      {/* Center: logo — always visible */}
       <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: colors.text,
         fontSize: 13, fontWeight: 600, position: 'absolute', left: '50%', transform: 'translateX(-50%)',
         pointerEvents: 'none', zIndex: 10, ...noDrag }}>
