@@ -1,10 +1,18 @@
-# glean
+<p align="center">
+  <img src="docs/gleanIcon.png" alt="glean" width="128" />
+</p>
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+<h1 align="center">glean</h1>
 
-A notes app where every note is a star. Position, brightness, and the lines
-between stars are never authored: they're inferred from what you actually
-open, revisit, and dwell on.
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3" /></a>
+</p>
+
+<p align="center">
+  A notes app where every note is a star. Position, brightness, and the lines
+  between stars are never authored: they're inferred from what you actually
+  open, revisit, and dwell on.
+</p>
 
 ## Concept
 
