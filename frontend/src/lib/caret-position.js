@@ -42,7 +42,7 @@ export function caretPosition(ta, container) {
     }
   }
 
-  return mirrorCaret(ta, container, cs, fs, lh)
+  return mirrorCaretRect(ta, container, cs, lh)
 }
 
 /**
