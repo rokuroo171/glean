@@ -28,8 +28,13 @@ function getCharPosition(ta, offset) {
   const lines = textBefore.split('\n')
   const line = lines.length - 1
   const col = lines[line]
-  const x = padL + measureText(lines[line], font)
-  const y = padT + line * lh - ta.scrollTop
+  // The textarea sits inside a padded container; offsetLeft/Top give its
+  // position relative to the positioned container so sparkle coordinates
+  // match the container's coordinate space in both edit and split modes.
+  const ox = ta.offsetLeft || 0
+  const oy = ta.offsetTop || 0
+  const x = ox + padL + measureText(lines[line], font)
+  const y = oy + padT + line * lh - ta.scrollTop
   // Approximate char width from the last typed char (or monospace advance).
   const w = measureText(lines[line].slice(-1) || '0', font) || 8
   return { x, y, lh, w }
@@ -731,11 +736,15 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                     display: selActive ? 'none' : 'block' }}>
                   <div ref={overlayInnerRef} style={{ transform: 'translateY(0px)', willChange: 'transform' }}>
                     {chars.map((c, i) => (
-                      <span key={i}
-                        style={{ display: 'inline-block',
-                          animation: fresh[String(i)] ? `char${cap(typingStyle)} ${ANIM_FADE_MS}ms ease-out` : undefined }}>
-                        {c}
-                      </span>
+                      c === '\n' ? (
+                        <br key={i} />
+                      ) : (
+                        <span key={i}
+                          style={{ display: 'inline-block',
+                            animation: fresh[String(i)] ? `char${cap(typingStyle)} ${ANIM_FADE_MS}ms ease-out` : undefined }}>
+                          {c}
+                        </span>
+                      )
                     ))}
                   </div>
                 </div>
@@ -793,11 +802,15 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                     display: selActive ? 'none' : 'block' }}>
                   <div ref={overlayInnerRef} style={{ transform: 'translateY(0px)', willChange: 'transform' }}>
                     {chars.map((c, i) => (
-                      <span key={i}
-                        style={{ display: 'inline-block',
-                          animation: fresh[String(i)] ? `char${cap(typingStyle)} ${ANIM_FADE_MS}ms ease-out` : undefined }}>
-                        {c}
-                      </span>
+                      c === '\n' ? (
+                        <br key={i} />
+                      ) : (
+                        <span key={i}
+                          style={{ display: 'inline-block',
+                            animation: fresh[String(i)] ? `char${cap(typingStyle)} ${ANIM_FADE_MS}ms ease-out` : undefined }}>
+                          {c}
+                        </span>
+                      )
                     ))}
                   </div>
                 </div>
