@@ -12,14 +12,9 @@ export default function Recovery({ onCreateNew, onComplete }) {
   const [error, setError] = useState(null)
 
   async function locate() {
-    let dir
-    const dialog = window.runtime?.OpenDirectoryDialog
-    if (dialog) {
-      dir = await dialog({ title: 'Locate your Sky folder' })
-    } else {
-      const entered = prompt('Enter the path to your Sky folder:')
-      dir = entered && entered.trim() ? entered.trim() : null
-    }
+    // Native OS folder picker via the Go backend (window.runtime has no
+    // directory dialog, so the old prompt() fallback is replaced).
+    let dir = wails?.App?.PickFolder ? await wails.App.PickFolder() : null
     if (!dir) return
     setBusy(true)
     setError(null)
