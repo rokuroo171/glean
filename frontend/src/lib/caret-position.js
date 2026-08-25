@@ -1,23 +1,24 @@
 /**
  * Precise caret pixel measurement for <textarea> elements.
  *
- * PRIMARY: the browser's own caret. While a textarea is focused, Chromium
- * (WebView2) reflects the edit caret in document.getSelection(). The
- * selection's anchor is the textarea's INTERNAL text node (ta.firstChild),
- * not the textarea element itself. The collapsed range's client rect IS
- * the caret rect - exact, scroll-aware, wrap-aware, at any note depth.
+ * A textarea's caret is not exposed anywhere on the DOM, so we replicate
+ * its layout: a hidden mirror div clones the textarea's full computed
+ * style, renders the content up to the caret, and a zero-width marker
+ * span marks the caret. Reading the marker's layout rect gives the
+ * caret's position pixel-perfectly - wrap-aware, font-aware, padding and
+ * scrollbar aware.
  *
- * FALLBACK: a hidden mirror div with the textarea's full computed style,
- * content up to the caret and a zero-width marker. The marker's rect is
- * the caret. The mirror only runs when the selection is unavailable
- * (unfocused, or a non-WebView2 engine), and it compensates for the
- * scroller that actually moves.
+ * Coordinate space: the reported position is the caret's position in
+ * CONTENT coordinates relative to the container's content origin. The
+ *canvas that draws the caret is re-pinned to the scrollport on every
+ * scroll (canvas.top = host.scrollTop), so content coordinates map to the
+ * correct on-screen pixels regardless of who scrolls.
  */
 
 /**
  * @param {HTMLTextAreaElement} ta
- * @param {HTMLElement} container  anchored ancestor the returned
- *        coordinates are relative to.
+ * @param {HTMLElement} container - positioned ancestor the returned
+ *        coordinates are relative to its content area.
  * @returns {{x:number,y:number,w:number,h:number,fs:number}|null}
  */
 export function caretPosition(ta, container) {
@@ -26,81 +27,33 @@ export function caretPosition(ta, container) {
   const cs = getComputedStyle(ta)
   const fs = parseFloat(cs.fontSize) || 14
   const lh = parseFloat(cs.lineHeight) || fs * 1.6
-  const hostRect = container.getBoundingClientRect()
-
-  const native = nativeCaretRect(ta)
-  if (native) {
-    // The native rect is in viewport space. The drawing canvas is pinned
-    // to the visible area (sticky) and does not scroll with the content,
-    // so viewport coordinates are exactly what it needs - no scroll
-    // compensation on either axis.
-    return {
-      x: native.left - hostRect.left,
-      y: native.top - hostRect.top,
-      w: fs * 0.6,
-      h: native.height > 0 ? native.height : lh,
-      fs,
-      lh,
-    }
-  }
-
-  return mirrorCaretRect(ta, container, cs, lh)
-}
-
-/**
- * The browser's own caret rect, from the document selection. Works while
- * the textarea is focused; the anchor is the textarea's internal text
- * node, NOT the element. Returns null when there is no usable selection.
- */
-function nativeCaretRect(ta) {
-  let sel
-  try {
-    sel = document.getSelection()
-  } catch { return null }
-  if (!sel || sel.rangeCount === 0 || sel.isCollapsed === false) return null
-  const anchor = sel.anchorNode
-  const inTa = anchor === ta ||
-    (anchor && anchor.nodeType === Node.TEXT_NODE && anchor.parentElement === ta)
-  if (!inTa) return null
-  const range = sel.getRangeAt(0)
-  if (!range || range.collapsed === false) return null
-  const rects = range.getClientRects()
-  const rect = rects && rects.length > 0 ? rects[0] : null
-  if (!rect || !isFinite(rect.left) || !isFinite(rect.top)) return null
-  // A degenerate caret rect has width 0; reject a zero-zero rect that
-  // appears when the document selection is a blank artefact.
-  if (rect.left === 0 && rect.top === 0 && rect.width === 0 && rect.height === 0) return null
-  return { left: rect.left, top: rect.top, width: rect.width, height: rect.height }
-}
-
-/**
- * Mirror fallback: the textarea's layout clone with its content up to the
- * caret and a zero-width marker. Scroll-compensated for the scroller that
- * actually moves (textarea internal scroll in split; the wrapper scrolls
- * and the mirror rides along in single-edit mode).
- */
-function mirrorCaretRect(ta, container, cs, lh) {
-  const host = container
+  // The absolute mirror is positioned at the host's padding box origin;
+  // the textarea's own content starts at the host's CONTENT box (it lies
+  // inside the host's padding). Offset the mirror by the host's padding
+  // so both texts share the same origin.
+  const hcs = getComputedStyle(container)
+  const padTop = parseFloat(hcs.paddingTop) || 0
+  const padLeft = parseFloat(hcs.paddingLeft) || 0
 
   let mirror = ta._caretMirror
-  if (mirror && mirror._host !== host) {
+  if (mirror && mirror._host !== container) {
     mirror.remove()
     mirror = null
   }
   if (!mirror) {
     mirror = document.createElement('div')
-    mirror._host = host
+    mirror._host = container
     for (let i = 0; i < cs.length; i++) {
       const prop = cs[i]
       if (['position', 'top', 'left', 'right', 'bottom', 'z-index', 'visibility',
         'pointer-events', 'overflow', 'resize', 'cursor', 'display', 'width',
-        'height', 'margin', 'float', 'opacity'].includes(prop)) continue
+        'height', 'margin', 'float', 'opacity', 'contain'].includes(prop)) continue
       mirror.style.setProperty(prop, cs.getPropertyValue(prop), cs.getPropertyPriority(prop))
     }
     Object.assign(mirror.style, {
       position: 'absolute',
-      left: '0px',
-      top: '0px',
+      left: padLeft + 'px',
+      top: padTop + 'px',
       boxSizing: 'border-box',
       visibility: 'hidden',
       pointerEvents: 'none',
@@ -109,26 +62,46 @@ function mirrorCaretRect(ta, container, cs, lh) {
       resize: 'none',
       width: '0px',
     })
-    host.appendChild(mirror)
+    container.appendChild(mirror)
     ta._caretMirror = mirror
+  } else {
+    mirror.style.top = padTop + 'px'
+    mirror.style.left = padLeft + 'px'
   }
 
-  // clientWidth already excludes the scrollbar, so this is exactly the
-  // textarea's wrap width - do NOT subtract the scrollbar again or lines
-  // wrap early and drift row by row on long notes.
+  // clientWidth already excludes a vertical scrollbar, so the wrap width
+  // matches the textarea exactly - never subtract the scrollbar again.
   mirror.style.width = Math.max(1, ta.clientWidth) + 'px'
 
   const sel = ta.selectionEnd ?? ta.selectionStart ?? 0
   mirror.textContent = ta.value.slice(0, sel)
   const marker = document.createElement('span')
   marker.style.display = 'inline'
+  // Zero-width NO-BREAK marker: has no width so it never moves the wrap
+  // point, and unlike a zero-width space it cannot introduce a line
+  // break right where we are measuring.
   marker.textContent = '\uFEFF'
   mirror.appendChild(marker)
   const r = marker.getBoundingClientRect()
   try { marker.remove() } catch { /* noop */ }
 
-  const hr = host.getBoundingClientRect()
-  // The mirror marker rect is also viewport space; the sticky drawing
-  // layer takes it directly. No scroll compensation on either axis.
-  return { left: r.left - hr.left, top: r.top - hr.top, width: 0, height: r.height > 0 ? r.height : lh }
+  const hr = container.getBoundingClientRect()
+  // Marker rect minus container rect is the caret offset from the
+  // container's top-left IN THE SCROLLED VIEW (viewport-relative).
+  // The canvas is pinned over the scrollport (canvas.top = host.scrollTop),
+  // so viewport-relative coordinates are exactly what it needs - the
+  // host's own scroll cancels out here.
+  //
+  // The one exception: in split mode the TEXTAREA scrolls internally
+  // (the host does not) and the mirror renders the FULL content, so its
+  // marker rect includes the internal scroll; subtract it to get back
+  // to viewport coordinates.
+  let x = r.left - hr.left
+  let y = r.top - hr.top
+  if (ta.scrollHeight > ta.clientHeight + 1) {
+    x -= ta.scrollLeft || 0
+    y -= ta.scrollTop || 0
+  }
+
+  return { x, y, w: fs * 0.6, h: r.height > 0 ? r.height : lh, fs, lh }
 }
