@@ -274,6 +274,7 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
   const [folderRenaming, setFolderRenaming] = useState(null) // { path, name }
   const [localFolders, setLocalFolders] = useState([])
   const [refreshing, setRefreshing] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(null) // folder path awaiting delete confirmation
   // Prefer the folder list passed from the parent; fall back to our own scan.
   const folderList = folders || localFolders
 
@@ -374,9 +375,13 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
   }
 
   function handleDeleteFolder(path) {
-    const name = path.split('/').pop()
-    const ok = window.confirm(`Delete folder \u201c${name}\u201d and everything inside it?`)
-    if (!ok) return
+    setConfirmDelete(path)
+  }
+
+  function confirmDeleteFolder() {
+    const path = confirmDelete
+    setConfirmDelete(null)
+    if (!path) return
     if (wails) {
       wails.App.DeleteFolder(path)
         .then(async () => { await fetchFolders(); if (onRefresh) onRefresh() })
@@ -548,6 +553,61 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
           <Icon name="chevron-right" size={10} style={{ color: colors.textMuted, transform: 'rotate(90deg)' }} />
         </button>
       </div>
+
+      {/* Themed delete-folder confirmation (replaces the native browser dialog) */}
+      {confirmDelete && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(5, 8, 14, 0.6)',
+          }}
+          onClick={() => setConfirmDelete(null)}
+        >
+          <div
+            style={{
+              background: colors.bgElevated,
+              border: `1px solid ${colors.borderStrong}`,
+              borderRadius: 10,
+              padding: '18px 20px',
+              maxWidth: 360,
+              boxShadow: '0 12px 40px rgba(0, 0, 0, 0.45)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 14, fontWeight: 600, color: colors.text, marginBottom: 8 }}>
+              Delete folder
+            </div>
+            <div style={{ fontSize: 13, color: colors.textMuted, lineHeight: 1.5, marginBottom: 16 }}>
+              Delete folder "{confirmDelete.split('/').pop()}" and everything inside it?
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(null)}
+                style={{
+                  background: 'none', border: `1px solid ${colors.borderStrong}`,
+                  color: colors.textMuted, borderRadius: 6, padding: '6px 12px',
+                  fontSize: 12, cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteFolder}
+                style={{
+                  background: '#b05050', border: 'none', color: '#fff',
+                  borderRadius: 6, padding: '6px 14px', fontSize: 12,
+                  fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
