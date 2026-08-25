@@ -21,6 +21,7 @@
 
 import { useEffect, useRef } from 'react'
 import { usePreferences } from '../lib/preferences-context'
+import { caretPosition } from '../lib/caret-position'
 
 const ACCENT_FALLBACK = '#5b9fd4'
 const INTENSITY = { subtle: 0.6, normal: 1, vivid: 1.6 }
@@ -86,8 +87,11 @@ export default function CursorTrail({ textareaRef, containerRef }) {
     if (!ta) return
 
     // Always draw our own caret.
-    const onFocus = () => { focusRef.current = true }
+    const onFocus = () => { focusRef.current = true; measure(false) }
     const onBlur = () => { focusRef.current = false }
+    const onKeyUp = () => measure(false)
+    const onInput = () => measure(false)
+    const onClick = () => measure(false)
     ta.style.caretColor = 'transparent'
     ta.addEventListener('focus', onFocus)
     ta.addEventListener('blur', onBlur)
@@ -170,29 +174,28 @@ export default function CursorTrail({ textareaRef, containerRef }) {
       }
     }
 
-    ta.addEventListener('keydown', onKeyDown)
-    ta.addEventListener('keyup', () => measure(false))
-    ta.addEventListener('input', () => measure(false))
-    ta.addEventListener('click', () => measure(false))
-    ta.addEventListener('focus', () => measure(false))
-    ta.addEventListener('scroll', onScroll)
-    // In single-edit mode the WRAPPER is the scrollable (the textarea is
-    // height:100% and never scrolls), so listen for its scroll in the
-    // capture phase too - scroll events don't bubble.
-    const containerNode = containerRef?.current
-    if (containerNode) containerNode.addEventListener('scroll', onScroll, true)
-    return () => {
-      ta.style.caretColor = ''
-      ta.removeEventListener('focus', onFocus)
-      ta.removeEventListener('blur', onBlur)
-      ta.removeEventListener('keydown', onKeyDown)
-      ta.removeEventListener('keyup', () => measure(false))
-      ta.removeEventListener('input', () => measure(false))
-      ta.removeEventListener('click', () => measure(false))
-      ta.removeEventListener('focus', () => measure(false))
-      ta.removeEventListener('scroll', onScroll)
-      if (containerNode) containerNode.removeEventListener('scroll', onScroll, true)
-    }
+      ta.addEventListener('keydown', onKeyDown)
+      ta.addEventListener('keyup', onKeyUp)
+      ta.addEventListener('input', onInput)
+      ta.addEventListener('click', onClick)
+      ta.addEventListener('focus', onFocus)
+      ta.addEventListener('scroll', onScroll)
+      // In single-edit mode the WRAPPER is the scrollable (the textarea is
+      // height:100% and never scrolls), so listen for its scroll in the
+      // capture phase too - scroll events don't bubble.
+      const containerNode = containerRef?.current
+      if (containerNode) containerNode.addEventListener('scroll', onScroll, true)
+      return () => {
+        ta.style.caretColor = ''
+        ta.removeEventListener('focus', onFocus)
+        ta.removeEventListener('blur', onBlur)
+        ta.removeEventListener('keydown', onKeyDown)
+        ta.removeEventListener('keyup', onKeyUp)
+        ta.removeEventListener('input', onInput)
+        ta.removeEventListener('click', onClick)
+        ta.removeEventListener('scroll', onScroll)
+        if (containerNode) containerNode.removeEventListener('scroll', onScroll, true)
+      }
   }, [textareaRef])
 
   // Animation loop. Always runs (custom caret is always visible).
@@ -223,15 +226,11 @@ export default function CursorTrail({ textareaRef, containerRef }) {
       const rgb = parseHex(colorRef.current)
       const target = targetRef.current
 
-      // Ease the drawn position toward the real caret for ALL modes,
-      // not just beam - otherwise sparkle/ink leave the caret stuck
-      // at its initial plant position.
-      const pos = posRef.current
-      if (pos && target) {
-        const k = 1 - Math.pow(2, (-10 * dt) / 70)
-        pos.x += (target.x - pos.x) * k
-        pos.y += (target.y - pos.y) * k
-      }
+      // The caret always draws EXACTLY at the measured native caret
+      // position. No easing: any lag between the drawn caret and the
+      // text looks like misalignment on long notes. The comet tail
+      // still flows from the samples.
+      posRef.current = target ? { ...target } : posRef.current
 
       // Trail effects only fire when the toggle is on.
       if (enabled) {
@@ -598,74 +597,9 @@ function findScroller(el) {
 
 function getCursorPixelPos(ta, container) {
   if (!ta || !container) return null
-  const s = getComputedStyle(ta)
-  const fs = parseFloat(s.fontSize) || 14
-  const lh = parseFloat(s.lineHeight) || fs * 1.6
-  const pl = parseFloat(s.paddingLeft) || 0
-  const pr = parseFloat(s.paddingRight) || 0
-
-  // The mirror is always inside the container (which has position:relative)
-  // so its coordinate system matches the canvas. The textarea's scroll is
-  // subtracted from the final position to handle both single and split modes.
-  const trect = ta.getBoundingClientRect()
-  const srect = container.getBoundingClientRect()
-  const mLeft = trect.left - srect.left + (parseFloat(getComputedStyle(ta).paddingLeft) || 0)
-  const mTop = trect.top - srect.top + (parseFloat(getComputedStyle(ta).paddingTop) || 0)
-
-  let mirror = ta._gleanMirror
-  if (mirror && mirror._c !== container) {
-    mirror.remove()
-    mirror = null
-  }
-  if (!mirror) {
-    mirror = document.createElement('div')
-    mirror._c = container
-    Object.assign(mirror.style, {
-      position: 'absolute',
-      left: mLeft + 'px',
-      top: mTop + 'px',
-      width: Math.max(1, ta.clientWidth - pl - pr) + 'px',
-      height: 'auto',
-      visibility: 'hidden',
-      pointerEvents: 'none',
-      overflow: 'hidden',
-      whiteSpace: 'pre-wrap',
-      fontFamily: s.fontFamily,
-      fontSize: s.fontSize,
-      fontStyle: s.fontStyle,
-      fontWeight: s.fontWeight,
-      letterSpacing: s.letterSpacing,
-      lineHeight: s.lineHeight,
-      tabSize: s.tabSize,
-    })
-    container.appendChild(mirror)
-    ta._gleanMirror = mirror
-  } else {
-    mirror.style.width = Math.max(1, ta.clientWidth - pl - pr) + 'px'
-    // Recompute offsets on every measure: the scroller can move between
-    // measures (resize, split mode toggle).
-    mirror.style.left = mLeft + 'px'
-    mirror.style.top = mTop + 'px'
-  }
-
-  const sel = ta.selectionEnd ?? ta.selectionStart ?? 0
-  mirror.textContent = ta.value.slice(0, sel)
-  const marker = document.createElement('span')
-  mirror.appendChild(marker)
-
-  // Viewport-relative rects: if the WRAPPER scrolls (single-edit mode),
-  // the mirror lives inside it and its marker rect already reflects the
-  // scroll. If the TEXTAREA scrolls (split mode), the mirror is a fixed
-  // sibling so the textarea's own scroll must be subtracted. This
-  // covers both: subtract ta.scroll* (0 when the wrapper scrolls).
-  const m = marker.getBoundingClientRect()
-  const cv = container.getBoundingClientRect()
-  return {
-    x: m.left - cv.left - (ta.scrollLeft || 0),
-    y: m.top - cv.top - (ta.scrollTop || 0),
-    h: lh,
-    w: fs * 0.6,
-  }
+  const p = caretPosition(ta, container)
+  if (!p) return null
+  return { x: p.x, y: p.y, h: p.h, w: p.w }
 }
 
 function parseHex(hex) {
