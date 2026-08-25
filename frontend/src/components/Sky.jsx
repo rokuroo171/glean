@@ -237,7 +237,7 @@ function dormantDimming(daysSince) {
 
 // ─── Component ────────────────────────────────────────────────────────
 export default function Sky({
-  notes, trails, onNoteClick, selectedNote, onCloseNote,
+  notes, links, onNoteClick, selectedNote, onCloseNote,
   onSave, onWish, onDelete, onCreate,
   showStats, onCloseStats, onReturnHome,
   pendingNoteId, onPendingNoteHandled,
@@ -413,7 +413,7 @@ export default function Sky({
     const prevIds = new Set(
       prevTrailsRef.current.map(t => [t.note_a, t.note_b].sort().join('-'))
     )
-    trails.forEach(t => {
+    links.forEach(t => {
       const id = [t.note_a, t.note_b].sort().join('-')
       if (!prevIds.has(id)) {
         setTrailBirth(prev => ({ ...prev, [id]: Date.now() }))
@@ -421,15 +421,15 @@ export default function Sky({
     })
     // Clean up stale entries for trails that no longer exist
     const currentIds = new Set(
-      trails.map(t => [t.note_a, t.note_b].sort().join('-'))
+      links.map(t => [t.note_a, t.note_b].sort().join('-'))
     )
     setTrailBirth(prev => {
       const next = {}
       Object.keys(prev).forEach(k => { if (currentIds.has(k)) next[k] = prev[k] })
       return next
     })
-    prevTrailsRef.current = trails
-  }, [trails])
+    prevTrailsRef.current = links
+  }, [links])
 
   // ─── Returning pulse auto-clear ──────────────────────────────────────
   useEffect(() => {
@@ -1137,34 +1137,34 @@ export default function Sky({
           {/* Deduplicate by pairId to prevent double-rendering from duplicate backend pairs */}
           {(() => {
             const seen = new Set()
-            return trails.map((trail) => {
-            const noteA = notes.find(n => n.id === trail.note_a)
-            const noteB = notes.find(n => n.id === trail.note_b)
+            return links.map((link) => {
+            const noteA = notes.find(n => n.id === link.note_a)
+            const noteB = notes.find(n => n.id === link.note_b)
             if (!noteA || !noteB) return null
-            const pairId = [trail.note_a, trail.note_b].sort().join('-')
+            const pairId = [link.note_a, link.note_b].sort().join('-')
             if (seen.has(pairId)) return null
             seen.add(pairId)
             const a = worldToScreen(noteA.world_x, noteA.world_y, 'fg')
             const b = worldToScreen(noteB.world_x, noteB.world_y, 'fg')
             const birthTime = trailBirth[pairId]
             let drawProgress = 1
-            let lineOpacity = trail.dimmed ? 0.08 : 0.2
+            let lineOpacity = link.dimmed ? 0.08 : 0.2
             if (birthTime && !reducedMotion) {
               const elapsed = (Date.now() - birthTime) / 450 // 450ms draw-in
               drawProgress = Math.min(1, elapsed)
               // Smooth ease-out quad for natural feel
               drawProgress = 1 - (1 - drawProgress) * (1 - drawProgress)
               // Opacity fades in during the first half of the draw
-              lineOpacity = Math.min(lineOpacity, drawProgress * (trail.dimmed ? 0.08 : 0.2))
+              lineOpacity = Math.min(lineOpacity, drawProgress * (link.dimmed ? 0.08 : 0.2))
             }
             // ── Pulse on hover (Idea 1) ──────────────────────────────────
             // Connected lines brighten while hovering; fade back over 200ms on leave.
             const isPulseActive = hoveredStar && (
-              trail.note_a === hoveredStar || trail.note_b === hoveredStar
+              link.note_a === hoveredStar || link.note_b === hoveredStar
             )
             const isFading = pulseFadeRef.current && (
-              trail.note_a === pulseFadeRef.current.starId ||
-              trail.note_b === pulseFadeRef.current.starId
+              link.note_a === pulseFadeRef.current.starId ||
+              link.note_b === pulseFadeRef.current.starId
             )
             if (isPulseActive && !reducedMotion && drawProgress >= 1) {
               lineOpacity = 0.6
@@ -1199,7 +1199,7 @@ export default function Sky({
             const note = notes.find(n => n.id === hoveredStar)
             if (!note) return null
             const constellationPairs = new Set()
-            trails.forEach(t => {
+            links.forEach(t => {
               if (t.note_a === hoveredStar || t.note_b === hoveredStar) {
                 constellationPairs.add([t.note_a, t.note_b].sort().join('-'))
               }
@@ -1426,7 +1426,7 @@ export default function Sky({
             const now = Date.now()
             // Build set of existing constellation pair IDs for fast lookup
             const constellationPairs = new Set()
-            trails.forEach(t => {
+            links.forEach(t => {
               constellationPairs.add([t.note_a, t.note_b].sort().join('-'))
             })
             // Build screen-space points from trail entries

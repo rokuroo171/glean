@@ -15,6 +15,7 @@ import (
 	"github.com/glean/glean/internal/growth"
 	"github.com/glean/glean/internal/note"
 	"github.com/glean/glean/internal/store"
+	"github.com/glean/glean/internal/wikilink"
 	"github.com/glean/glean/internal/world"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -390,26 +391,52 @@ type TrailView struct {
 	Dimmed bool   `json:"dimmed"`
 }
 
-// GetTrails returns adjacency pairs that meet the rendering threshold (count >= 5).
-func (a *App) GetTrails() []TrailView {
-	if a.adjacency == nil {
+// GetLinks returns all resolved wikilink edges across the sky's notes.
+// Each pair is the IDs of two notes connected by at least one [[Title]]
+// reference (either direction), deduped and sorted. Unresolved links
+// ([[Missing]]) are excluded here; the preview styles them itself.
+func (a *App) GetLinks() []TrailView {
+	if a.store == nil {
 		return nil
 	}
-	pairs := a.adjacency.Pairs()
-	views := make([]TrailView, 0, len(pairs))
-	now := time.Now()
-	for _, pair := range pairs {
-		if pair.Count < 5 {
+	notes := a.store.All()
+	byTitle := make(map[string]string, len(notes)) // lowercase title -> id
+	for _, n := range notes {
+		byTitle[strings.ToLower(n.Title)] = n.ID
+	}
+	edgeSet := make(map[string]bool)
+	views := make([]TrailView, 0, len(notes))
+	for _, n := range notes {
+		path, err := a.notePath(n)
+		if err != nil {
 			continue
 		}
-		dimmed := adjacency.IsDimmed(pair, now)
-		views = append(views, TrailView{
-			NoteA:  pair.NoteA,
-			NoteB:  pair.NoteB,
-			Dimmed: dimmed,
-		})
+		body, err := store.ReadNoteFile(path)
+		if err != nil {
+			continue
+		}
+		for _, l := range wikilink.Scan(body) {
+			to, ok := byTitle[strings.ToLower(l.Target)]
+			if !ok || to == n.ID {
+				continue
+			}
+			key := linkPairKey(n.ID, to)
+			if edgeSet[key] {
+				continue
+			}
+			edgeSet[key] = true
+			views = append(views, TrailView{NoteA: n.ID, NoteB: to, Dimmed: false})
+		}
 	}
 	return views
+}
+
+// linkPairKey returns a canonical, order-independent key for a note pair.
+func linkPairKey(a, b string) string {
+	if a < b {
+		return a + "\x00" + b
+	}
+	return b + "\x00" + a
 }
 
 // StatsView is the JSON-safe stats representation for the frontend.

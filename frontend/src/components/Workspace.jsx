@@ -18,7 +18,7 @@ import ManageSky from './ManageSky'
 const wails = window.go?.main
 
 export default function Workspace({
-  notes, trails, stats, skyName, skyPath, version,
+  notes, links, stats, skyName, skyPath, version,
   onOpenNote, onNewNote, onOpenStats, onCreateNote,
   fetchWorkspaceState, saveWorkspaceState,
   noteBodies, // map id -> body, filled by App via OpenNote
@@ -249,12 +249,12 @@ export default function Workspace({
   const linked = useMemo(() => {
     if (!activeNote) return []
     const ids = new Set()
-    for (const t of trails) {
+    for (const t of links) {
       if (t.note_a === activeNote.id) ids.add(t.note_b)
       if (t.note_b === activeNote.id) ids.add(t.note_a)
     }
     return notes.filter(n => ids.has(n.id))
-  }, [activeNote, trails, notes])
+  }, [activeNote, links, notes])
 
   return (
     <div style={{ width: '100vw', height: '100vh', background: colors.bg,
@@ -408,7 +408,7 @@ export default function Workspace({
         )}
       </div>
       {fullSky && (
-        <FullSky notes={notes} trails={trails} onNoteClick={openNote}
+        <FullSky notes={notes} links={links} onNoteClick={openNote}
           onClose={() => setFullSky(false)} />
       )}
       {showManageSky && (

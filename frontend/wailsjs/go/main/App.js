@@ -26,6 +26,10 @@ export function GetKnownSkies() {
   return window['go']['main']['App']['GetKnownSkies']();
 }
 
+export function GetLinks() {
+  return window['go']['main']['App']['GetLinks']();
+}
+
 export function GetNote(arg1) {
   return window['go']['main']['App']['GetNote'](arg1);
 }
@@ -52,10 +56,6 @@ export function GetSkyPath() {
 
 export function GetStats() {
   return window['go']['main']['App']['GetStats']();
-}
-
-export function GetTrails() {
-  return window['go']['main']['App']['GetTrails']();
 }
 
 export function GetWorkspaceState() {
