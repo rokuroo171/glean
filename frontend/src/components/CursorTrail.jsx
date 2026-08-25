@@ -122,6 +122,10 @@ export default function CursorTrail({ textareaRef, containerRef }) {
 
     const measure = (fromScroll) => {
       const pos = getCursorPixelPos(ta, containerRef?.current)
+      // Never leave the user without a caret: if we cannot measure yet,
+      // let the native one show through; once we CAN measure we take over
+      // and hide it.
+      ta.style.caretColor = pos ? 'transparent' : ''
       if (!pos) return
       const e = prefsRef.current || {}
       const threshold = e.cursor_trail_start_threshold ?? 4
@@ -185,6 +189,11 @@ export default function CursorTrail({ textareaRef, containerRef }) {
       // capture phase too - scroll events don't bubble.
       const containerNode = containerRef?.current
       if (containerNode) containerNode.addEventListener('scroll', onScroll, true)
+
+      // Measure once on mount so the drawn caret appears immediately,
+      // even before the user touches the keyboard.
+      measure(false)
+
       return () => {
         ta.style.caretColor = ''
         ta.removeEventListener('focus', onFocus)
