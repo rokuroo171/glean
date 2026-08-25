@@ -154,27 +154,29 @@ function CodeBlock({ children, className }) {
 
   return (
     <div className="code-block" style={s.pre}>
-      {lang && (
-        <span style={{
-          position: 'absolute', top: 6, right: 10,
-          fontSize: 10, color: colors.textDim, textTransform: 'uppercase',
-          letterSpacing: '0.05em',
-        }}>
-          {lang}
-        </span>
-      )}
-      <button
-        type="button"
-        onClick={copy}
-        title="Copy code"
-        style={{
-          position: 'absolute', top: 6, right: lang ? 50 : 10,
-          background: 'none', border: 'none', color: colors.textMuted,
-          cursor: 'pointer', padding: 2, fontSize: 11,
-        }}
-      >
-        copy
-      </button>
+      {/* Header row so the language label and copy button never overlap */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: 8,
+      }}>
+          <span style={{
+            fontSize: 10, color: colors.textDim, textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+          }}>
+            {lang}
+          </span>
+          <button
+            type="button"
+            onClick={copy}
+            title="Copy code"
+            style={{
+              background: 'none', border: 'none', color: colors.textMuted,
+              cursor: 'pointer', padding: 2, fontSize: 11,
+            }}
+          >
+            copy
+          </button>
+      </div>
       {highlighted
         ? <code className={`language-${lang}`} dangerouslySetInnerHTML={{ __html: highlighted }} />
         : <code>{code}</code>}
