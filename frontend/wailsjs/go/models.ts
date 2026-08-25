@@ -14,6 +14,7 @@ export namespace main {
 	    cursor_trail_length: number;
 	    cursor_trail_start_threshold: number;
 	    animated_text_enabled: boolean;
+	    animated_text_style: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new EditorPrefsView(source);
@@ -34,6 +35,7 @@ export namespace main {
 	        this.cursor_trail_length = source["cursor_trail_length"];
 	        this.cursor_trail_start_threshold = source["cursor_trail_start_threshold"];
 	        this.animated_text_enabled = source["animated_text_enabled"];
+	        this.animated_text_style = source["animated_text_style"];
 	    }
 	}
 	export class KnownSkyView {
