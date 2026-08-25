@@ -286,6 +286,11 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
 
   const headings = useMemo(() => parseHeadings(body), [body])
 
+  /** Toggle a task checkbox from the rendered preview: body already rewritten. */
+  function handleToggleTask(newBody) {
+    handleChange(newBody)
+  }
+
   function handleChange(newBody) {
     pushHistory(newBody)
     onBodyChange(newBody)
@@ -757,7 +762,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
             <div style={{ width: 1, background: colors.border, flexShrink: 0 }} />
             <div ref={previewRef} style={{ flex: 1, minWidth: 0, overflow: 'auto',
               padding: space[3], color: colors.text, lineHeight: prefs.editor.line_height || 1.6 }}>
-              {renderMarkdown(body)}
+              {renderMarkdown(body, { onToggle: handleToggleTask })}
             </div>
           </div>
         ) : (
@@ -768,7 +773,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
               transition: 'box-shadow 0.6s ease-out',
               boxShadow: typing ? `inset 0 0 30px rgba(180, 140, 80, 0.06)` : 'none' }}>
             {mode === 'preview' ? (
-              <div style={{ color: colors.text, lineHeight: 1.6 }}>{renderMarkdown(body)}</div>
+              <div style={{ color: colors.text, lineHeight: 1.6 }}>{renderMarkdown(body, { onToggle: handleToggleTask })}</div>
             ) : (
               <>
               {(mode === 'edit') && prefs.editor.cursor_trail_mode !== 'off' && (

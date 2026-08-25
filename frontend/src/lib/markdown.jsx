@@ -88,37 +88,59 @@ function getS() {
 
 let s = {}
 
+// Per-render task-list state: which checkbox index is next, the source body,
+// and the toggle callback. Reset at the start of every renderMarkdown call.
+let taskCtx = { body: '', next: 0, onToggle: null }
+
 /* ── Interactive Components ── */
 
 /** Task-list checkbox, Obsidian-style: clean box, no bullet marker */
-function Checkbox({ checked, children }) {
+function Checkbox({ checked, index, children }) {
+  const handleClick = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (taskCtx.onToggle) taskCtx.onToggle(flipTask(taskCtx.body, index))
+  }
+  const handleKey = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      handleClick(e)
+    }
+  }
   return (
-    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', lineHeight: 1.7 }}>
+    <span
+      role="checkbox"
+      aria-checked={checked}
+      tabIndex={0}
+      onClick={handleClick}
+      onKeyDown={handleKey}
+      style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', lineHeight: 1.7, outline: 'none' }}
+    >
       <span
         style={{
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
-          width: 16,
-          height: 16,
-          borderRadius: 4,
-          border: `1.5px solid ${checked ? colors.accent : colors.borderStrong}`,
+          width: 14,
+          height: 14,
+          borderRadius: 3.5,
+          border: `1px solid ${checked ? colors.accent : colors.borderStrong}`,
           background: checked ? colors.accent : 'transparent',
           flexShrink: 0,
-          marginTop: 3,
+          marginTop: 5,
           transition: 'background 120ms ease, border-color 120ms ease',
         }}
       >
         {checked && (
-          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" style={{ display: 'block' }}>
-            <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+          <svg width="10" height="10" viewBox="0 0 14 14" fill="none" style={{ display: 'block' }}>
+            <path d="M3.5 7.5l2.5 2.5 4.5-5.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         )}
       </span>
       <span style={checked ? { textDecoration: 'line-through', opacity: 0.55 } : undefined}>
         {children}
       </span>
-    </label>
+    </span>
   )
 }
 
@@ -223,8 +245,9 @@ const components = {
   ol: ({ children, ...props }) => <ol style={s.ol} {...props}>{children}</ol>,
   li: ({ children, checked, ...props }) => {
     if (checked !== undefined && checked !== null) {
+      const index = taskCtx.next++
       return <li style={{ ...s.li, listStyle: 'none', paddingLeft: 0 }} {...props}>
-        <Checkbox checked={checked}>{children}</Checkbox>
+        <Checkbox checked={checked} index={index}>{children}</Checkbox>
       </li>
     }
     return <li style={s.li} {...props}>{children}</li>
@@ -257,9 +280,31 @@ const components = {
 
 /* ── Main Renderer ── */
 
-export function renderMarkdown(text) {
+/**
+ * Flip the nth task checkbox ([ ] <-> [x]) in a markdown source string.
+ * Only matches checkboxes at the start of a list item (GFM task list syntax),
+ * so literal `[ ]` text in paragraphs is never touched.
+ */
+export function flipTask(body, index) {
+  const re = /^(\s*(?:[-*+]|\d+\.)\s+)\[[ xX]\]/gm
+  let i = 0
+  let m
+  while ((m = re.exec(body))) {
+    if (i === index) {
+      const checked = m[0].endsWith('[x]') || m[0].endsWith('[X]')
+      const replacement = checked ? '[ ]' : '[x]'
+      const start = m.index + m[1].length
+      return body.slice(0, start) + replacement + body.slice(start + 3)
+    }
+    i++
+  }
+  return body
+}
+
+export function renderMarkdown(text, opts = {}) {
   if (!text) return null
   s = getS()
+  taskCtx = { body: text, next: 0, onToggle: opts.onToggle || null }
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
