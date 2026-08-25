@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { colors } from '../lib/theme'
 import StarIcon from './StarIcon'
@@ -19,9 +19,16 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
   // tab slides the next one under the cursor (spam-close). Released on leave.
   const [frozenW, setFrozenW] = useState(null)
   const tabsWrapRef = useRef(null)
+  const releaseTimer = useRef(null)
 
   // Compute a compact width that fits all current tabs, and hold it.
+  // Re-entering cancels any pending release, so the expand only fires
+  // once per genuine leave (no nudge spam on rapid in/out).
   const freezeWidth = () => {
+    if (releaseTimer.current) {
+      clearTimeout(releaseTimer.current)
+      releaseTimer.current = null
+    }
     const el = tabsWrapRef.current
     if (!el) return
     const count = tabs.length + (pseudoTab ? 1 : 0)
@@ -30,10 +37,17 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
     setFrozenW(Math.max(TAB_MIN, Math.min(TAB_MAX, Math.floor(avail / count))))
   }
 
-  const release = () => {
-    setFrozenW(null)
-    setHovered(null)
+  // Expand once, only after the cursor has stayed out of the bar.
+  const scheduleRelease = () => {
+    if (releaseTimer.current) clearTimeout(releaseTimer.current)
+    releaseTimer.current = setTimeout(() => {
+      releaseTimer.current = null
+      setFrozenW(null)
+      setHovered(null)
+    }, 250)
   }
+
+  useEffect(() => () => { if (releaseTimer.current) clearTimeout(releaseTimer.current) }, [])
 
   // Frozen: fixed width, no reflow on close. Otherwise: equal flex tabs
   // that shrink to fit and expand up to TAB_MAX.
@@ -44,7 +58,7 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
   return (
     <div
       onMouseEnter={freezeWidth}
-      onMouseLeave={release}
+      onMouseLeave={scheduleRelease}
       style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 10px', height: 40,
         borderBottom: `1px solid ${colors.border}`, background: colors.bgElevated,
         flexShrink: 0, WebkitUserSelect: 'none', ...drag }}>
