@@ -834,6 +834,7 @@ type EditorPrefsView struct {
 	CursorTrailLength         int    `json:"cursor_trail_length"`
 	CursorTrailStartThreshold int    `json:"cursor_trail_start_threshold"`
 	AnimatedTextEnabled        bool   `json:"animated_text_enabled"`
+	AnimatedTextStyle          string `json:"animated_text_style"`
 }
 
 // GetPreferences returns the user's customization preferences.
@@ -865,8 +866,10 @@ func (a *App) GetPreferences() PreferencesView {
 			CursorTrailDecayFast:      p.Editor.CursorTrailDecayFast,
 			CursorTrailDecaySlow:      p.Editor.CursorTrailDecaySlow,
 			CursorTrailLength:         p.Editor.CursorTrailLength,
-			CursorTrailStartThreshold: p.Editor.CursorTrailStartThreshold,
-			AnimatedTextEnabled:        p.Editor.AnimatedTextEnabled != nil && *p.Editor.AnimatedTextEnabled,
+			CursorTrailStartThreshold: p.Editor.CursorTrailStartThreshold,			AnimatedTextEnabled:        p.Editor.AnimatedTextEnabled != nil && *p.Editor.AnimatedTextEnabled,
+			AnimatedTextStyle:          p.Editor.AnimatedTextStyle,
+
+
 		},
 	}
 }
@@ -913,6 +916,10 @@ func (a *App) SavePreferences(p PreferencesView) error {
 	if p.Editor.CursorTrailStartThreshold < 1 || p.Editor.CursorTrailStartThreshold > 32 {
 		p.Editor.CursorTrailStartThreshold = 4
 	}
+	validTyping := map[string]bool{"drop": true, "fade": true, "pop": true}
+	if !validTyping[p.Editor.AnimatedTextStyle] {
+		p.Editor.AnimatedTextStyle = "drop"
+	}
 	validDensity := map[string]bool{"comfortable": true, "compact": true, "dense": true}
 	if !validDensity[p.Layout.Density] {
 		p.Layout.Density = "comfortable"
@@ -948,6 +955,7 @@ func (a *App) SavePreferences(p PreferencesView) error {
 			CursorTrailLength:         p.Editor.CursorTrailLength,
 			CursorTrailStartThreshold: p.Editor.CursorTrailStartThreshold,
 			AnimatedTextEnabled:        &animated,
+			AnimatedTextStyle:          p.Editor.AnimatedTextStyle,
 		},
 	})
 }
