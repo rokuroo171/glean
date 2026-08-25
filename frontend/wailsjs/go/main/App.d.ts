@@ -15,6 +15,8 @@ export function DeleteNote(arg1:string):Promise<void>;
 
 export function GetKnownSkies():Promise<Array<main.KnownSkyView>>;
 
+export function GetLinks():Promise<Array<main.TrailView>>;
+
 export function GetNote(arg1:string):Promise<main.NoteView|boolean>;
 
 export function GetNotes():Promise<Array<main.NoteView>>;
@@ -28,8 +30,6 @@ export function GetSkyName():Promise<string>;
 export function GetSkyPath():Promise<string>;
 
 export function GetStats():Promise<main.StatsView>;
-
-export function GetTrails():Promise<Array<main.TrailView>>;
 
 export function GetWorkspaceState():Promise<store.WorkspaceState>;
 
