@@ -90,7 +90,40 @@ let s = {}
 
 // Per-render task-list state: which checkbox index is next, the source body,
 // and the toggle callback. Reset at the start of every renderMarkdown call.
-let taskCtx = { body: '', next: 0, onToggle: null }
+let ctx = { body: '', next: 0, onToggle: null, noteNames: null }
+
+/* ── Note-link helpers ── */
+
+// Wiki-link / markdown-.md-link regex: [[Title]], [[Title|alias]], [text](file.md)
+const WIKI_RE = /\[\[([^\[\]|]+)(?:\|([^\[\]]*))?\]\]/g
+const MD_LINK_RE = /\[([^\]]*)\]\(([^) ]+\.md)\)/g
+
+/**
+ * Pre-scan note bodies and rewrite note-to-note links to wails:wiki:<title>
+ * hrefs so react-markdown's <a> handler can route them. Returns the rewritten
+ * body and a map of title -> resolved note id ('' for unresolved).
+ *
+ * noteNames: null means no note list was provided (e.g. NoteOverlay) - links
+ * keep their resolved form only if a title matches the active note; otherwise
+ * they render muted and unclickable.
+ */
+export function rewriteWikiLinks(body, noteNames) {
+  if (!body) return { body: '', resolved: {} }
+  const resolved = {}
+  const out = body
+    .replace(WIKI_RE, (m, title, alias) => {
+      const t = title.trim()
+      const label = (alias && alias.trim()) || t
+      resolved[t] = noteNames?.[t] ?? ''
+      return `[${label}](wails:wiki:${encodeURIComponent(t)})`
+    })
+    .replace(MD_LINK_RE, (m, text, target) => {
+      const t = target.replace(/^.*[\\\/]/, '').replace(/\.md$/, '')
+      resolved[t] = noteNames?.[t] ?? ''
+      return `[${text || t}](wails:wiki:${encodeURIComponent(t)})`
+    })
+  return { body: out, resolved }
+}
 
 /* ── Interactive Components ── */
 
@@ -102,7 +135,7 @@ function Checkbox({ checked, index }) {
   const handleClick = (e) => {
     e.preventDefault()
     e.stopPropagation()
-    if (taskCtx.onToggle) taskCtx.onToggle(flipTask(taskCtx.body, index))
+    if (ctx.onToggle) ctx.onToggle(flipTask(ctx.body, index))
   }
   const handleKey = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -216,19 +249,35 @@ const components = {
   del: ({ children, ...props }) => <del style={s.del} {...props}>{children}</del>,
 
   // Links and images
-  a: ({ children, href, ...props }) => (
-    <a
-      style={s.a}
-      href={href}
-      onClick={(e) => {
-        e.preventDefault()
-        if (href && window.runtime?.BrowserOpenURL) {
-          window.runtime.BrowserOpenURL(href)
-        }
-      }}
-      {...props}
-    >{children}</a>
-  ),
+  a: ({ children, href, ...props }) => {
+    const isWiki = typeof href === 'string' && href.startsWith('wails:wiki:')
+    const title = isWiki ? decodeURIComponent(href.slice('wails:wiki:'.length)) : ''
+    const resolvedId = isWiki ? (ctx.resolved && ctx.resolved[title]) : null
+    const broken = isWiki && !resolvedId
+    return (
+      <a
+        href={isWiki ? undefined : href}
+        onClick={(e) => {
+          e.preventDefault()
+          if (isWiki) {
+            if (ctx.onNoteLink) ctx.onNoteLink(title, resolvedId)
+          } else if (href && window.runtime?.BrowserOpenURL) {
+            window.runtime.BrowserOpenURL(href)
+          }
+        }}
+        style={{
+          ...s.a,
+          ...(broken ? {
+            color: colors.textMuted,
+            textDecoration: 'underline dotted',
+            textUnderlineOffset: 3,
+            cursor: 'pointer',
+          } : {}),
+        }}
+        {...props}
+      >{children}</a>
+    )
+  },
   img: ({ src, alt, ...props }) => <img src={src} alt={alt} style={s.img} {...props} />,
 
   // Code
@@ -269,7 +318,7 @@ const components = {
   // custom clickable checkbox box (the li groups it with the label text).
   input: ({ type, checked, ...props }) => {
     if (type === 'checkbox') {
-      const index = taskCtx.next++
+      const index = ctx.next++
       return <Checkbox checked={checked} index={index} />
     }
     return <input type={type} checked={checked} {...props} />
@@ -326,13 +375,20 @@ export function flipTask(body, index) {
 export function renderMarkdown(text, opts = {}) {
   if (!text) return null
   s = getS()
-  taskCtx = { body: text, next: 0, onToggle: opts.onToggle || null }
+  const { body, resolved } = rewriteWikiLinks(text, opts.noteNames || null)
+  ctx = {
+    body,
+    next: 0,
+    onToggle: opts.onToggle || null,
+    onNoteLink: opts.onNoteLink || null,
+    resolved,
+  }
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={components}
     >
-      {text}
+      {body}
     </ReactMarkdown>
   )
 }

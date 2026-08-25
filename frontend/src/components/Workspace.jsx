@@ -371,12 +371,14 @@ export default function Workspace({
                 key={activeNote?.id}
                 note={activeNote}
                 body={body}
+                noteNames={Object.fromEntries(notes.map(n => [n.title, n.id]))}
                 onBodyChange={(newBody) => onBodyChange(activeNote.id, newBody)}
                 onSaveNow={() => handleSaveComplete(activeNote.id)}
                 dirty={!!dirty[activeNote?.id]}
                 setDirty={(v) => setDirty(prev => ({ ...prev, [activeNote.id]: v }))}
                 linked={linked}
                 onOpenNote={openNote}
+                onNewNote={onNewNote}
                 skyName={skyName}
                 onCursorChange={setCursorPos}
                 editorMode={editorMode}
