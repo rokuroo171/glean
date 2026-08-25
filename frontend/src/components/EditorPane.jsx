@@ -90,7 +90,12 @@ function AnimItem({ a, accent }) {
 }
 
 export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty, setDirty,
-  linked, onOpenNote, skyName, onCursorChange, editorMode, onEditorModeChange }) {
+  linked, onOpenNote, onNewNote, skyName, onCursorChange, editorMode, onEditorModeChange, noteNames }) {
+
+  function handleNoteLink(title, id) {
+    if (id && onOpenNote) { onOpenNote(id); return }
+    if (!id && onNewNote) onNewNote(title) // broken link: create the note
+  }
   const { prefs } = usePreferences()
   const [mode, setMode] = useState(editorMode || 'preview')
   const [typing, setTyping] = useState(false)
@@ -762,7 +767,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
             <div style={{ width: 1, background: colors.border, flexShrink: 0 }} />
             <div ref={previewRef} style={{ flex: 1, minWidth: 0, overflow: 'auto',
               padding: space[3], color: colors.text, lineHeight: prefs.editor.line_height || 1.6 }}>
-              {renderMarkdown(body, { onToggle: handleToggleTask })}
+              {renderMarkdown(body, { onToggle: handleToggleTask, noteNames, onNoteLink: handleNoteLink })}
             </div>
           </div>
         ) : (
@@ -773,7 +778,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
               transition: 'box-shadow 0.6s ease-out',
               boxShadow: typing ? `inset 0 0 30px rgba(180, 140, 80, 0.06)` : 'none' }}>
             {mode === 'preview' ? (
-              <div style={{ color: colors.text, lineHeight: 1.6 }}>{renderMarkdown(body, { onToggle: handleToggleTask })}</div>
+              <div style={{ color: colors.text, lineHeight: 1.6 }}>{renderMarkdown(body, { onToggle: handleToggleTask, noteNames, onNoteLink: handleNoteLink })}</div>
             ) : (
               <>
               {(mode === 'edit') && prefs.editor.cursor_trail_mode !== 'off' && (
