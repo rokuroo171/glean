@@ -7,22 +7,24 @@ import Icon from './Icon'
 const drag = { '--wails-draggable': 'drag' }
 const noDrag = { '--wails-draggable': 'no-drag' }
 
+// Every tab gets the exact same fixed width. Closing a tab slides the
+// next one into the same slot, so the close button stays under the
+// cursor and you can spam-close (Chrome/Obsidian behavior).
+const TAB_W = 150
+
 export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSettings, onCustomize, onCommand, pseudoTab, onClosePseudo, detailsOpen, onToggleDetails }) {
   const pseudoLabel = pseudoTab === 'stats' ? 'Sky overview' : pseudoTab === 'customization' ? 'Customization' : 'Settings'
   const [hovered, setHovered] = useState(null)
-  const [inBar, setInBar] = useState(false)
 
   return (
     <div
-      onMouseEnter={() => setInBar(true)}
-      onMouseLeave={() => { setInBar(false); setHovered(null) }}
       style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 10px', height: 40,
         borderBottom: `1px solid ${colors.border}`, background: colors.bgElevated,
         flexShrink: 0, WebkitUserSelect: 'none', ...drag }}>
       <div style={{ flexShrink: 0, ...noDrag }} />
 
-      {/* Tabs: equal width, compressed while hovering for spam-close, expand on leave */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
+      {/* Tabs: fixed equal width, no reflow on close */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0, overflow: 'hidden' }}>
         {tabs.map(t => {
           const active = t.id === activeId
           const showX = active || hovered === t.id
@@ -31,13 +33,13 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
               onClick={() => onSelect(t.id)}
               onMouseEnter={() => setHovered(t.id)}
               style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 5,
-                padding: '5px 24px 5px 8px', borderRadius: 6,
+                width: TAB_W, flexShrink: 0,
+                padding: '5px 22px 5px 8px', borderRadius: 6,
                 cursor: 'pointer', whiteSpace: 'nowrap',
-                flex: '1 1 0', minWidth: inBar ? 60 : 100, maxWidth: inBar ? 160 : 240,
-                transition: 'min-width 0.15s ease, max-width 0.15s ease',
                 background: active ? colors.bg : 'transparent',
                 border: `1px solid ${active ? colors.borderStrong : 'transparent'}`,
-                boxShadow: active ? `inset 0 -2px 0 ${colors.accentWarm}` : 'none', ...noDrag }}>
+                boxShadow: active ? `inset 0 -2px 0 ${colors.accentWarm}` : 'none',
+                transition: 'background 0.12s ease', ...noDrag }}>
               {t.id === '__night__' ? <Icon name="moon" size={13} style={{ color: colors.accent, flexShrink: 0 }} /> : <StarIcon species={t.species} size="sm" />}
               <span style={{ color: t.id === '__night__' ? colors.accent : colors.text, fontSize: 12,
                 overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>{t.title}</span>
