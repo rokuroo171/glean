@@ -18,7 +18,7 @@ function measureText(text, font) {
 }
 /** Get the (x, y) pixel position of a cursor offset inside a textarea-like element. */
 function getCharPosition(ta, offset) {
-  if (!ta) return { x: 0, y: 0 }
+  if (!ta) return { x: 0, y: 0, lh: 22, w: 8 }
   const cs = getComputedStyle(ta)
   const font = `${cs.fontSize} ${cs.fontFamily}`
   const padL = parseFloat(cs.paddingLeft) || 0
@@ -30,7 +30,9 @@ function getCharPosition(ta, offset) {
   const col = lines[line]
   const x = padL + measureText(lines[line], font)
   const y = padT + line * lh - ta.scrollTop
-  return { x, y }
+  // Approximate char width from the last typed char (or monospace advance).
+  const w = measureText(lines[line].slice(-1) || '0', font) || 8
+  return { x, y, lh, w }
 }
 
 export function parseHeadings(markdown) {
@@ -66,24 +68,27 @@ const MAX_HISTORY = 200
 const ANIM_FADE_MS = 350
 const ANIM_SPARKLE_MS = 450
 
-/** Single animated character or sparkle particle. */
-function AnimItem({ a, color, accent, fontSize }) {
+/** Animation overlay item: a glow on the real char, or sparkle particles. */
+function AnimItem({ a, accent }) {
   if (a.type === 'char') {
+    // A soft glow/pop that plays ON the real character at its normal
+    // position. No duplicate glyph, no mirroring.
     return (
       <span style={{
-        position: 'absolute', left: a.x, top: a.y - 4, pointerEvents: 'none',
-        color, fontSize, fontFamily: 'inherit', lineHeight: 'inherit',
-        animation: `animCharDrop ${ANIM_FADE_MS}ms ease-out forwards`,
-        zIndex: 50, opacity: 0
-      }}>{a.char || ' '}</span>
+        position: 'absolute', left: a.x - 2, top: a.y - 2,
+        width: a.w, height: a.lh,
+        borderRadius: 4, pointerEvents: 'none', zIndex: 50,
+        background: `radial-gradient(circle, ${accent}66 0%, transparent 70%)`,
+        animation: `animCharPop ${ANIM_FADE_MS}ms ease-out forwards`
+      }} />
     )
   }
-  // sparkle particle
+  // sparkle particle (backspace)
   return (
     <span style={{
       position: 'absolute', left: a.x, top: a.y,
       width: 4, height: 4, borderRadius: 2,
-      background: accent || color,
+      background: accent || 'currentColor',
       pointerEvents: 'none', zIndex: 50, opacity: 0,
       animation: `animSparkle ${ANIM_SPARKLE_MS}ms ease-out forwards`,
       '--dx': `${a.dx}px`, '--dy': `${a.dy}px`
@@ -118,7 +123,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   }, [])
 
   /** Trigger an animation at the given offset (defaults to the cursor). */
-  const triggerAnim = useCallback((action, char, offset) => {
+  const triggerAnim = useCallback((action, offset) => {
     if (!animatedEnabled) return
     const ta = taRef.current
     if (!ta) return
@@ -127,7 +132,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     const id = ++_animId
     const ts = Date.now()
     if (action === 'type') {
-      setAnimItems(prev => [...prev, { id, type: 'char', char, x: pos.x, y: pos.y, ts }])
+      setAnimItems(prev => [...prev, { id, type: 'char', x: pos.x, y: pos.y, lh: pos.lh, w: pos.w, ts }])
     } else if (action === 'backspace') {
       const sparkles = Array.from({ length: 6 }, (_, i) => ({
         id: id * 100 + i,
@@ -254,13 +259,10 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
       if (diff > 0) {
         const ta = taRef.current
         const insertStart = ta ? ta.selectionStart - diff : 0
-        const inserted = newBody.slice(insertStart, insertStart + diff)
-        // Animate the inserted text at the position where it landed (the
-        // insertion start), not at the cursor after it, so the ghost char
-        // sits exactly on the real one.
-        triggerAnim('type', inserted.length === 1 ? inserted : '', insertStart)
+        // Play the glow on the real character where it landed.
+        triggerAnim('type', insertStart)
       } else if (diff < 0) {
-        triggerAnim('backspace', '')
+        triggerAnim('backspace')
       }
     }
     lastBodyLenRef.current = newBody.length
@@ -540,10 +542,10 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}>
       {animatedEnabled && (
         <style>{`
-          @keyframes animCharDrop {
-            0% { opacity: 0; transform: translateY(-12px) scale(1.2); }
-            40% { opacity: 1; transform: translateY(1px) scale(1.05); }
-            100% { opacity: 1; transform: translateY(0) scale(1); }
+          @keyframes animCharPop {
+            0% { opacity: 0; transform: translateY(-8px) scale(1.4); }
+            35% { opacity: 0.9; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(0) scale(1.05); }
           }
           @keyframes animSparkle {
             0% { opacity: 1; transform: translate(0, 0) scale(1); }
@@ -670,7 +672,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
               />
               {/* Animated text overlay (split mode) */}
               {animatedEnabled && animItems.map(a => (
-                <AnimItem key={a.id} a={a} color={colors.text} accent={colors.accent} fontSize={prefs.editor.font_size || 14} />
+                <AnimItem key={a.id} a={a} accent={colors.accent} />
               ))}
               </ContextMenu>
             </div>
@@ -713,7 +715,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
               />
               {/* Animated text overlay (single mode) */}
               {animatedEnabled && animItems.map(a => (
-                <AnimItem key={a.id} a={a} color={colors.text} accent={colors.accent} fontSize={prefs.editor.font_size || 14} />
+                <AnimItem key={a.id} a={a} accent={colors.accent} />
               ))}
               </ContextMenu>
               </>
