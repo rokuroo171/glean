@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { colors } from '../lib/theme'
 import StarIcon from './StarIcon'
 import WindowControls from './WindowControls'
@@ -51,11 +52,17 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
         <div ref={tabsWrapRef} style={{ display: 'flex', alignItems: 'center', gap: GAP, flex: 1, minWidth: 0, overflow: 'hidden' }}>
+          <AnimatePresence initial={false}>
           {tabs.map(t => {
             const active = t.id === activeId
             const showX = active || hovered === t.id
             return (
-              <div key={t.id}
+              <motion.div key={t.id}
+                layout
+                initial={{ opacity: 0, scaleX: 0.9 }}
+                animate={{ opacity: 1, scaleX: 1 }}
+                exit={{ opacity: 0, scaleX: 0.7, width: 0, marginRight: -GAP }}
+                transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                 onClick={() => onSelect(t.id)}
                 onMouseEnter={() => setHovered(t.id)}
                 style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 5,
@@ -78,9 +85,10 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
                     <Icon name="x" size={12} />
                   </span>
                 )}
-              </div>
+              </motion.div>
             )
           })}
+          </AnimatePresence>
           {pseudoTab && (
             <div key="pseudo"
               style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 5,
