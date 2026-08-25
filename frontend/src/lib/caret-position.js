@@ -30,16 +30,13 @@ export function caretPosition(ta, container) {
 
   const native = nativeCaretRect(ta)
   if (native) {
-    // The native rect is in VIEWPORT space. The canvas rides INSIDE the
-    // scrollable host (single-edit mode), so its coordinate origin scrolls
-    // with the content: drawing at the viewport offset alone would put the
-    // caret one scrollTop too high, worse the deeper you scroll. Add the
-    // host's scroll back when the host itself is the scroller.
-    const hostScrollTop = host.scrollHeight > host.clientHeight + 1 ? (host.scrollTop || 0) : 0
-    const hostScrollLeft = host.scrollWidth > host.clientWidth + 1 ? (host.scrollLeft || 0) : 0
+    // The native rect is in viewport space. The drawing canvas is pinned
+    // to the visible area (sticky) and does not scroll with the content,
+    // so viewport coordinates are exactly what it needs - no scroll
+    // compensation on either axis.
     return {
-      x: native.left - hostRect.left + hostScrollLeft,
-      y: native.top - hostRect.top + hostScrollTop,
+      x: native.left - hostRect.left,
+      y: native.top - hostRect.top,
       w: fs * 0.6,
       h: native.height > 0 ? native.height : lh,
       fs,
@@ -130,13 +127,8 @@ function mirrorCaretRect(ta, container, cs, lh) {
   const r = marker.getBoundingClientRect()
   try { marker.remove() } catch { /* noop */ }
 
-  const taScrollable = ta.scrollHeight > ta.clientHeight + 1
   const hr = host.getBoundingClientRect()
-  let x = r.left - hr.left
-  let y = r.top - hr.top
-  if (taScrollable) {
-    x -= ta.scrollLeft || 0
-    y -= ta.scrollTop || 0
-  }
-  return { left: x, top: y, width: 0, height: r.height > 0 ? r.height : lh }
+  // The mirror marker rect is also viewport space; the sticky drawing
+  // layer takes it directly. No scroll compensation on either axis.
+  return { left: r.left - hr.left, top: r.top - hr.top, width: 0, height: r.height > 0 ? r.height : lh }
 }
