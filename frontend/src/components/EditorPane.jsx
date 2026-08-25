@@ -19,7 +19,15 @@ function getCharPosition(ta) {
   const container = ta.closest('[data-editor-root]') || ta.offsetParent
   const p = caretPosition(ta, container)
   if (!p) return { x: 0, y: 0, lh: 22, w: 8 }
-  return { x: p.x, y: p.y, lh: p.lh, w: p.w }
+  // carets are viewport-relative; sparkles are absolutely positioned in the
+  // scrollable content, so add the host scroll back when it scrolls.
+  let x = p.x
+  let y = p.y
+  if (container && container.scrollHeight > container.clientHeight + 1) {
+    x += container.scrollLeft || 0
+    y += container.scrollTop || 0
+  }
+  return { x, y, lh: p.lh, w: p.w }
 }
 
 export function parseHeadings(markdown) {
