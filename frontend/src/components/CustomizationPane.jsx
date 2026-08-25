@@ -32,6 +32,12 @@ const trailIntensities = [
   { id: 'vivid', label: 'Vivid' },
 ]
 
+const typingStyles = [
+  { id: 'drop', label: 'Drop', desc: 'Character drops in from above' },
+  { id: 'fade', label: 'Fade', desc: 'Soft fade in at its position' },
+  { id: 'pop', label: 'Pop', desc: 'Pops in with a quick scale bounce' },
+]
+
 function Section({ title, icon, children, defaultOpen = true }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
@@ -425,9 +431,24 @@ export default function CustomizationPane() {
         )}
 
         <Toggle label="Animated typing"
-          hint="Characters fade in when typed and sparkle on backspace."
+          hint="Characters animate when typed and sparkle on backspace."
           checked={prefs.editor.animated_text_enabled}
           onChange={(v) => updatePrefs({ editor: { animated_text_enabled: v } })} />
+
+        {prefs.editor.animated_text_enabled && (
+          <>
+            <div style={{ ...typography.sectionLabel, color: colors.textMuted, marginBottom: 8, marginTop: 12 }}>
+              Typing style
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+              {typingStyles.map(style => (
+                <TrailCard key={style.id} mode={style}
+                  active={prefs.editor.animated_text_style === style.id}
+                  onClick={() => updatePrefs({ editor: { animated_text_style: style.id } })} />
+              ))}
+            </div>
+          </>
+        )}
       </Section>
     </div>
   )

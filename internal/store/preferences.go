@@ -42,6 +42,7 @@ type EditorPrefs struct {
 	CursorTrailLength         int    `json:"cursor_trail_length"`          // trail buffer size (points)
 	CursorTrailStartThreshold int    `json:"cursor_trail_start_threshold"` // px, movement needed to trigger
 	AnimatedTextEnabled        *bool  `json:"animated_text_enabled"`          // nil = false (default)
+	AnimatedTextStyle          string `json:"animated_text_style"`             // "drop" (default), "fade", "pop"
 }
 
 // DefaultPreferences returns the built-in defaults.
@@ -71,6 +72,7 @@ func DefaultPreferences() Preferences {
 			CursorTrailDecaySlow:      300,
 			CursorTrailLength:         12,
 			CursorTrailStartThreshold: 4,
+			AnimatedTextStyle:          "drop",
 		},
 	}
 }
@@ -135,6 +137,9 @@ func LoadPreferences() Preferences {
 	}
 	if p.Editor.CursorTrailEnabled == nil {
 		p.Editor.CursorTrailEnabled = def.Editor.CursorTrailEnabled
+	}
+	if p.Editor.AnimatedTextStyle == "" {
+		p.Editor.AnimatedTextStyle = def.Editor.AnimatedTextStyle
 	}
 	if p.Editor.CursorTrailMode == "" {
 		p.Editor.CursorTrailMode = def.Editor.CursorTrailMode
