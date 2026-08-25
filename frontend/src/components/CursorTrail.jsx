@@ -87,14 +87,16 @@ export default function CursorTrail({ textareaRef, containerRef }) {
     return () => obs.disconnect()
   }, [containerRef, enabled])
 
-  // Caret tracking. Always hides the native caret and draws our own
-  // (the custom caret is always visible). Trail effects inside measure
-  // are gated on `enabled`.
+  // Caret tracking. When the trail is enabled it hides the native caret
+  // and draws its own; when disabled the component MUST NOT touch the
+  // native caret at all - an invisible custom caret is worse than the
+  // native one, so pass through completely.
   useEffect(() => {
     const ta = textareaRef?.current
     if (!ta) return
+    if (!enabled) return
 
-    // Always draw our own caret.
+    // Draw our own caret.
     const onFocus = () => { focusRef.current = true; measure(false) }
     const onBlur = () => { focusRef.current = false }
     // Measure right after the browser has settled the selection into the
@@ -230,7 +232,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
         ta.removeEventListener('scroll', onScroll)
         if (containerNode) containerNode.removeEventListener('scroll', onScroll, true)
       }
-  }, [textareaRef])
+  }, [textareaRef, enabled])
 
   // Animation loop. Always runs (custom caret is always visible).
   // Trail effects are gated on `enabled` inside the frame.
@@ -278,10 +280,11 @@ export default function CursorTrail({ textareaRef, containerRef }) {
         }
       }
 
-      // The caret always draws when a target exists. No focus gating:
-      // a lost-focus blip must never make the caret vanish, and the
-      // trail position rides the eased head so it flows, not teleports.
-      if (target) {
+      // The caret always draws when a target exists AND the trail is on.
+      // No focus gating: a lost-focus blip must never make the caret
+      // vanish, and the trail position rides the eased head so it flows,
+      // not teleports.
+      if (enabled && target) {
         const drawn = posRef.current || target
         // Slight dim when the window is unfocused, never hidden.
         const dim = document.hasFocus() || focusRef.current ? 1 : 0.45
