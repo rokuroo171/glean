@@ -424,8 +424,8 @@ export default function CustomizationPane() {
           </>
         )}
 
-        <Toggle label="Animated text"
-          hint="Characters fade in when typed and sparkle on backspace (Issue #2)."
+        <Toggle label="Animated typing"
+          hint="Characters fade in when typed and sparkle on backspace."
           checked={prefs.editor.animated_text_enabled}
           onChange={(v) => updatePrefs({ editor: { animated_text_enabled: v } })} />
       </Section>
