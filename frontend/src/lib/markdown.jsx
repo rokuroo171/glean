@@ -2,6 +2,7 @@ import React, { useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { colors } from './theme'
+import { highlightCode } from './prism-setup'
 
 /**
  * Markdown renderer built on react-markdown + remark-gfm.
@@ -124,17 +125,18 @@ function Checkbox({ checked, children }) {
   )
 }
 
-/** Code block with copy button */
+/** Code block with copy button and syntax highlighting */
 function CodeBlock({ children, className }) {
   const code = String(children).replace(/\n$/, '')
   const lang = className?.replace('language-', '') || ''
+  const highlighted = highlightCode(code, lang)
 
   const copy = useCallback(() => {
     navigator.clipboard.writeText(code)
   }, [code])
 
   return (
-    <div style={s.pre}>
+    <div className="code-block" style={s.pre}>
       {lang && (
         <span style={{
           position: 'absolute', top: 6, right: 10,
@@ -156,7 +158,9 @@ function CodeBlock({ children, className }) {
       >
         copy
       </button>
-      <code>{code}</code>
+      {highlighted
+        ? <code className={`language-${lang}`} dangerouslySetInnerHTML={{ __html: highlighted }} />
+        : <code>{code}</code>}
     </div>
   )
 }
