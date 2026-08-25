@@ -94,10 +94,11 @@ let taskCtx = { body: '', next: 0, onToggle: null }
 
 /* ── Interactive Components ── */
 
-/** Task-list checkbox, Obsidian-style: clean box, no bullet marker.
+/** Task-list checkbox box, Obsidian-style: clean square, no bullet.
  *  Intercepts the <input type="checkbox"> that react-markdown emits for
- *  GFM task items (v10 does not pass `checked` to the `li` component). */
-function Checkbox({ checked, index, children }) {
+ *  GFM task items (v10 does not pass `checked` to the `li` component).
+ *  The `li` component groups this box with the sibling label text. */
+function Checkbox({ checked, index }) {
   const handleClick = (e) => {
     e.preventDefault()
     e.stopPropagation()
@@ -116,32 +117,27 @@ function Checkbox({ checked, index, children }) {
       tabIndex={0}
       onClick={handleClick}
       onKeyDown={handleKey}
-      style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', lineHeight: 1.7, outline: 'none' }}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 14,
+        height: 14,
+        borderRadius: 3.5,
+        border: `1px solid ${checked ? colors.accent : colors.borderStrong}`,
+        background: checked ? colors.accent : 'transparent',
+        flexShrink: 0,
+        marginTop: 5,
+        cursor: 'pointer',
+        outline: 'none',
+        transition: 'background 120ms ease, border-color 120ms ease',
+      }}
     >
-      <span
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 14,
-          height: 14,
-          borderRadius: 3.5,
-          border: `1px solid ${checked ? colors.accent : colors.borderStrong}`,
-          background: checked ? colors.accent : 'transparent',
-          flexShrink: 0,
-          marginTop: 5,
-          transition: 'background 120ms ease, border-color 120ms ease',
-        }}
-      >
-        {checked && (
-          <svg width="10" height="10" viewBox="0 0 14 14" fill="none" style={{ display: 'block' }}>
-            <path d="M3.5 7.5l2.5 2.5 4.5-5.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        )}
-      </span>
-      <span style={checked ? { textDecoration: 'line-through', opacity: 0.55 } : undefined}>
-        {children}
-      </span>
+      {checked && (
+        <svg width="10" height="10" viewBox="0 0 14 14" fill="none" style={{ display: 'block' }}>
+          <path d="M3.5 7.5l2.5 2.5 4.5-5.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
     </span>
   )
 }
@@ -247,13 +243,28 @@ const components = {
   ol: ({ children, ...props }) => <ol style={s.ol} {...props}>{children}</ol>,
   li: ({ children, className, ...props }) => {
     if (className?.includes('task-list-item')) {
-      return <li style={{ ...s.li, listStyle: 'none', paddingLeft: 0 }} {...props}>{children}</li>
+      // react-markdown renders the checkbox input and the label text as
+      // siblings: [<input/>, " Text"]. Group them in a flex row so the box
+      // and text sit on one line, and strike through the text when checked.
+      const kids = React.Children.toArray(children)
+      const box = kids[0]
+      const checked = box?.props?.checked
+      return (
+        <li style={{ ...s.li, listStyle: 'none', paddingLeft: 0 }} {...props}>
+          <span style={{ display: 'flex', alignItems: 'flex-start', gap: 8, lineHeight: 1.7, cursor: 'pointer' }}>
+            {box}
+            <span style={checked ? { textDecoration: 'line-through', opacity: 0.55 } : undefined}>
+              {kids.slice(1)}
+            </span>
+          </span>
+        </li>
+      )
     }
     return <li style={s.li} {...props}>{children}</li>
   },
 
   // GFM task lists render as <input type="checkbox">; replace it with our
-  // custom clickable checkbox (the li above already kills the bullet).
+  // custom clickable checkbox box (the li groups it with the label text).
   input: ({ type, checked, ...props }) => {
     if (type === 'checkbox') {
       const index = taskCtx.next++
