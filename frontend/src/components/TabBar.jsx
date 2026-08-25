@@ -45,7 +45,7 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
                 style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 5,
                   padding: '5px 26px 5px 8px', borderRadius: 6,
                   cursor: isClosing ? 'default' : 'pointer', whiteSpace: 'nowrap',
-                  flex: '1 1 0', minWidth: 0,
+                  flex: '1 1 0', minWidth: 0, maxWidth: 200,
                   background: active ? colors.bg : 'transparent',
                   border: `1px solid ${active ? colors.borderStrong : 'transparent'}`,
                   boxShadow: active ? `inset 0 -2px 0 ${colors.accentWarm}` : 'none', ...noDrag }}>
