@@ -69,9 +69,17 @@ export default function CursorTrail({ textareaRef, containerRef }) {
     const container = containerRef?.current
     if (!canvas || !container) return
     const fit = () => {
+      // The canvas is STICKY (see style below) so it stays pinned over the
+      // visible area while the host scrolls. Size it to the scrollport -
+      // not the full content height - and give it explicit CSS dimensions
+      // so a deep caret can never land outside the bitmap.
       const dpr = window.devicePixelRatio || 1
-      canvas.width = Math.max(1, Math.round(container.offsetWidth * dpr))
-      canvas.height = Math.max(1, Math.round(container.offsetHeight * dpr))
+      const w = Math.max(1, container.clientWidth)
+      const h = Math.max(1, container.clientHeight)
+      canvas.width = Math.round(w * dpr)
+      canvas.height = Math.round(h * dpr)
+      canvas.style.width = w + 'px'
+      canvas.style.height = h + 'px'
     }
     fit()
     const obs = new ResizeObserver(fit)
@@ -289,7 +297,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
   return (
     <canvas
       ref={canvasRef}
-      style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 10 }}
+      style={{ position: 'sticky', top: 0, left: 0, pointerEvents: 'none', zIndex: 10 }}
     />
   )
 }
