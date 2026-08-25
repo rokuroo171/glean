@@ -20,7 +20,10 @@ function measureText(text, font) {
 function getCharPosition(ta, offset) {
   if (!ta) return { x: 0, y: 0, lh: 22, w: 8 }
   const cs = getComputedStyle(ta)
-  const font = `${cs.fontSize} ${cs.fontFamily}`
+  // Rebuild the font string from the live computed style so weight and style
+  // are included - canvas measureText falls back to 400 normal otherwise and
+  // drifts on long notes with non-default weights.
+  const font = `${cs.fontWeight || 400} ${cs.fontStyle || 'normal'} ${cs.fontSize} ${cs.fontFamily}`
   const padL = parseFloat(cs.paddingLeft) || 0
   const padT = parseFloat(cs.paddingTop) || 0
   const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.6
