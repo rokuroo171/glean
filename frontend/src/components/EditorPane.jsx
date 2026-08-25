@@ -732,7 +732,8 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                   <div ref={overlayInnerRef} style={{ transform: 'translateY(0px)', willChange: 'transform' }}>
                     {chars.map((c, i) => (
                       <span key={i}
-                        style={{ animation: fresh[String(i)] ? `char${cap(typingStyle)} ${ANIM_FADE_MS}ms ease-out` : undefined }}>
+                        style={{ display: 'inline-block',
+                          animation: fresh[String(i)] ? `char${cap(typingStyle)} ${ANIM_FADE_MS}ms ease-out` : undefined }}>
                         {c}
                       </span>
                     ))}
@@ -793,7 +794,8 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                   <div ref={overlayInnerRef} style={{ transform: 'translateY(0px)', willChange: 'transform' }}>
                     {chars.map((c, i) => (
                       <span key={i}
-                        style={{ animation: fresh[String(i)] ? `char${cap(typingStyle)} ${ANIM_FADE_MS}ms ease-out` : undefined }}>
+                        style={{ display: 'inline-block',
+                          animation: fresh[String(i)] ? `char${cap(typingStyle)} ${ANIM_FADE_MS}ms ease-out` : undefined }}>
                         {c}
                       </span>
                     ))}
