@@ -9,6 +9,29 @@ import ContextMenu from './ContextMenu'
 
 const AUTOSAVE_DELAY = 1500
 const LINE_HEIGHT = 22
+let _animId = 0
+/** Measure text width using an offscreen canvas. */
+function measureText(text, font) {
+  const ctx = measureText._ctx || (measureText._ctx = document.createElement('canvas').getContext('2d'))
+  ctx.font = font
+  return ctx.measureText(text).width
+}
+/** Get the (x, y) pixel position of a cursor offset inside a textarea-like element. */
+function getCharPosition(ta, offset) {
+  if (!ta) return { x: 0, y: 0 }
+  const cs = getComputedStyle(ta)
+  const font = `${cs.fontSize} ${cs.fontFamily}`
+  const padL = parseFloat(cs.paddingLeft) || 0
+  const padT = parseFloat(cs.paddingTop) || 0
+  const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.6
+  const textBefore = ta.value.slice(0, offset)
+  const lines = textBefore.split('\n')
+  const line = lines.length - 1
+  const col = lines[line]
+  const x = padL + measureText(lines[line], font)
+  const y = padT + line * lh - ta.scrollTop
+  return { x, y }
+}
 
 export function parseHeadings(markdown) {
   const out = []
@@ -40,6 +63,33 @@ function wrapSelection(ta, prefix, suffix) {
 }
 
 const MAX_HISTORY = 200
+const ANIM_FADE_MS = 350
+const ANIM_SPARKLE_MS = 450
+
+/** Single animated character or sparkle particle. */
+function AnimItem({ a, color, accent, fontSize }) {
+  if (a.type === 'char') {
+    return (
+      <span style={{
+        position: 'absolute', left: a.x, top: a.y - 4, pointerEvents: 'none',
+        color, fontSize, fontFamily: 'inherit', lineHeight: 'inherit',
+        animation: `animCharDrop ${ANIM_FADE_MS}ms ease-out forwards`,
+        zIndex: 50, opacity: 0
+      }}>{a.char || ' '}</span>
+    )
+  }
+  // sparkle particle
+  return (
+    <span style={{
+      position: 'absolute', left: a.x, top: a.y,
+      width: 4, height: 4, borderRadius: 2,
+      background: accent || color,
+      pointerEvents: 'none', zIndex: 50, opacity: 0,
+      animation: `animSparkle ${ANIM_SPARKLE_MS}ms ease-out forwards`,
+      '--dx': `${a.dx}px`, '--dy': `${a.dy}px`
+    }} />
+  )
+}
 
 export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty, setDirty,
   linked, onOpenNote, skyName, onCursorChange, editorMode, onEditorModeChange }) {
@@ -52,6 +102,57 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const debounceRef = useRef(null)
   const taRef = useRef(null)
   const previewRef = useRef(null)
+
+  // --- Animated text overlay ---
+  const animatedEnabled = prefs.editor.animated_text_enabled === true
+  const [animItems, setAnimItems] = useState([])
+  const animTimerRef = useRef(null)
+  const lastBodyLenRef = useRef(body.length)
+
+  // Sync lastBodyLen when note changes
+  useEffect(() => { lastBodyLenRef.current = body.length }, [note?.id])
+
+  /** Clean up expired animation items. */
+  const sweepAnims = useCallback(() => {
+    setAnimItems(prev => prev.filter(a => Date.now() - a.ts < (a.type === 'sparkle' ? ANIM_SPARKLE_MS : ANIM_FADE_MS)))
+  }, [])
+
+  /** Trigger an animation at the current cursor position. */
+  const triggerAnim = useCallback((action, char) => {
+    if (!animatedEnabled) return
+    const ta = taRef.current
+    if (!ta) return
+    const pos = getCharPosition(ta, ta.selectionStart)
+    const id = ++_animId
+    const ts = Date.now()
+    if (action === 'type') {
+      setAnimItems(prev => [...prev, { id, type: 'char', char, x: pos.x, y: pos.y, ts }])
+    } else if (action === 'backspace') {
+      const sparkles = Array.from({ length: 6 }, (_, i) => ({
+        id: id * 100 + i,
+        type: 'sparkle',
+        x: pos.x, y: pos.y,
+        dx: (Math.random() - 0.5) * 30,
+        dy: (Math.random() - 0.5) * 20 - 8,
+        ts
+      }))
+      setAnimItems(prev => [...prev, ...sparkles])
+    }
+    if (!animTimerRef.current) {
+      animTimerRef.current = setInterval(sweepAnims, 60)
+    }
+  }, [animatedEnabled, sweepAnims])
+
+  // Stop sweep timer when all items gone
+  useEffect(() => {
+    if (animItems.length === 0 && animTimerRef.current) {
+      clearInterval(animTimerRef.current)
+      animTimerRef.current = null
+    }
+  }, [animItems.length])
+
+  // Cleanup timer on unmount
+  useEffect(() => () => { if (animTimerRef.current) clearInterval(animTimerRef.current) }, [])
 
   // --- Undo / Redo history ---
   const historyRef = useRef([])
@@ -146,6 +247,18 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     onBodyChange(newBody)
     setDirty(true)
     setTyping(true)
+    // Animated text: detect type vs backspace
+    if (animatedEnabled) {
+      const diff = newBody.length - lastBodyLenRef.current
+      if (diff > 0) {
+        const ta = taRef.current
+        const inserted = newBody.slice(ta ? ta.selectionStart - diff : 0, ta ? ta.selectionStart : diff)
+        triggerAnim('type', inserted.length === 1 ? inserted : '')
+      } else if (diff < 0) {
+        triggerAnim('backspace', '')
+      }
+    }
+    lastBodyLenRef.current = newBody.length
     if (typingTimer.current) clearTimeout(typingTimer.current)
     typingTimer.current = setTimeout(() => setTyping(false), 600)
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -420,6 +533,19 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}>
+      {animatedEnabled && (
+        <style>{`
+          @keyframes animCharDrop {
+            0% { opacity: 0; transform: translateY(-12px) scale(1.2); }
+            40% { opacity: 1; transform: translateY(1px) scale(1.05); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+          }
+          @keyframes animSparkle {
+            0% { opacity: 1; transform: translate(0, 0) scale(1); }
+            100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.3); }
+          }
+        `}</style>
+      )}
       {/* Title bar with breadcrumbs, title, and mode toggle */}
       <div style={{ display: 'flex', alignItems: 'center', gap: space[2],
         padding: `${space[2]}px ${space[3]}px`,
@@ -537,6 +663,10 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                   transition: 'box-shadow 0.6s ease-out',
                   boxShadow: typing ? `inset 0 0 30px rgba(180, 140, 80, 0.06)` : 'none' }}
               />
+              {/* Animated text overlay (split mode) */}
+              {animatedEnabled && animItems.map(a => (
+                <AnimItem key={a.id} a={a} color={colors.text} accent={colors.accent} fontSize={prefs.editor.font_size || 14} />
+              ))}
               </ContextMenu>
             </div>
             <div style={{ width: 1, background: colors.border, flexShrink: 0 }} />
@@ -576,6 +706,10 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                   fontFamily: prefs.editor.font_family || 'monospace',
                   fontSize: prefs.editor.font_size || 14, lineHeight: prefs.editor.line_height || 1.6 }}
               />
+              {/* Animated text overlay (single mode) */}
+              {animatedEnabled && animItems.map(a => (
+                <AnimItem key={a.id} a={a} color={colors.text} accent={colors.accent} fontSize={prefs.editor.font_size || 14} />
+              ))}
               </ContextMenu>
               </>
             )}
