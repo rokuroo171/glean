@@ -69,10 +69,10 @@ export default function CursorTrail({ textareaRef, containerRef }) {
     const container = containerRef?.current
     if (!canvas || !container) return
     const fit = () => {
-      // The canvas is STICKY (see style below) so it stays pinned over the
-      // visible area while the host scrolls. Size it to the scrollport -
-      // not the full content height - and give it explicit CSS dimensions
-      // so a deep caret can never land outside the bitmap.
+      // The canvas is absolutely positioned (see style below) so it stays
+      // out of the layout flow - it must never push the textarea around.
+      // Size the bitmap to the visible scrollport (not the full content
+      // height) so a deep caret can never land outside the bitmap.
       const dpr = window.devicePixelRatio || 1
       const w = Math.max(1, container.clientWidth)
       const h = Math.max(1, container.clientHeight)
@@ -181,7 +181,20 @@ export default function CursorTrail({ textareaRef, containerRef }) {
       }
     }
 
-    const onScroll = () => measure(true)
+    // When the WRAPPER scrolls (single-edit mode), the absolutely
+    // positioned canvas would scroll away with the content. Jump it back
+    // by the scroll offset so it always covers the visible scrollport:
+    // content y = scrollTop appears at viewport y = 0. In split mode the
+    // wrapper never scrolls, so this stays at 0 and the canvas never moves.
+    const pin = () => {
+      const c = canvasRef.current
+      const sc = containerRef?.current
+      if (!c || !sc) return
+      c.style.top = (sc.scrollTop || 0) + 'px'
+      c.style.left = (sc.scrollLeft || 0) + 'px'
+    }
+
+    const onScroll = () => { pin(); measure(true) }
 
     const onKeyDown = (e) => {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'].includes(e.key)) {
@@ -203,6 +216,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
 
       // Measure once on mount so the drawn caret appears immediately,
       // even before the user touches the keyboard.
+      pin()
       measure(false)
 
       return () => {
@@ -297,7 +311,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
   return (
     <canvas
       ref={canvasRef}
-      style={{ position: 'sticky', top: 0, left: 0, pointerEvents: 'none', zIndex: 10 }}
+      style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: 10 }}
     />
   )
 }
