@@ -17,6 +17,15 @@ export default function ManageSky({ currentSky, onSwitch, onClose }) {
 
   useEffect(() => {
     loadKnownSkies()
+    // Auto-refresh while the modal is open: poll every 5s and refresh on
+    // window focus, so skies added/removed externally stay in sync.
+    const id = setInterval(loadKnownSkies, 5000)
+    const onFocus = () => loadKnownSkies()
+    window.addEventListener('focus', onFocus)
+    return () => {
+      clearInterval(id)
+      window.removeEventListener('focus', onFocus)
+    }
   }, [])
 
   async function loadKnownSkies() {
