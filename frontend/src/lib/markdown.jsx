@@ -11,7 +11,7 @@ import { highlightCode } from './prism-setup'
  * character references, and all CommonMark core features.
  *
  * Custom interactive components:
- * - Checkboxes: clickable, toggle checked state
+ * - Checkboxes: styled task-list checkboxes (visual only)
  * - Copy button on code blocks
  * - Collapsible details/summary
  */
@@ -90,37 +90,34 @@ let s = {}
 
 /* ── Interactive Components ── */
 
-/** Clickable checkbox for task lists */
+/** Task-list checkbox, Obsidian-style: clean box, no bullet marker */
 function Checkbox({ checked, children }) {
   return (
     <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', lineHeight: 1.7 }}>
-      <input
-        type="checkbox"
-        checked={checked}
-        readOnly
+      <span
         style={{
-          appearance: 'none',
-          width: 16, height: 16,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 16,
+          height: 16,
+          borderRadius: 4,
           border: `1.5px solid ${checked ? colors.accent : colors.borderStrong}`,
-          borderRadius: 3,
           background: checked ? colors.accent : 'transparent',
-          cursor: 'pointer',
           flexShrink: 0,
           marginTop: 3,
-          position: 'relative',
+          transition: 'background 120ms ease, border-color 120ms ease',
         }}
-      />
-      <span style={checked ? { textDecoration: 'line-through', opacity: 0.6 } : undefined}>
+      >
+        {checked && (
+          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" style={{ display: 'block' }}>
+            <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </span>
+      <span style={checked ? { textDecoration: 'line-through', opacity: 0.55 } : undefined}>
         {children}
       </span>
-      {checked && (
-        <svg
-          style={{ position: 'absolute', left: 3, top: 6, pointerEvents: 'none' }}
-          width={10} height={10} viewBox="0 0 12 12" fill="none"
-        >
-          <path d="M2 6l3 3 5-5" stroke="#0B0F19" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      )}
     </label>
   )
 }
@@ -226,7 +223,7 @@ const components = {
   ol: ({ children, ...props }) => <ol style={s.ol} {...props}>{children}</ol>,
   li: ({ children, checked, ...props }) => {
     if (checked !== undefined && checked !== null) {
-      return <li style={{ ...s.li, listStyle: 'none', marginLeft: -24 }} {...props}>
+      return <li style={{ ...s.li, listStyle: 'none', paddingLeft: 0 }} {...props}>
         <Checkbox checked={checked}>{children}</Checkbox>
       </li>
     }
