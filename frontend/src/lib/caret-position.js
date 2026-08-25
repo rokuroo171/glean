@@ -30,11 +30,16 @@ export function caretPosition(ta, container) {
 
   const native = nativeCaretRect(ta)
   if (native) {
-    // The native rect is the caret's visual position - ALREADY in the
-    // scrolled view, scroller-agnostic. Just translate into host space.
+    // The native rect is in VIEWPORT space. The canvas rides INSIDE the
+    // scrollable host (single-edit mode), so its coordinate origin scrolls
+    // with the content: drawing at the viewport offset alone would put the
+    // caret one scrollTop too high, worse the deeper you scroll. Add the
+    // host's scroll back when the host itself is the scroller.
+    const hostScrollTop = host.scrollHeight > host.clientHeight + 1 ? (host.scrollTop || 0) : 0
+    const hostScrollLeft = host.scrollWidth > host.clientWidth + 1 ? (host.scrollLeft || 0) : 0
     return {
-      x: native.left - hostRect.left,
-      y: native.top - hostRect.top,
+      x: native.left - hostRect.left + hostScrollLeft,
+      y: native.top - hostRect.top + hostScrollTop,
       w: fs * 0.6,
       h: native.height > 0 ? native.height : lh,
       fs,
@@ -111,11 +116,10 @@ function mirrorCaretRect(ta, container, cs, lh) {
     ta._caretMirror = mirror
   }
 
-  // Scrollbar steals wrap width; wrap must match or rows drift apart.
-  const taScrollable = ta.scrollHeight > ta.clientHeight + 1
-  const borderLR = (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.borderRightWidth) || 0)
-  const sbW = taScrollable ? Math.max(0, ta.offsetWidth - ta.clientWidth - borderLR) : 0
-  mirror.style.width = Math.max(1, ta.clientWidth - sbW) + 'px'
+  // clientWidth already excludes the scrollbar, so this is exactly the
+  // textarea's wrap width - do NOT subtract the scrollbar again or lines
+  // wrap early and drift row by row on long notes.
+  mirror.style.width = Math.max(1, ta.clientWidth) + 'px'
 
   const sel = ta.selectionEnd ?? ta.selectionStart ?? 0
   mirror.textContent = ta.value.slice(0, sel)
@@ -126,6 +130,7 @@ function mirrorCaretRect(ta, container, cs, lh) {
   const r = marker.getBoundingClientRect()
   try { marker.remove() } catch { /* noop */ }
 
+  const taScrollable = ta.scrollHeight > ta.clientHeight + 1
   const hr = host.getBoundingClientRect()
   let x = r.left - hr.left
   let y = r.top - hr.top
