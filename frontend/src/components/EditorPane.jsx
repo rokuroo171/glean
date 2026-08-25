@@ -68,22 +68,8 @@ const MAX_HISTORY = 200
 const ANIM_FADE_MS = 350
 const ANIM_SPARKLE_MS = 450
 
-/** Animation overlay item: a glow on the real char, or sparkle particles. */
+/** Sparkle particle shown where a character was removed (backspace). */
 function AnimItem({ a, accent }) {
-  if (a.type === 'char') {
-    // A soft glow/pop that plays ON the real character at its normal
-    // position. No duplicate glyph, no mirroring.
-    return (
-      <span style={{
-        position: 'absolute', left: a.x - 2, top: a.y - 2,
-        width: a.w, height: a.lh,
-        borderRadius: 4, pointerEvents: 'none', zIndex: 50,
-        background: `radial-gradient(circle, ${accent}66 0%, transparent 70%)`,
-        animation: `animCharPop ${ANIM_FADE_MS}ms ease-out forwards`
-      }} />
-    )
-  }
-  // sparkle particle (backspace)
   return (
     <span style={{
       position: 'absolute', left: a.x, top: a.y,
@@ -108,57 +94,101 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const taRef = useRef(null)
   const previewRef = useRef(null)
 
-  // --- Animated text overlay ---
+  // --- Animated text (Issue #2): the visible text IS the animated layer ---
+  // The textarea text is transparent; a text layer on top renders the real
+  // characters. A freshly typed character animates in place (drop from top).
+  // No duplicate glyph, no mirror - the real character is the animation.
   const animatedEnabled = prefs.editor.animated_text_enabled === true
-  const [animItems, setAnimItems] = useState([])
+  const [animItems, setAnimItems] = useState([])    // backspace sparkle particles
+  const [fresh, setFresh] = useState({})            // char index -> ts of last insert
+  const [selActive, setSelActive] = useState(false) // native selection in progress
   const animTimerRef = useRef(null)
   const lastBodyLenRef = useRef(body.length)
+  const overlayInnerRef = useRef(null)
+
+  const editorFont = prefs.editor.font_family || 'monospace'
+  const editorFontSize = prefs.editor.font_size || 14
+  const editorLineHeight = prefs.editor.line_height || 1.6
+  const chars = useMemo(() => Array.from(body), [body])
 
   // Sync lastBodyLen when note changes
   useEffect(() => { lastBodyLenRef.current = body.length }, [note?.id])
 
   /** Clean up expired animation items. */
   const sweepAnims = useCallback(() => {
-    setAnimItems(prev => prev.filter(a => Date.now() - a.ts < (a.type === 'sparkle' ? ANIM_SPARKLE_MS : ANIM_FADE_MS)))
+    setAnimItems(prev => prev.filter(a => Date.now() - a.ts < ANIM_SPARKLE_MS))
+    setFresh(prev => {
+      const now = Date.now()
+      const n = {}
+      let changed = false
+      for (const k in prev) {
+        if (now - prev[k] < ANIM_FADE_MS) n[k] = prev[k]
+        else changed = true
+      }
+      return changed ? n : prev
+    })
   }, [])
 
-  /** Trigger an animation at the given offset (defaults to the cursor). */
-  const triggerAnim = useCallback((action, offset) => {
+  /** Sparkle burst where a character was removed (backspace). */
+  const triggerSparkles = useCallback(() => {
     if (!animatedEnabled) return
     const ta = taRef.current
     if (!ta) return
-    const at = offset != null ? offset : ta.selectionStart
-    const pos = getCharPosition(ta, at)
+    const pos = getCharPosition(ta, ta.selectionStart)
     const id = ++_animId
     const ts = Date.now()
-    if (action === 'type') {
-      setAnimItems(prev => [...prev, { id, type: 'char', x: pos.x, y: pos.y, lh: pos.lh, w: pos.w, ts }])
-    } else if (action === 'backspace') {
-      const sparkles = Array.from({ length: 6 }, (_, i) => ({
-        id: id * 100 + i,
-        type: 'sparkle',
-        x: pos.x, y: pos.y,
-        dx: (Math.random() - 0.5) * 30,
-        dy: (Math.random() - 0.5) * 20 - 8,
-        ts
-      }))
-      setAnimItems(prev => [...prev, ...sparkles])
-    }
-    if (!animTimerRef.current) {
-      animTimerRef.current = setInterval(sweepAnims, 60)
-    }
+    const sparkles = Array.from({ length: 6 }, (_, i) => ({
+      id: id * 100 + i,
+      type: 'sparkle',
+      x: pos.x, y: pos.y,
+      dx: (Math.random() - 0.5) * 30,
+      dy: (Math.random() - 0.5) * 20 - 8,
+      ts
+    }))
+    setAnimItems(prev => [...prev, ...sparkles])
+    if (!animTimerRef.current) animTimerRef.current = setInterval(sweepAnims, 60)
   }, [animatedEnabled, sweepAnims])
 
-  // Stop sweep timer when all items gone
+  // Stop sweep timer when nothing left
   useEffect(() => {
-    if (animItems.length === 0 && animTimerRef.current) {
+    if (animItems.length === 0 && Object.keys(fresh).length === 0 && animTimerRef.current) {
       clearInterval(animTimerRef.current)
       animTimerRef.current = null
     }
-  }, [animItems.length])
+  }, [animItems.length, fresh])
 
   // Cleanup timer on unmount
   useEffect(() => () => { if (animTimerRef.current) clearInterval(animTimerRef.current) }, [])
+
+  // Sync overlay scroll when the feature toggles on or the note changes
+  useEffect(() => {
+    if (animatedEnabled && taRef.current && overlayInnerRef.current) {
+      overlayInnerRef.current.style.transform = `translateY(${-taRef.current.scrollTop}px)`
+    }
+  }, [animatedEnabled, note?.id])
+
+  /** Keep the visible text layer scrolled in lockstep with the textarea. */
+  const syncOverlayScroll = () => {
+    const ta = taRef.current
+    if (ta && overlayInnerRef.current) {
+      overlayInnerRef.current.style.transform = `translateY(${-ta.scrollTop}px)`
+    }
+  }
+
+  /** Track whether the user is dragging a selection (show native text then). */
+  const handleSelect = () => {
+    const ta = taRef.current
+    if (!ta) return
+    const active = ta.selectionStart !== ta.selectionEnd
+    setSelActive(active)
+    if (onCursorChange) {
+      const pos = ta.selectionStart
+      const textBefore = ta.value.slice(0, pos)
+      const line = textBefore.split('\n').length
+      const lastNewline = textBefore.lastIndexOf('\n')
+      onCursorChange({ line, col: pos - lastNewline })
+    }
+  }
 
   // --- Undo / Redo history ---
   const historyRef = useRef([])
@@ -253,16 +283,21 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     onBodyChange(newBody)
     setDirty(true)
     setTyping(true)
-    // Animated text: detect type vs backspace
+    // Animated text: mark inserted chars so they animate in place.
     if (animatedEnabled) {
       const diff = newBody.length - lastBodyLenRef.current
       if (diff > 0) {
         const ta = taRef.current
         const insertStart = ta ? ta.selectionStart - diff : 0
-        // Play the glow on the real character where it landed.
-        triggerAnim('type', insertStart)
+        const now = Date.now()
+        setFresh(prev => {
+          const n = { ...prev }
+          for (let k = 0; k < diff; k++) n[String(insertStart + k)] = now
+          return n
+        })
+        if (!animTimerRef.current) animTimerRef.current = setInterval(sweepAnims, 60)
       } else if (diff < 0) {
-        triggerAnim('backspace')
+        triggerSparkles()
       }
     }
     lastBodyLenRef.current = newBody.length
@@ -286,6 +321,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   }
 
   function onScroll() {
+    syncOverlayScroll()
     const ta = taRef.current
     if (!ta) return
     const lineIndex = Math.floor(ta.scrollTop / LINE_HEIGHT)
@@ -511,6 +547,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   /** Sync textarea scroll with preview scroll in split mode. */
   function handleTextareaScroll() {
     onScroll()
+    syncOverlayScroll()
     // Sync preview scroll proportionally
     const ta = taRef.current
     const pv = previewRef.current
@@ -542,10 +579,10 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}>
       {animatedEnabled && (
         <style>{`
-          @keyframes animCharPop {
-            0% { opacity: 0; transform: translateY(-8px) scale(1.4); }
-            35% { opacity: 0.9; transform: translateY(0) scale(1); }
-            100% { opacity: 0; transform: translateY(0) scale(1.05); }
+          @keyframes charIn {
+            0% { opacity: 0; transform: translateY(-10px); }
+            60% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 1; transform: translateY(0); }
           }
           @keyframes animSparkle {
             0% { opacity: 1; transform: translate(0, 0) scale(1); }
@@ -660,17 +697,36 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                 onChange={(e) => handleChange(e.target.value)}
                 onScroll={handleTextareaScroll}
                 onKeyDown={handleKeyDown}
-                onSelect={updateCursor}
-                onClick={updateCursor}                  onKeyUp={updateCursor}
+                onSelect={handleSelect}
+                onClick={updateCursor}
+                onKeyUp={updateCursor}
+                onBlur={() => setSelActive(false)}
                 placeholder="Write, the night holds what you seek."
                 style={{ width: '100%', height: '100%', resize: 'none', outline: 'none',
-                  background: 'transparent', border: 'none', color: colors.text,
-                  fontFamily: prefs.editor.font_family || 'monospace',
-                  fontSize: prefs.editor.font_size || 14, lineHeight: prefs.editor.line_height || 1.6, padding: space[3],
+                  background: 'transparent', border: 'none',
+                  color: animatedEnabled && !selActive && body.length > 0 ? 'transparent' : colors.text,
+                  caretColor: colors.text,
+                  fontFamily: editorFont, fontSize: editorFontSize, lineHeight: editorLineHeight, padding: space[3],
                   transition: 'box-shadow 0.6s ease-out',
                   boxShadow: typing ? `inset 0 0 30px rgba(180, 140, 80, 0.06)` : 'none' }}
               />
-              {/* Animated text overlay (split mode) */}
+              {animatedEnabled && (
+                <div aria-hidden="true"
+                  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                    overflow: 'hidden', pointerEvents: 'none', padding: space[3],
+                    color: colors.text, fontFamily: editorFont, fontSize: editorFontSize,
+                    lineHeight: editorLineHeight, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
+                    display: selActive ? 'none' : 'block' }}>
+                  <div ref={overlayInnerRef} style={{ transform: 'translateY(0px)', willChange: 'transform' }}>
+                    {chars.map((c, i) => (
+                      <span key={i}
+                        style={{ animation: fresh[String(i)] ? `charIn ${ANIM_FADE_MS}ms ease-out` : undefined }}>
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
               {animatedEnabled && animItems.map(a => (
                 <AnimItem key={a.id} a={a} accent={colors.accent} />
               ))}
@@ -704,16 +760,34 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                 onChange={(e) => handleChange(e.target.value)}
                 onScroll={onScroll}
                 onKeyDown={handleKeyDown}
-                onSelect={updateCursor}
+                onSelect={handleSelect}
                 onClick={updateCursor}
                 onKeyUp={updateCursor}
+                onBlur={() => setSelActive(false)}
                 placeholder="Write, the night holds what you seek."
                 style={{ width: '100%', height: '100%', resize: 'none', outline: 'none',
-                  background: 'transparent', border: 'none', color: colors.text,
-                  fontFamily: prefs.editor.font_family || 'monospace',
-                  fontSize: prefs.editor.font_size || 14, lineHeight: prefs.editor.line_height || 1.6 }}
+                  background: 'transparent', border: 'none',
+                  color: animatedEnabled && !selActive && body.length > 0 ? 'transparent' : colors.text,
+                  caretColor: colors.text,
+                  fontFamily: editorFont, fontSize: editorFontSize, lineHeight: editorLineHeight }}
               />
-              {/* Animated text overlay (single mode) */}
+              {animatedEnabled && (
+                <div aria-hidden="true"
+                  style={{ position: 'absolute', top: space[3], left: space[3], right: space[3], bottom: space[3],
+                    overflow: 'hidden', pointerEvents: 'none', padding: space[3],
+                    color: colors.text, fontFamily: editorFont, fontSize: editorFontSize,
+                    lineHeight: editorLineHeight, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
+                    display: selActive ? 'none' : 'block' }}>
+                  <div ref={overlayInnerRef} style={{ transform: 'translateY(0px)', willChange: 'transform' }}>
+                    {chars.map((c, i) => (
+                      <span key={i}
+                        style={{ animation: fresh[String(i)] ? `charIn ${ANIM_FADE_MS}ms ease-out` : undefined }}>
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
               {animatedEnabled && animItems.map(a => (
                 <AnimItem key={a.id} a={a} accent={colors.accent} />
               ))}
