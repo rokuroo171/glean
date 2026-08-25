@@ -67,6 +67,8 @@ function wrapSelection(ta, prefix, suffix) {
 const MAX_HISTORY = 200
 const ANIM_FADE_MS = 350
 const ANIM_SPARKLE_MS = 450
+/** Capitalize first letter (drop -> Drop) for keyframe names. */
+function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : 'Drop' }
 
 /** Sparkle particle shown where a character was removed (backspace). */
 function AnimItem({ a, accent }) {
@@ -99,6 +101,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   // characters. A freshly typed character animates in place (drop from top).
   // No duplicate glyph, no mirror - the real character is the animation.
   const animatedEnabled = prefs.editor.animated_text_enabled === true
+  const typingStyle = prefs.editor.animated_text_style || 'drop'
   const [animItems, setAnimItems] = useState([])    // backspace sparkle particles
   const [fresh, setFresh] = useState({})            // char index -> ts of last insert
   const [selActive, setSelActive] = useState(false) // native selection in progress
@@ -579,10 +582,19 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}>
       {animatedEnabled && (
         <style>{`
-          @keyframes charIn {
+          @keyframes charDrop {
             0% { opacity: 0; transform: translateY(-10px); }
             60% { opacity: 1; transform: translateY(0); }
             100% { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes charFade {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+          }
+          @keyframes charPop {
+            0% { opacity: 0; transform: scale(0.4); }
+            60% { opacity: 1; transform: scale(1.15); }
+            100% { opacity: 1; transform: scale(1); }
           }
           @keyframes animSparkle {
             0% { opacity: 1; transform: translate(0, 0) scale(1); }
@@ -720,7 +732,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                   <div ref={overlayInnerRef} style={{ transform: 'translateY(0px)', willChange: 'transform' }}>
                     {chars.map((c, i) => (
                       <span key={i}
-                        style={{ animation: fresh[String(i)] ? `charIn ${ANIM_FADE_MS}ms ease-out` : undefined }}>
+                        style={{ animation: fresh[String(i)] ? `char${cap(typingStyle)} ${ANIM_FADE_MS}ms ease-out` : undefined }}>
                         {c}
                       </span>
                     ))}
@@ -781,7 +793,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                   <div ref={overlayInnerRef} style={{ transform: 'translateY(0px)', willChange: 'transform' }}>
                     {chars.map((c, i) => (
                       <span key={i}
-                        style={{ animation: fresh[String(i)] ? `charIn ${ANIM_FADE_MS}ms ease-out` : undefined }}>
+                        style={{ animation: fresh[String(i)] ? `char${cap(typingStyle)} ${ANIM_FADE_MS}ms ease-out` : undefined }}>
                         {c}
                       </span>
                     ))}

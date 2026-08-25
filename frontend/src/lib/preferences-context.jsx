@@ -20,6 +20,7 @@ const defaultPrefs = {
     cursor_trail_length: 12,
     cursor_trail_start_threshold: 4,
     animated_text_enabled: false,
+    animated_text_style: 'drop',
   },
 }
 
