@@ -6,41 +6,20 @@ import StarIcon from './StarIcon'
 import Icon from './Icon'
 import CursorTrail from './CursorTrail'
 import ContextMenu from './ContextMenu'
+import { caretPosition } from '../lib/caret-position'
 
 const AUTOSAVE_DELAY = 1500
 const LINE_HEIGHT = 22
 let _animId = 0
-/** Measure text width using an offscreen canvas. */
-function measureText(text, font) {
-  const ctx = measureText._ctx || (measureText._ctx = document.createElement('canvas').getContext('2d'))
-  ctx.font = font
-  return ctx.measureText(text).width
-}
-/** Get the (x, y) pixel position of a cursor offset inside a textarea-like element. */
-function getCharPosition(ta, offset) {
+/** Get the (x, y) pixel position of a caret inside the textarea container.
+ *  Uses the native selection rect so sparkles land exactly on the glyph
+ *  that was removed, on long notes too. */
+function getCharPosition(ta) {
   if (!ta) return { x: 0, y: 0, lh: 22, w: 8 }
-  const cs = getComputedStyle(ta)
-  // Rebuild the font string from the live computed style so weight and style
-  // are included - canvas measureText falls back to 400 normal otherwise and
-  // drifts on long notes with non-default weights.
-  const font = `${cs.fontWeight || 400} ${cs.fontStyle || 'normal'} ${cs.fontSize} ${cs.fontFamily}`
-  const padL = parseFloat(cs.paddingLeft) || 0
-  const padT = parseFloat(cs.paddingTop) || 0
-  const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.6
-  const textBefore = ta.value.slice(0, offset)
-  const lines = textBefore.split('\n')
-  const line = lines.length - 1
-  const col = lines[line]
-  // The textarea sits inside a padded container; offsetLeft/Top give its
-  // position relative to the positioned container so sparkle coordinates
-  // match the container's coordinate space in both edit and split modes.
-  const ox = ta.offsetLeft || 0
-  const oy = ta.offsetTop || 0
-  const x = ox + padL + measureText(lines[line], font)
-  const y = oy + padT + line * lh - ta.scrollTop
-  // Approximate char width from the last typed char (or monospace advance).
-  const w = measureText(lines[line].slice(-1) || '0', font) || 8
-  return { x, y, lh, w }
+  const container = ta.closest('[data-editor-root]') || ta.offsetParent
+  const p = caretPosition(ta, container)
+  if (!p) return { x: 0, y: 0, lh: 22, w: 8 }
+  return { x: p.x, y: p.y, lh: p.lh, w: p.w }
 }
 
 export function parseHeadings(markdown) {
@@ -150,7 +129,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     if (!animatedEnabled) return
     const ta = taRef.current
     if (!ta) return
-    const pos = getCharPosition(ta, ta.selectionStart)
+    const pos = getCharPosition(ta)
     const id = ++_animId
     const ts = Date.now()
     const sparkles = Array.from({ length: 6 }, (_, i) => ({
