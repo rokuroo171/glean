@@ -117,12 +117,13 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     setAnimItems(prev => prev.filter(a => Date.now() - a.ts < (a.type === 'sparkle' ? ANIM_SPARKLE_MS : ANIM_FADE_MS)))
   }, [])
 
-  /** Trigger an animation at the current cursor position. */
-  const triggerAnim = useCallback((action, char) => {
+  /** Trigger an animation at the given offset (defaults to the cursor). */
+  const triggerAnim = useCallback((action, char, offset) => {
     if (!animatedEnabled) return
     const ta = taRef.current
     if (!ta) return
-    const pos = getCharPosition(ta, ta.selectionStart)
+    const at = offset != null ? offset : ta.selectionStart
+    const pos = getCharPosition(ta, at)
     const id = ++_animId
     const ts = Date.now()
     if (action === 'type') {
@@ -252,8 +253,12 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
       const diff = newBody.length - lastBodyLenRef.current
       if (diff > 0) {
         const ta = taRef.current
-        const inserted = newBody.slice(ta ? ta.selectionStart - diff : 0, ta ? ta.selectionStart : diff)
-        triggerAnim('type', inserted.length === 1 ? inserted : '')
+        const insertStart = ta ? ta.selectionStart - diff : 0
+        const inserted = newBody.slice(insertStart, insertStart + diff)
+        // Animate the inserted text at the position where it landed (the
+        // insertion start), not at the cursor after it, so the ghost char
+        // sits exactly on the real one.
+        triggerAnim('type', inserted.length === 1 ? inserted : '', insertStart)
       } else if (diff < 0) {
         triggerAnim('backspace', '')
       }
