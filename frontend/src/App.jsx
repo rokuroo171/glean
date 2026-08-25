@@ -49,11 +49,11 @@ async function getNotes() {
   return [...MOCK_NOTES, ...mockCreated]
 }
 
-async function getTrails() {
-  if (wails) return wails.App.GetTrails()
+async function getLinks() {
+  if (wails) return wails.App.GetLinks()
   return [
     { note_a: '1', note_b: '2', dimmed: false },
-    { note_a: '2', note_b: '3', dimmed: true },
+    { note_a: '2', note_b: '3', dimmed: false },
   ]
 }
 
@@ -86,7 +86,7 @@ export default function App() {
   const [setup, setSetup] = useState('loading') // loading | setup | recovery | workspace
   const [skyState, setSkyState] = useState(null)
   const [notes, setNotes] = useState([])
-  const [trails, setTrails] = useState([])
+  const [links, setLinks] = useState([])
   const [stats, setStats] = useState(null)
   const [noteBodies, setNoteBodies] = useState({})
   const [skyName, setSkyName] = useState('My Sky')
@@ -110,9 +110,9 @@ export default function App() {
   }, [])
 
   const loadSky = useCallback(async () => {
-    const [n, t] = await Promise.all([getNotes(), getTrails()])
+    const [n, l] = await Promise.all([getNotes(), getLinks()])
     setNotes(n)
-    setTrails(t)
+    setLinks(l)
   }, [])
 
   const loadStats = useCallback(async () => {
@@ -126,9 +126,9 @@ export default function App() {
     if (setup !== 'workspace') return
     // Direct call to avoid stale useCallback closures
     (async () => {
-      const [n, t] = await Promise.all([getNotes(), getTrails()])
+      const [n, l] = await Promise.all([getNotes(), getLinks()])
       setNotes(n)
-      setTrails(t)
+      setLinks(l)
 
     })()
     loadStats()
@@ -269,7 +269,7 @@ export default function App() {
       <TooltipLayer />
       <Workspace
         notes={notes}
-        trails={trails}
+        links={links}
         stats={stats}
         skyName={skyName}
         skyPath={skyPath}
