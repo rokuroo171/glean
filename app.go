@@ -767,14 +767,20 @@ type KnownSkyView struct {
 }
 
 // GetKnownSkies returns all remembered skies for the manage-skies UI.
+// Skies whose folder no longer exists on disk are filtered out, so the
+// list never shows stale entries for deleted/moved folders.
 func (a *App) GetKnownSkies() []KnownSkyView {
 	p, _, err := store.LoadPointer()
 	if err != nil || p.KnownSkies == nil {
 		return nil
 	}
-	views := make([]KnownSkyView, len(p.KnownSkies))
-	for i, ks := range p.KnownSkies {
-		views[i] = KnownSkyView{Name: ks.Name, Path: ks.Path}
+	views := make([]KnownSkyView, 0, len(p.KnownSkies))
+	for _, ks := range p.KnownSkies {
+		info, statErr := os.Stat(ks.Path)
+		if statErr != nil || !info.IsDir() {
+			continue
+		}
+		views = append(views, KnownSkyView{Name: ks.Name, Path: ks.Path})
 	}
 	return views
 }
