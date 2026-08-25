@@ -89,9 +89,12 @@ export default function CursorTrail({ textareaRef, containerRef }) {
     // Always draw our own caret.
     const onFocus = () => { focusRef.current = true; measure(false) }
     const onBlur = () => { focusRef.current = false }
-    const onKeyUp = () => measure(false)
-    const onInput = () => measure(false)
-    const onClick = () => measure(false)
+    // Measure right after the browser has settled the selection into the
+    // document selection - the native caret rect only exists then.
+    const later = () => requestAnimationFrame(() => measure(false))
+    const onKeyUp = later
+    const onInput = later
+    const onClick = later
     ta.style.caretColor = 'transparent'
     ta.addEventListener('focus', onFocus)
     ta.addEventListener('blur', onBlur)
