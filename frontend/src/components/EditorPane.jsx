@@ -766,14 +766,14 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                 onBlur={() => setSelActive(false)}
                 placeholder="Write, the night holds what you seek."
                 style={{ width: '100%', height: '100%', resize: 'none', outline: 'none',
-                  background: 'transparent', border: 'none',
+                  background: 'transparent', border: 'none', padding: 0,
                   color: animatedEnabled && !selActive && body.length > 0 ? 'transparent' : colors.text,
                   caretColor: colors.text,
                   fontFamily: editorFont, fontSize: editorFontSize, lineHeight: editorLineHeight }}
               />
               {animatedEnabled && (
                 <div aria-hidden="true"
-                  style={{ position: 'absolute', top: space[3], left: space[3], right: space[3], bottom: space[3],
+                  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                     overflow: 'hidden', pointerEvents: 'none', padding: space[3],
                     color: colors.text, fontFamily: editorFont, fontSize: editorFontSize,
                     lineHeight: editorLineHeight, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
