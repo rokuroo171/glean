@@ -94,7 +94,9 @@ let taskCtx = { body: '', next: 0, onToggle: null }
 
 /* ── Interactive Components ── */
 
-/** Task-list checkbox, Obsidian-style: clean box, no bullet marker */
+/** Task-list checkbox, Obsidian-style: clean box, no bullet marker.
+ *  Intercepts the <input type="checkbox"> that react-markdown emits for
+ *  GFM task items (v10 does not pass `checked` to the `li` component). */
 function Checkbox({ checked, index, children }) {
   const handleClick = (e) => {
     e.preventDefault()
@@ -243,14 +245,21 @@ const components = {
   // Lists
   ul: ({ children, ...props }) => <ul style={s.ul} {...props}>{children}</ul>,
   ol: ({ children, ...props }) => <ol style={s.ol} {...props}>{children}</ol>,
-  li: ({ children, checked, ...props }) => {
-    if (checked !== undefined && checked !== null) {
-      const index = taskCtx.next++
-      return <li style={{ ...s.li, listStyle: 'none', paddingLeft: 0 }} {...props}>
-        <Checkbox checked={checked} index={index}>{children}</Checkbox>
-      </li>
+  li: ({ children, className, ...props }) => {
+    if (className?.includes('task-list-item')) {
+      return <li style={{ ...s.li, listStyle: 'none', paddingLeft: 0 }} {...props}>{children}</li>
     }
     return <li style={s.li} {...props}>{children}</li>
+  },
+
+  // GFM task lists render as <input type="checkbox">; replace it with our
+  // custom clickable checkbox (the li above already kills the bullet).
+  input: ({ type, checked, ...props }) => {
+    if (type === 'checkbox') {
+      const index = taskCtx.next++
+      return <Checkbox checked={checked} index={index} />
+    }
+    return <input type={type} checked={checked} {...props} />
   },
 
   // Blockquote
