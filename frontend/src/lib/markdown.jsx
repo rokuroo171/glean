@@ -1,8 +1,75 @@
 import React, { useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { visit, SKIP } from 'unist-util-visit'
 import { colors } from './theme'
 import { highlightCode } from './prism-setup'
+
+/**
+ * remark plugin: GFM alerts (> [!NOTE] etc).
+ *
+ * Works on the mdast AST, BEFORE rendering. Strips the marker text from
+ * the blockquote's first paragraph and re-tags the node for the renderer
+ * via the canonical mdast->hast extension points (data.hName +
+ * data.hProperties). This is the ONLY mechanism react-markdown actually
+ * honors: replacing the node with a custom type is silently flattened to
+ * a plain div (verified empirically), so custom element names here is
+ * what makes the `alertbox` component fire.
+ *
+ * The alert tag always sits at the start of the blockquote's FIRST
+ * paragraph. It may be plain text or strong/emphasis-wrapped; we flatten
+ * the leading inline runs to text to find the tag, then consume the tag
+ * length across inline nodes so the marker vanishes from whichever node
+ * holds it (keeping the strong wrapper for the remainder).
+ */
+const ALERT_RE = /^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/i
+
+function inlineText(node) {
+  if (!node) return ''
+  if (node.type === 'text') return node.value || ''
+  if (node.children) return (node.children || []).map(inlineText).join('')
+  return ''
+}
+
+function remarkAlert() {
+  return (tree) => {
+    visit(tree, 'blockquote', (bq) => {
+      const first = bq.children && bq.children[0]
+      if (!first || first.type !== 'paragraph') return
+      const inline = (first.children || []).map(inlineText).join('')
+      const m = inline.match(ALERT_RE)
+      if (!m) return
+
+      const tagLen = m[0].length
+      // Consume the tag length across the leading inline runs so the
+      // marker disappears from whichever nodes hold it.
+      let remaining = tagLen
+      const out = []
+      for (const child of first.children) {
+        if (remaining <= 0) { out.push(child); continue }
+        const txt = inlineText(child)
+        const tlen = txt.length
+        if (tlen <= remaining) {
+          remaining -= tlen
+          // Fully consumed: this node only held tag text; drop it.
+          continue
+        }
+        // Partially consumed: keep the remainder, preserve the wrapper.
+        const keep = txt.slice(remaining)
+        remaining = 0
+        if (child.type === 'text') out.push({ ...child, value: keep })
+        else if (child.children) out.push({ ...child, children: [{ type: 'text', value: keep }] })
+        else out.push(child)
+      }
+      first.children = out
+
+      // Re-tag the blockquote so the renderer picks it up as an alertbox.
+      bq.data = bq.data || {}
+      bq.data.hName = 'alertbox'
+      bq.data.hProperties = { kind: m[1].toLowerCase() }
+    })
+  }
+}
 
 /**
  * Markdown renderer built on react-markdown + remark-gfm.
@@ -26,7 +93,7 @@ function getS() {
   h4: { fontSize: 14, fontWeight: 600, lineHeight: 1.4, margin: '12px 0 4px', color: colors.text },
   h5: { fontSize: 13, fontWeight: 600, lineHeight: 1.4, margin: '10px 0 4px', color: colors.text },
   h6: { fontSize: 13, fontWeight: 500, lineHeight: 1.4, margin: '10px 0 4px', color: colors.textMuted },
-  p: { margin: '6px 0', lineHeight: 1.7, color: colors.text },
+  p: { margin: '6px 0', lineHeight: 1.7, color: colors.text, overflowWrap: 'anywhere' },
   strong: { fontWeight: 600, color: colors.text },
   em: { fontStyle: 'italic', color: colors.text },
   del: { textDecoration: 'line-through', color: colors.textMuted },
@@ -43,10 +110,10 @@ function getS() {
   hr: { border: 'none', borderTop: `1px solid ${colors.border}`, margin: '20px 0' },
   ul: { margin: '6px 0', paddingLeft: 24 },
   ol: { margin: '6px 0', paddingLeft: 24 },
-  li: { margin: '3px 0', lineHeight: 1.7, color: colors.text },
+  li: { margin: '3px 0', lineHeight: 1.7, color: colors.text, overflowWrap: 'anywhere' },
   table: { borderCollapse: 'collapse', margin: '12px 0', width: '100%', fontSize: 13 },
-  th: { border: `1px solid ${colors.border}`, padding: '8px 12px', fontWeight: 600, color: colors.text, background: 'rgba(90,106,122,0.08)', textAlign: 'left' },
-  td: { border: `1px solid ${colors.border}`, padding: '8px 12px', color: colors.text },
+  th: { border: `1px solid ${colors.border}`, padding: '8px 12px', fontWeight: 600, color: colors.text, background: 'rgba(90,106,122,0.08)', textAlign: 'left', overflowWrap: 'anywhere' },
+  td: { border: `1px solid ${colors.border}`, padding: '8px 12px', color: colors.text, overflowWrap: 'anywhere' },
   code: {
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
     fontSize: 13,
@@ -68,6 +135,7 @@ function getS() {
     color: colors.text,
     lineHeight: 1.5,
     whiteSpace: 'pre',
+    overflowWrap: 'anywhere',
   },
   img: { maxWidth: '100%', height: 'auto', borderRadius: 4, margin: '6px 0' },
   details: {
@@ -231,6 +299,44 @@ function Summary({ children, ...props }) {
   return <summary style={s.summary} {...props}>{children}</summary>
 }
 
+/* ── GFM Alerts ── */
+
+// Alert kinds and their accent colors, per the GitHub alert palette.
+const ALERT_KINDS = {
+  note: { label: 'Note', color: '#5b9fd4' },
+  tip: { label: 'Tip', color: '#56b87a' },
+  important: { label: 'Important', color: '#8b7cf6' },
+  warning: { label: 'Warning', color: '#d99a3d' },
+  caution: { label: 'Caution', color: '#db4c40' },
+}
+
+/** GFM alert box: > [!TYPE] yields a tinted panel with a label row. */
+function AlertBlock({ kind, children }) {
+  const t = ALERT_KINDS[kind] || ALERT_KINDS.note
+  return (
+    <div style={{
+      border: `1px solid ${t.color}40`,
+      borderLeft: `3px solid ${t.color}`,
+      borderRadius: 6,
+      background: `${t.color}0f`,
+      padding: '10px 14px',
+      margin: '10px 0',
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        color: t.color, fontWeight: 600, fontSize: 12,
+        textTransform: 'uppercase', letterSpacing: '0.04em',
+      }}>
+        <span style={{ width: 8, height: 8, borderRadius: 2, background: t.color, flexShrink: 0 }} />
+        {t.label}
+      </div>
+      <div style={{ marginTop: 5, color: colors.text }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 /* ── Custom Components Map ── */
 
 const components = {
@@ -324,8 +430,15 @@ const components = {
     return <input type={type} checked={checked} {...props} />
   },
 
-  // Blockquote
+  // Blockquote: the remark plugin re-tags alert blockquotes as
+  // <alertbox kind> before rendering, so this renders only plain
+  // blockquotes. Alerts are handled by the `alertbox` component below.
   blockquote: ({ children, ...props }) => <blockquote style={s.blockquote} {...props}>{children}</blockquote>,
+
+  // GFM alert: tinted panel with a colored label row. The remark plugin
+  // re-tags alert blockquotes as <alertbox kind> via data.hName (the one
+  // mechanism react-markdown actually routes custom elements for).
+  alertbox: ({ kind, children }) => <AlertBlock kind={kind}>{children}</AlertBlock>,
 
   // Table
   table: ({ children, ...props }) => <table style={s.table} {...props}>{children}</table>,
@@ -385,7 +498,7 @@ export function renderMarkdown(text, opts = {}) {
   }
   return (
     <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
+      remarkPlugins={[remarkGfm, remarkAlert]}
       components={components}
     >
       {body}

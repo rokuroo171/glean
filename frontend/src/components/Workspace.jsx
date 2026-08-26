@@ -366,7 +366,7 @@ export default function Workspace({
                 onOpenStats={() => { setPseudoTab('stats'); onOpenStats() }} onNewNote={onNewNote} />
             </div>
           ) : (
-            <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+            <div style={{ flex: 1, minHeight: 0, minWidth: 0, display: 'flex' }}>
               <EditorPane
                 key={activeNote?.id}
                 note={activeNote}

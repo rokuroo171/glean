@@ -1,20 +1,14 @@
 /**
- * CursorTrail -- replaces the native text caret and draws a beam that
- * morphs into a smear on jumps.
+ * CursorTrail -- transient effects on top of the NATIVE text caret.
  *
- * The native textarea caret cannot transform (the OS/webview draws it),
- * so when this component is enabled the native caret is hidden
- * (caret-color: transparent) and we draw our own:
+ * The native caret is the caret. The browser draws it from the same
+ * layout as the text, so it is pixel-exact at any depth by
+ * construction. This component never hides it and never draws a
+ * replacement: it only tints it and adds short-lived effects:
  *
- * - At rest: a blinking beam (rounded, ~2px wide, full line height).
- * - On a caret jump (typing, arrows, clicks, undo/redo): instead of a
- *   long smear spanning the whole move, the caret itself flows -- the
- *   drawn position eases toward the new caret with a short tapered
- *   comet tail behind it that fades out in ~150ms. The head bulges
- *   into a soft drop while moving and settles back into a beam.
- *
- * Styles:
- * - beam (default): the fluid morphing caret above.
+ * - beam (default): a fading comet band from the old caret position to
+ *   the new one on REAL jumps (clicks, arrow keys, undo/redo).
+ *   Per-character typing stays quiet, like a native caret.
  * - sparkle: star particles emit at the old caret position and fade.
  * - ink: bezier stroke that follows the caret path and fades tail->head.
  */
@@ -25,11 +19,10 @@ import { caretPosition } from '../lib/caret-position'
 
 const ACCENT_FALLBACK = '#5b9fd4'
 const INTENSITY = { subtle: 0.6, normal: 1, vivid: 1.6 }
-// The stretch band fires on ANY caret move (including per-character
-// typing): typing right leaves `---o0|` behind the advancing head,
-// typing left / backspace leaves `|0o---` behind. Only sub-pixel
-// jitter and the starting plant are exempt.
-const BAND_MIN = 1.2
+// The comet band fires only on REAL jumps (clicks, arrow keys,
+// undo/redo) - jumps of at least one line. Per-character typing
+// advances less than this and stays quiet, like a native caret.
+const JUMP_MIN = 16
 
 // "beam" is the default trail style. Older prefs may still hold the
 // previous mode name - alias it so saved settings survive.
@@ -96,16 +89,30 @@ export default function CursorTrail({ textareaRef, containerRef }) {
     if (!ta) return
     if (!enabled) return
 
-    // Draw our own caret.
-    const onFocus = () => { focusRef.current = true; measure(false) }
+    // Coalesce every measure trigger into ONE mirror layout per frame.
+    // Without this, a single keystroke fires input + selectionchange +
+    // keyup, each scheduling its own full-document mirror measurement -
+    // on long notes that is several expensive synchronous layouts per
+    // keystroke and typing stutters.
+    let measurePending = false
+    const scheduleMeasure = (fromScroll) => {
+      if (measurePending) return
+      measurePending = true
+      requestAnimationFrame(() => {
+        measurePending = false
+        measure(fromScroll)
+      })
+    }
+    // Measure right after the browser has settled the selection.
+    const onKeyUp = () => scheduleMeasure(false)
+    const onInput = () => scheduleMeasure(false)
+    const onClick = () => scheduleMeasure(false)
+    const onFocus = () => { focusRef.current = true; scheduleMeasure(false) }
     const onBlur = () => { focusRef.current = false }
-    // Measure right after the browser has settled the selection into the
-    // document selection - the native caret rect only exists then.
-    const later = () => requestAnimationFrame(() => measure(false))
-    const onKeyUp = later
-    const onInput = later
-    const onClick = later
-    ta.style.caretColor = 'transparent'
+    // The native caret stays the caret: the browser draws it pixel-exact
+    // at any depth. We only tint it to match the trail color; alignment
+    // is the browser's job, not ours. Never hide it.
+    ta.style.caretColor = colorRef.current || ACCENT_FALLBACK
     ta.addEventListener('focus', onFocus)
     ta.addEventListener('blur', onBlur)
 
@@ -135,10 +142,6 @@ export default function CursorTrail({ textareaRef, containerRef }) {
 
     const measure = (fromScroll) => {
       const pos = getCursorPixelPos(ta, containerRef?.current)
-      // Never leave the user without a caret: if we cannot measure yet,
-      // let the native one show through; once we CAN measure we take over
-      // and hide it.
-      ta.style.caretColor = pos ? 'transparent' : ''
       if (!pos) return
       const e = prefsRef.current || {}
       const threshold = e.cursor_trail_start_threshold ?? 4
@@ -160,9 +163,9 @@ export default function CursorTrail({ textareaRef, containerRef }) {
       targetRef.current = pos
       // Scroll re-measures move the caret with the text but are not
       // caret jumps: no stretch band, no burst. The band also needs a
-      // real jump distance (BAND_MIN) so per-keystroke typing stays a
-      // quiet fluid follow instead of a smear over the characters.
-      if (!fromScroll && dist > Math.max(threshold, BAND_MIN)) {
+      // real jump distance (JUMP_MIN) so per-keystroke typing stays a
+      // quiet native caret with no smear over the characters.
+      if (!fromScroll && dist > Math.max(threshold, JUMP_MIN)) {
         // The stretch band: from the PREVIOUS caret position to this
         // new one, both captured as fixed points so the ghost persists
         // after the caret lands (typing right leaves `---o0|` behind).
@@ -196,19 +199,20 @@ export default function CursorTrail({ textareaRef, containerRef }) {
       c.style.left = (sc.scrollLeft || 0) + 'px'
     }
 
-    const onScroll = () => { pin(); measure(true) }
+    const onScroll = () => { pin(); scheduleMeasure(true) }
 
     const onKeyDown = (e) => {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'].includes(e.key)) {
-        setTimeout(measure, 0)
+        scheduleMeasure(false)
       }
     }
 
     // Fires on EVERY caret move (drags, IME, programmatic selection) -
     // the one event the key/click wiring can miss. Guarded to this
-    // textarea so unrelated selections elsewhere are ignored.
+    // textarea so unrelated selections elsewhere are ignored. Coalesced
+    // so it can never stall the input path with a sync layout.
     const onSelectionChange = () => {
-      if (document.activeElement === ta) measure(false)
+      if (document.activeElement === ta) scheduleMeasure(false)
     }
 
       ta.addEventListener('keydown', onKeyDown)
@@ -230,6 +234,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
       measure(false)
 
       return () => {
+        measurePending = false
         ta.style.caretColor = ''
         ta.removeEventListener('focus', onFocus)
         ta.removeEventListener('blur', onBlur)
@@ -271,10 +276,9 @@ export default function CursorTrail({ textareaRef, containerRef }) {
       const rgb = parseHex(colorRef.current)
       const target = targetRef.current
 
-      // The caret always draws EXACTLY at the measured native caret
-      // position. No easing: any lag between the drawn caret and the
-      // text looks like misalignment on long notes. The comet tail
-      // still flows from the samples.
+      // The native caret is the caret - nothing synthetic replaces it.
+      // posRef chases the target only so the beam band can sample a
+      // smooth path for its tail.
       posRef.current = target ? { ...target } : posRef.current
 
       // Trail effects only fire when the toggle is on.
@@ -287,17 +291,6 @@ export default function CursorTrail({ textareaRef, containerRef }) {
         } else if (mode === 'ink') {
           drawInk(ctx, now, { fast, slow, length, mul, rgb }, inkPointsRef)
         }
-      }
-
-      // The caret always draws when a target exists AND the trail is on.
-      // No focus gating: a lost-focus blip must never make the caret
-      // vanish, and the trail position rides the eased head so it flows,
-      // not teleports.
-      if (enabled && target) {
-        const drawn = posRef.current || target
-        // Slight dim when the window is unfocused, never hidden.
-        const dim = document.hasFocus() || focusRef.current ? 1 : 0.45
-        drawCaret(ctx, now, drawn, now - lastMoveAtRef.current, rgb, dim)
       }
 
       animRef.current = requestAnimationFrame(frame)
@@ -370,8 +363,8 @@ function drawBeam(ctx, now, dt, p, refs) {
       drawRibbon(ctx, pts, p.rgb, 1, 1)
       ctx.globalAlpha = 1
       // The band IS the trail for this move: skip the samples tail while
-      // it lives so the two never compete. The head itself still eases
-      // and is drawn on top by the caller's drawCaret.
+      // it lives so the two never compete. The native caret underneath
+      // stays where the browser puts it.
       return
     }
   }
@@ -394,7 +387,7 @@ function drawBeam(ctx, now, dt, p, refs) {
   while (list.length > 0 && now - list[0].t > maxAge) list.shift()
   while (list.length > 0 && Math.hypot(list[0].x - pos.x, list[0].y - pos.y) > tailLen * 1.5) list.shift()
   if (list.length < 1) {
-    // Nothing to draw yet: rest state is the beam drawn by drawCaret.
+    // Nothing to draw yet: rest state is the native caret alone.
     ctx.globalAlpha = 1
     return
   }
@@ -420,24 +413,6 @@ function drawBeam(ctx, now, dt, p, refs) {
   ctx.globalAlpha = 1
 }
 
-// The line at rest: a chunky rounded beam that blinks like the native
-// one (it is solid briefly after a movement, then a normal ~1s on/off
-// blink).
-function drawCaret(ctx, now, target, elapsed, rgb, dim) {
-  const h = target.h || 22
-  const w = Math.max(1.8, 2.2)
-  // Always solid (no blink) so it's capturable; dims slightly when the
-  // window is unfocused instead of disappearing.
-  ctx.globalAlpha = 0.9 * (dim == null ? 1 : dim)
-  ctx.strokeStyle = `rgb(${rgb.r},${rgb.g},${rgb.b})`
-  ctx.lineCap = 'round'
-  ctx.lineWidth = w
-  ctx.beginPath()
-  ctx.moveTo(target.x - w / 2, target.y)
-  ctx.lineTo(target.x - w / 2, target.y + h)
-  ctx.stroke()
-  ctx.globalAlpha = 1
-}
 
 // Fill the ribbon as per-segment quads so width and alpha can vary along
 // the path smoothly (fatter at the caret ends, thinner in the middle).
