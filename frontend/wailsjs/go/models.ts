@@ -152,6 +152,10 @@ export namespace main {
 	    muted: string;
 	    heading: string;
 	    list: string;
+	    sky: string;
+	    nebula: string;
+	    aurora: boolean;
+	    meteor_boost: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new PaletteView(source);
@@ -165,6 +169,10 @@ export namespace main {
 	        this.muted = source["muted"];
 	        this.heading = source["heading"];
 	        this.list = source["list"];
+	        this.sky = source["sky"];
+	        this.nebula = source["nebula"];
+	        this.aurora = source["aurora"];
+	        this.meteor_boost = source["meteor_boost"];
 	    }
 	}
 	export class SkyPrefsView {
@@ -176,6 +184,7 @@ export namespace main {
 	    species_cool: string;
 	    species_hot: string;
 	    species_neutral: string;
+	    season: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new SkyPrefsView(source);
@@ -191,6 +200,7 @@ export namespace main {
 	        this.species_cool = source["species_cool"];
 	        this.species_hot = source["species_hot"];
 	        this.species_neutral = source["species_neutral"];
+	        this.season = source["season"];
 	    }
 	}
 	export class ThemePrefsView {

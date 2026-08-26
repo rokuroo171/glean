@@ -65,12 +65,51 @@ const STAGE_RADIUS = {
   brilliantstar: 26,
 }
 
-// Ambient palette from time-of-day (mirrors Go ambient.Palette).
+// Ambient palette from time-of-day + season (mirrors Go ambient.Palette).
 function ambientPalette() {
   const hour = new Date().getHours()
-  if (hour < 12) return { sky: '#1a2030', star: '#4a8a5a', line: '#3a5a4a', text: '#6a8a9a' }
-  if (hour < 20) return { sky: '#1a2020', star: '#4a7a4a', line: '#3a5a3a', text: '#7a9a7a' }
-  return { sky: '#201a18', star: '#7a6a4a', line: '#5a4a3a', text: '#9a8a6a' }
+  const month = new Date().getMonth() // 0-11
+  let line, text
+  if (hour < 12) { line = '#3a5a4a'; text = '#6a8a9a' }
+  else if (hour < 20) { line = '#3a5a3a'; text = '#7a9a7a' }
+  else { line = '#5a4a3a'; text = '#9a8a6a' }
+  // Seasonal sky tint + events.
+  let sky, nebula, aurora = false, meteorBoost = 1
+  const winter = month === 11 || month <= 1
+  const spring = month >= 2 && month <= 4
+  const summer = month >= 5 && month <= 7
+  if (winter) { sky = '#0B1220'; nebula = '#2a3a6a' }
+  else if (spring) { sky = '#0B1418'; nebula = '#1f3a2e' }
+  else if (summer) { sky = '#0B0F1E'; nebula = '#2a2140' }
+  else { sky = '#140F0B'; nebula = '#3a2a1a' }
+  // Aurora nights: winter, after dark.
+  if (winter && (hour >= 19 || hour < 6)) aurora = true
+  // Meteor-shower weeks: Quadrantids, Lyrids, Perseids, Orionids, Leonids, Geminids.
+  const d = new Date()
+  const dom = d.getDate()
+  if (month === 0 && dom >= 1 && dom <= 5) meteorBoost = 4
+  else if (month === 3 && dom >= 21 && dom <= 23) meteorBoost = 3
+  else if (month === 7 && dom >= 9 && dom <= 13) meteorBoost = 4
+  else if (month === 9 && dom >= 20 && dom <= 22) meteorBoost = 3
+  else if (month === 10 && dom >= 16 && dom <= 18) meteorBoost = 3
+  else if (month === 11 && dom >= 4 && dom <= 17) meteorBoost = 4
+  return { sky, line, text, nebula, aurora, meteorBoost }
+}
+
+// Points for one aurora curtain band at time t (seconds). Shared by the
+// mount and the rAF drift so both draw the same shape.
+function auroraBandPoints(b, t, width, height) {
+  const baseY = height * (0.10 + b * 0.11)
+  const amp = 26 + b * 18
+  const freq = 0.0042 + b * 0.0016
+  const phase = b * 2.2
+  const pts = []
+  for (let x = -60; x <= width + 60; x += 36) {
+    pts.push(x, baseY
+      + Math.sin(x * freq + t + phase) * amp
+      + Math.sin(x * 0.011 + t * 0.7 + phase) * 12)
+  }
+  return pts
 }
 
 // ─── Seeded random for deterministic decoration ───────────────────────
@@ -155,14 +194,14 @@ const NEBULA_COLORS = [
   { fill: '#2a1a1a', glow: '#4a2a2a' },  // deep rose
 ]
 const NEBULA_PER_TILE = 2  // 2 clouds per tile, perf-optimized
-function makeNebulaCloud(tileX, tileY, index) {
+function makeNebulaCloud(tileX, tileY, index, colors = NEBULA_COLORS) {
   const rand = seededRand(hashMix(tileX * 3571 + tileY * 2957 + index * 777))
   return {
     x: rand() * NEBULA_TILE_SIZE,
     y: rand() * NEBULA_TILE_SIZE,
     radius: 180 + rand() * 220,
     opacity: 0.015 + rand() * 0.035,
-    color: NEBULA_COLORS[index % NEBULA_COLORS.length],
+    color: colors[index % colors.length],
   }
 }
 
@@ -506,19 +545,37 @@ export default function Constellation({
 
   // ─── Ambient palette from Go backend (time-of-day + seasonal) ──────
   const [palette, setPalette] = useState(ambientPalette())
+  const meteorBoost = palette.meteorBoost || 1
+  const auroraActive = !!palette.aurora && !reducedMotion
+  // Aurora runs imperatively on the rAF loop (refs, no React state) so
+  // the curtains drift without re-rendering the whole constellation.
+  const auroraLayerRef = useRef(null)
+  const auroraLineRefs = useRef([])
+  const auroraActiveRef = useRef(auroraActive)
+  auroraActiveRef.current = auroraActive
   useEffect(() => {
     let mounted = true
     const fetchPalette = () => {
       if (!wails) return // browser/mock mode: keep hardcoded ambientPalette()
+      // If the user pinned a season in Customization, ask the backend
+      // for that season's palette instead of the current wall-clock one.
       GetPalette().then(c => {
-        if (mounted) setPalette({ line: c.accent, text: c.primary })
+        if (mounted) setPalette({
+          line: c.accent,
+          text: c.primary,
+          sky: c.sky || colors.bg,
+          nebula: c.nebula || '',
+          aurora: !!c.aurora,
+          meteorBoost: c.meteor_boost || 1,
+        })
       }).catch(() => {}) // fallback to hardcoded ambientPalette()
     }
     fetchPalette()
-    // Re-fetch every 30 minutes to catch hour-of-day changes
+    // Re-fetch every 30 minutes to catch hour-of-day changes, and
+    // immediately when the user pins a new season in Customization.
     const interval = setInterval(fetchPalette, 30 * 60 * 1000)
     return () => { mounted = false; clearInterval(interval) }
-  }, [])
+  }, [skyPrefs.season])
 
   // ─── Initial camera (center on oldest note, with drift-in) ────────────
   const driftRafRef = useRef(null)
@@ -636,7 +693,7 @@ export default function Constellation({
       meteorTimerRef.current = setTimeout(() => {
         meteorsRef.current = [...meteorsRef.current, spawnMeteor()]
         scheduleMeteor()
-      }, 6000 + Math.random() * 18000)
+      }, (6000 + Math.random() * 18000) / meteorBoost)
     }
     scheduleMeteor()
 
@@ -652,7 +709,8 @@ export default function Constellation({
       clearTimeout(meteorTimerRef.current)
       clearTimeout(cometTimerRef.current)
     }
-  }, [reducedMotion])
+    // meteorBoost re-triggers the schedule when a shower palette arrives.
+  }, [reducedMotion, meteorBoost])
 
   // ─── Animation loop ──────────────────────────────────────────────────
   useEffect(() => {
@@ -678,6 +736,20 @@ export default function Constellation({
       cometsRef.current = cometsRef.current
         .map(c => ({ ...c, x: c.x + c.vx * dt, y: c.y + c.vy * dt, life: c.life + dt }))
         .filter(c => c.life < c.maxLife)
+
+      // Drift the aurora curtains. Own layer only, no React re-render.
+      if (auroraActiveRef.current && auroraLayerRef.current) {
+        const t = now / 3000
+        const width = window.innerWidth
+        const height = window.innerHeight
+        for (let b = 0; b < 3; b++) {
+          const line = auroraLineRefs.current[b]
+          if (!line) continue
+          line.points(auroraBandPoints(b, t, width, height))
+          line.opacity(Math.max(0.02, 0.045 + Math.sin(t * 0.5 + b * 1.7) * 0.015))
+        }
+        auroraLayerRef.current.batchDraw()
+      }
 
       rafRef.current = requestAnimationFrame(tick)
     }
@@ -1327,8 +1399,28 @@ export default function Constellation({
         onMouseUp={handleMouseUp}
         onWheel={handleWheel}
         onContextMenu={(e) => e.evt.preventDefault()}
-        style={{ background: colors.bg }}
+        style={{ background: palette.sky || colors.bg }}
       >
+        {/* ── Aurora curtains (seasonal). Deepest layer, non-interactive.
+            Winter nights only: soft green/violet bands, drifted by the
+            rAF loop via Konva refs (no React re-render per frame). */}
+        {auroraActive && (
+          <Layer ref={auroraLayerRef} listening={false}>
+            {[0, 1, 2].map(b => (
+              <Line
+                key={`aurora-${b}`}
+                ref={(el) => { auroraLineRefs.current[b] = el }}
+                points={auroraBandPoints(b, 0, window.innerWidth, window.innerHeight)}
+                stroke={b % 2 === 0 ? '#66ffcc' : '#8b7bff'}
+                strokeWidth={52 - b * 8}
+                opacity={0.045}
+                lineCap="round"
+                listening={false}
+              />
+            ))}
+          </Layer>
+        )}
+
         {/* ── Far twinkle layer (deepest, non-interactive) ── */}
         <Layer listening={false}>
           {(() => {
@@ -1380,10 +1472,15 @@ export default function Constellation({
             const wxMin = -camera.x / scale
             const wyMin = -camera.y / scale
             const tiles = getVisibleTiles(wxMin, wyMin, vpW, vpH, NEBULA_TILE_SIZE)
+            // Seasonal nebula hue from the ambient palette when present;
+            // otherwise the theme's default cloud colors.
+            const nebulaColors = palette.nebula
+              ? [{ fill: palette.nebula, glow: palette.nebula }]
+              : NEBULA_COLORS
             const elements = []
             for (const { tx, ty } of tiles) {
               for (let ci = 0; ci < NEBULA_PER_TILE; ci++) {
-                const nebula = makeNebulaCloud(tx, ty, ci)
+                const nebula = makeNebulaCloud(tx, ty, ci, nebulaColors)
                 const wx = tx * NEBULA_TILE_SIZE + nebula.x
                 const wy = ty * NEBULA_TILE_SIZE + nebula.y
                 const sx = wx * scale * P + camera.x * P
