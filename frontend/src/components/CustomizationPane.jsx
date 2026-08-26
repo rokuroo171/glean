@@ -490,6 +490,20 @@ export default function CustomizationPane() {
             onChange={(v) => updatePrefs({ sky: { nebula_enabled: v } })} />
         </div>
 
+        <div style={{ ...typography.sectionLabel, color: colors.textMuted, marginBottom: 6, marginTop: 14 }}>
+          Season
+        </div>
+        <OptionGroup
+          options={[
+            { id: '', label: 'Auto' },
+            { id: 'winter', label: 'Winter' },
+            { id: 'spring', label: 'Spring' },
+            { id: 'summer', label: 'Summer' },
+            { id: 'autumn', label: 'Autumn' },
+          ]}
+          value={prefs.sky.season || ''}
+          onChange={(v) => updatePrefs({ sky: { season: v } })} />
+
         <div style={{ ...typography.sectionLabel, color: colors.textMuted, marginBottom: 8, marginTop: 14 }}>
           Star species colors
         </div>
