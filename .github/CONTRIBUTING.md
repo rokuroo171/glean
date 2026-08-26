@@ -29,12 +29,21 @@ main.go          entry point; wires the App and window size/title
 app.go           wails-bound API: notes, skies, preferences, stats
 setup.go         first-run setup, sky adoption (OpenSky), default paths
 workspace.go     note CRUD, visits, streaks, trails
-internal/store/  all persistence (JSON) and config paths
+internal/
+  store/         all persistence (JSON) and config paths
+  note/          note model and collection
+  wikilink/      [[Title]] and [text](Target.md) link extraction
+  adjacency/     link graph, what constellation edges are drawn from
+  world/         note placement in the sky
+  growth/        star stage (brightness) from visits
+  activity/      visits, streaks, stats
+  ambient/       time/season palette: aurora, meteor showers, sky tint
+  cli/           subcommands (quick, list, export, import)
 installer/       C# Installer.cs + Uninstaller.cs (Windows only)
 frontend/src/
   App.jsx        root: tabs, provider wiring, command center
-  components/    every view: Home, Sky, EditorPane, FileExplorer,
-                 CustomizationPane, OnboardingTour, ...
+  components/    every view: Home, Constellation, EditorPane,
+                 FileExplorer, CustomizationPane, OnboardingTour, ...
   lib/           theme.js (color tokens), apply-theme.js (presets),
                  preferences-context.jsx (prefs store contract)
   hooks/         useReducedMotion, etc.
