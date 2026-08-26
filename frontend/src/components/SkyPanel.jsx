@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Stage, Layer, Circle, Line } from 'react-konva'
 import { colors, space, typography } from '../lib/theme'
 import Icon from './Icon'
-
-const SPECIES = { warm: colors.starWarm, cool: colors.starCool, hot: colors.starHot, neutral: colors.starNeutral }
+import { usePreferences, speciesPalette } from '../lib/preferences-context'
 
 export default function SkyPanel({ notes, trails, activeId, onOpenNote, onExpand, skyName }) {
+  const { prefs } = usePreferences()
+  const SPECIES = speciesPalette(prefs.sky || {})
   const [query, setQuery] = useState('')
   const [size, setSize] = useState({ w: 264, h: 0 })
   const [pulsingId, setPulsingId] = useState(null)
