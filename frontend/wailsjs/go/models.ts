@@ -165,6 +165,24 @@ export namespace main {
 	        this.list = source["list"];
 	    }
 	}
+	export class SkyPrefsView {
+	    density: string;
+	    twinkle_speed: string;
+	    star_color: string;
+	    nebula_enabled: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new SkyPrefsView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.density = source["density"];
+	        this.twinkle_speed = source["twinkle_speed"];
+	        this.star_color = source["star_color"];
+	        this.nebula_enabled = source["nebula_enabled"];
+	    }
+	}
 	export class ThemePrefsView {
 	    preset: string;
 	    accent_hex: string;
@@ -183,6 +201,7 @@ export namespace main {
 	    theme: ThemePrefsView;
 	    layout: LayoutPrefsView;
 	    editor: EditorPrefsView;
+	    sky: SkyPrefsView;
 	
 	    static createFrom(source: any = {}) {
 	        return new PreferencesView(source);
@@ -193,6 +212,7 @@ export namespace main {
 	        this.theme = this.convertValues(source["theme"], ThemePrefsView);
 	        this.layout = this.convertValues(source["layout"], LayoutPrefsView);
 	        this.editor = this.convertValues(source["editor"], EditorPrefsView);
+	        this.sky = this.convertValues(source["sky"], SkyPrefsView);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -213,6 +233,7 @@ export namespace main {
 		    return a;
 		}
 	}
+	
 	export class SkyStateView {
 	    configured: boolean;
 	    sky_missing: boolean;

@@ -5,6 +5,7 @@ import NoteOverlay from './NoteOverlay'
 import EditOverlay from './EditOverlay'
 import NewNotePrompt from './NewNotePrompt'
 import HomeIcon from './HomeIcon'
+import { usePreferences } from '../lib/preferences-context'
 import { colors } from '../lib/theme'
 import { motionTokens } from '../lib/motion-tokens'
 import { useReducedMotion } from '../hooks/useReducedMotion'
@@ -248,6 +249,16 @@ export default function Sky({
 }) {
   const reducedMotion = useReducedMotion()
   const tapScale = reducedMotion ? 1 : motionTokens.scale.press
+  const { prefs } = usePreferences()
+  const skyPrefs = prefs.sky || {}
+  // Starfield knobs (from Customization > Sky). Re-render the layers
+  // when they change so the sky responds live.
+  const starDensity = skyPrefs.density || 'normal'
+  const twinkleSpeed = skyPrefs.twinkle_speed || 'normal'
+  const starColor = skyPrefs.star_color || 'natural'
+  const nebulaEnabled = skyPrefs.nebula_enabled !== false
+  const densityMul = starDensity === 'sparse' ? 0.6 : starDensity === 'dense' ? 1.8 : 1
+  const speedMul = twinkleSpeed === 'slow' ? 0.5 : twinkleSpeed === 'fast' ? 2 : 1
   const stageRef = useRef(null)
   const rafRef = useRef(null)
   const lastTimeRef = useRef(performance.now())
@@ -1029,8 +1040,11 @@ export default function Sky({
             const wyMin = -camera.y / scale
             const tiles = getVisibleTiles(wxMin, wyMin, vpW, vpH, TWINKLE_TILE_SIZE)
             const totalTiles = tiles.length
-            const perTileStars = Math.max(3, Math.min(40, Math.floor(1500 / totalTiles)))
+            const perTileStars = Math.max(3, Math.min(40, Math.floor((1500 * densityMul) / totalTiles)))
             const t = reducedMotion ? 0 : performance.now() / 1000
+            const starColorPalette = starColor === 'warm' ? { warm: '#bba080', cool: '#b8a080', neutral: '#b8a888' }
+              : starColor === 'cool' ? { warm: '#8099bb', cool: '#6f8fb8', neutral: '#7f95b0' }
+              : BG_TWINKLE_COLORS
             const elements = []
             for (const { tx, ty } of tiles) {
               for (let si = 0; si < perTileStars; si++) {
@@ -1039,7 +1053,7 @@ export default function Sky({
                 const wy = ty * TWINKLE_TILE_SIZE + star.y
                 const sx = wx * scale * P + camera.x * P
                 const sy = wy * scale * P + camera.y * P
-                const twinkleAmt = star.twinkle ? Math.sin(t * star.speed + star.phase) : 0
+                const twinkleAmt = star.twinkle ? Math.sin(t * star.speed * speedMul + star.phase) : 0
                 const opacity = star.baseOp * (star.twinkle ? (0.6 + 0.4 * twinkleAmt) : 1)
                 elements.push(
                   <Circle
@@ -1047,7 +1061,7 @@ export default function Sky({
                     x={sx}
                     y={sy}
                     radius={star.r}
-                    fill={BG_TWINKLE_COLORS[star.colorTemp]}
+                    fill={starColorPalette[star.colorTemp]}
                     opacity={opacity}
                     listening={false}
                   />
@@ -1059,7 +1073,7 @@ export default function Sky({
         </Layer>
 
         {/* Nebula dust clouds (Idea 21). Deep background atmosphere. */}
-        <Layer listening={false}>
+        {nebulaEnabled && <Layer listening={false}>
           {(() => {
             const P = 0.3
             const vpW = window.innerWidth / (scale * P)
@@ -1090,7 +1104,7 @@ export default function Sky({
             }
             return elements
           })()}
-        </Layer>
+        </Layer>}
 
         {/* ── Near twinkle layer (mid-depth, non-interactive) ── */}
         <Layer listening={false}>
@@ -1102,7 +1116,10 @@ export default function Sky({
             const wyMin = -camera.y / scale
             const tiles = getVisibleTiles(wxMin, wyMin, vpW, vpH, TWINKLE_TILE_SIZE)
             const totalTiles = tiles.length
-            const perTileStars = Math.max(3, Math.min(30, Math.floor(1200 / totalTiles)))
+            const perTileStars = Math.max(3, Math.min(30, Math.floor((1200 * densityMul) / totalTiles)))
+            const starColorPalette = starColor === 'warm' ? { warm: '#bba080', cool: '#b8a080', neutral: '#b8a888' }
+              : starColor === 'cool' ? { warm: '#8099bb', cool: '#6f8fb8', neutral: '#7f95b0' }
+              : BG_TWINKLE_COLORS
             const t = reducedMotion ? 0 : performance.now() / 1000
             const elements = []
             for (const { tx, ty } of tiles) {
@@ -1112,7 +1129,7 @@ export default function Sky({
                 const wy = ty * TWINKLE_TILE_SIZE + star.y
                 const sx = wx * scale * P + camera.x * P
                 const sy = wy * scale * P + camera.y * P
-                const twinkleAmt = star.twinkle ? Math.sin(t * star.speed + star.phase) : 0
+                const twinkleAmt = star.twinkle ? Math.sin(t * star.speed * speedMul + star.phase) : 0
                 const opacity = star.baseOp * (star.twinkle ? (0.6 + 0.4 * twinkleAmt) : 1)
                 elements.push(
                   <Circle
@@ -1120,7 +1137,7 @@ export default function Sky({
                     x={sx}
                     y={sy}
                     radius={star.r}
-                    fill={BG_TWINKLE_COLORS[star.colorTemp]}
+                    fill={starColorPalette[star.colorTemp]}
                     opacity={opacity}
                     listening={false}
                   />
