@@ -18,18 +18,23 @@
 
 There are no folders, no tags, no manual links. A note's brightness rises
 with visit count. Constellation lines form between notes you tend to open
-in the same session. Nothing here is something you set up; it's something
-that accumulates.
+in the same session, and every winter night gets an aurora. Nothing here
+is something you set up; it's something that accumulates.
 
 ## Features
 
-- **Home** - a starting screen with a greeting, your recent notes, and your
-  writing streak
-- **Sky** - notes rendered as stars you can pan, zoom, and expand into a
-  full-sky view
+- **Home** - a starting screen with a greeting, your recent notes, and
+  your writing streak
+- **Constellation** - notes rendered as stars you can pan and zoom, drag
+  into place with spring physics, and open from a full-sky view; linked
+  notes form lines and hubs
+- **Markdown** - GFM alerts, syntax-highlighted code blocks, clickable
+  task checkboxes, wikilinks
+- **Animated typing** - optional per-character entrance styles (fade,
+  drop, pop) and a sparkle on backspace
 - **Customization pane** - theme presets, accent colors, editor settings
   (spelling squiggles, cursor trail with beam/sparkle/ink styles and
-  physics knobs), layout density
+  physics knobs), starfield knobs, star species colors, season preview
 - **Tabs** - notes open in tabs with a smooth close animation
 - **Ctrl+K** - command center: search, new note, replay the onboarding
   tour, and more
@@ -62,8 +67,8 @@ uninstaller are separate C# programs under `installer/` - see
 
 ## Usage
 
-Launching glean opens **Home**. From there you enter **Sky**, the main view,
-where your notes render as stars you can pan and zoom around.
+Launching glean opens **Home**. From there you enter **Constellation**, the
+main view, where your notes render as stars you can pan and zoom around.
 
 glean is click-first. Every action, new note, edit, wish, stats, has a
 visible button. Stars shine through five brightness stages as visit count
