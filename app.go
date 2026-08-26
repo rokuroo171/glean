@@ -915,10 +915,14 @@ type EditorPrefsView struct {
 }
 
 type SkyPrefsView struct {
-	Density       string `json:"density"`
-	TwinkleSpeed  string `json:"twinkle_speed"`
-	StarColor     string `json:"star_color"`
-	NebulaEnabled bool   `json:"nebula_enabled"`
+	Density        string `json:"density"`
+	TwinkleSpeed   string `json:"twinkle_speed"`
+	StarColor      string `json:"star_color"`
+	NebulaEnabled  bool   `json:"nebula_enabled"`
+	SpeciesWarm    string `json:"species_warm"`
+	SpeciesCool    string `json:"species_cool"`
+	SpeciesHot     string `json:"species_hot"`
+	SpeciesNeutral string `json:"species_neutral"`
 }
 
 // GetPreferences returns the user's customization preferences.
@@ -955,10 +959,14 @@ func (a *App) GetPreferences() PreferencesView {
 			AnimatedTextStyle:         p.Editor.AnimatedTextStyle,
 		},
 		Sky: SkyPrefsView{
-			Density:       p.Sky.Density,
-			TwinkleSpeed:  p.Sky.TwinkleSpeed,
-			StarColor:     p.Sky.StarColor,
-			NebulaEnabled: p.Sky.NebulaEnabled != nil && *p.Sky.NebulaEnabled,
+			Density:        p.Sky.Density,
+			TwinkleSpeed:   p.Sky.TwinkleSpeed,
+			StarColor:      p.Sky.StarColor,
+			NebulaEnabled:  p.Sky.NebulaEnabled != nil && *p.Sky.NebulaEnabled,
+			SpeciesWarm:    p.Sky.SpeciesWarm,
+			SpeciesCool:    p.Sky.SpeciesCool,
+			SpeciesHot:     p.Sky.SpeciesHot,
+			SpeciesNeutral: p.Sky.SpeciesNeutral,
 		},
 	}
 }
@@ -1062,10 +1070,14 @@ func (a *App) SavePreferences(p PreferencesView) error {
 			AnimatedTextStyle:         p.Editor.AnimatedTextStyle,
 		},
 		Sky: store.SkyPrefs{
-			Density:       p.Sky.Density,
-			TwinkleSpeed:  p.Sky.TwinkleSpeed,
-			StarColor:     p.Sky.StarColor,
-			NebulaEnabled: &nebula,
+			Density:        p.Sky.Density,
+			TwinkleSpeed:   p.Sky.TwinkleSpeed,
+			StarColor:      p.Sky.StarColor,
+			NebulaEnabled:  &nebula,
+			SpeciesWarm:    p.Sky.SpeciesWarm,
+			SpeciesCool:    p.Sky.SpeciesCool,
+			SpeciesHot:     p.Sky.SpeciesHot,
+			SpeciesNeutral: p.Sky.SpeciesNeutral,
 		},
 	})
 }
