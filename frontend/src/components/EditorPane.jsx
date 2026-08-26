@@ -724,6 +724,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                   color: animatedEnabled && !selActive && body.length > 0 ? 'transparent' : colors.text,
                   caretColor: colors.text,
                   fontFamily: editorFont, fontSize: editorFontSize, lineHeight: editorLineHeight, padding: space[3],
+                  overflowWrap: 'break-word',
                   transition: 'box-shadow 0.6s ease-out',
                   boxShadow: typing ? `inset 0 0 30px rgba(180, 140, 80, 0.06)` : 'none' }}
               />
@@ -732,7 +733,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                   style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                     overflow: 'hidden', pointerEvents: 'none', padding: space[3],
                     color: colors.text, fontFamily: editorFont, fontSize: editorFontSize,
-                    lineHeight: editorLineHeight, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
+                    lineHeight: editorLineHeight, whiteSpace: 'pre-wrap', overflowWrap: 'break-word',
                     display: selActive ? 'none' : 'block' }}>
                   <div ref={overlayInnerRef} style={{ transform: 'translateY(0px)', willChange: 'transform' }}>
                     {chars.map((c, i) => (
@@ -791,14 +792,15 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                   background: 'transparent', border: 'none', padding: 0,
                   color: animatedEnabled && !selActive && body.length > 0 ? 'transparent' : colors.text,
                   caretColor: colors.text,
-                  fontFamily: editorFont, fontSize: editorFontSize, lineHeight: editorLineHeight }}
+                  fontFamily: editorFont, fontSize: editorFontSize, lineHeight: editorLineHeight,
+                  overflowWrap: 'break-word' }}
               />
               {animatedEnabled && (
                 <div aria-hidden="true"
                   style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                     overflow: 'hidden', pointerEvents: 'none', padding: space[3],
                     color: colors.text, fontFamily: editorFont, fontSize: editorFontSize,
-                    lineHeight: editorLineHeight, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
+                    lineHeight: editorLineHeight, whiteSpace: 'pre-wrap', overflowWrap: 'break-word',
                     display: selActive ? 'none' : 'block' }}>
                   <div ref={overlayInnerRef} style={{ transform: 'translateY(0px)', willChange: 'transform' }}>
                     {chars.map((c, i) => (

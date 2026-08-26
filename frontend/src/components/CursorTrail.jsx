@@ -204,12 +204,20 @@ export default function CursorTrail({ textareaRef, containerRef }) {
       }
     }
 
+    // Fires on EVERY caret move (drags, IME, programmatic selection) -
+    // the one event the key/click wiring can miss. Guarded to this
+    // textarea so unrelated selections elsewhere are ignored.
+    const onSelectionChange = () => {
+      if (document.activeElement === ta) measure(false)
+    }
+
       ta.addEventListener('keydown', onKeyDown)
       ta.addEventListener('keyup', onKeyUp)
       ta.addEventListener('input', onInput)
       ta.addEventListener('click', onClick)
       ta.addEventListener('focus', onFocus)
       ta.addEventListener('scroll', onScroll)
+      document.addEventListener('selectionchange', onSelectionChange)
       // In single-edit mode the WRAPPER is the scrollable (the textarea is
       // height:100% and never scrolls), so listen for its scroll in the
       // capture phase too - scroll events don't bubble.
@@ -230,6 +238,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
         ta.removeEventListener('input', onInput)
         ta.removeEventListener('click', onClick)
         ta.removeEventListener('scroll', onScroll)
+        document.removeEventListener('selectionchange', onSelectionChange)
         if (containerNode) containerNode.removeEventListener('scroll', onScroll, true)
       }
   }, [textareaRef, enabled])
