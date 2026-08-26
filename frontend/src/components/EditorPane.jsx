@@ -65,6 +65,60 @@ const ANIM_SPARKLE_MS = 450
 /** Capitalize first letter (drop -> Drop) for keyframe names. */
 function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : 'Drop' }
 
+/** Rolling list of freshly inserted ranges, merged as the user types. */
+function pushFreshRange(prev, start, len) {
+  const now = Date.now()
+  const next = prev
+    .filter(r => now - r.ts < ANIM_FADE_MS)
+    .map(r => (r.start >= start ? { ...r, start: r.start + len, end: r.end + len } : r))
+  const nr = { start, end: start + len, ts: now }
+  for (const r of next) {
+    if (r.start <= nr.end && r.end >= nr.start) {
+      nr.start = Math.min(nr.start, r.start)
+      nr.end = Math.max(nr.end, r.end)
+    }
+  }
+  const out = next.filter(r => !(r.start <= nr.end && r.end >= nr.start)).concat(nr)
+  out.sort((a, b) => a.start - b.start)
+  return out.slice(-6)
+}
+
+/** Adjust fresh ranges after a deletion of `len` chars at `at`. */
+function cutFreshRanges(prev, at, len) {
+  const delStart = at
+  const delEnd = at - len
+  const now = Date.now()
+  return prev
+    .filter(r => now - r.ts < ANIM_FADE_MS)
+    .map(r => {
+      if (r.end <= delStart) return r
+      if (r.start >= delEnd) return { ...r, start: r.start + len, end: r.end + len }
+      return { ...r, end: delStart }
+    })
+    .filter(r => r.end > r.start)
+}
+
+/** Split the body into stable text and animated segments so plain text
+ *  lays out EXACTLY like the textarea (same wrap, tabs, emoji), and only
+ *  freshly typed chunks carry the animation. Per-char inline-block spans
+ *  are atomic and cannot wrap like the textarea, which drifted at depth. */
+function renderSegments(body, ranges, typingStyle) {
+  const segs = []
+  let last = 0
+  const list = ranges.filter(r => r.end <= body.length)
+  for (const r of list) {
+    if (r.start < last) continue
+    if (r.start > last) segs.push({ text: body.slice(last, r.start), key: null, fresh: false })
+    segs.push({ text: body.slice(r.start, r.end), key: r.ts + ':' + r.start, fresh: true })
+    last = r.end
+  }
+  if (last < body.length) segs.push({ text: body.slice(last), key: null, fresh: false })
+  return segs.map(s => s.fresh
+    ? <span key={s.key} style={{ display: 'inline-block',
+        animation: `char${cap(typingStyle)} ${ANIM_FADE_MS}ms ease-out` }}>{s.text}</span>
+    : s.text)
+}
+
 /** Sparkle particle shown where a character was removed (backspace). */
 function AnimItem({ a, accent }) {
   return (
@@ -103,7 +157,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const animatedEnabled = prefs.editor.animated_text_enabled === true
   const typingStyle = prefs.editor.animated_text_style || 'drop'
   const [animItems, setAnimItems] = useState([])    // backspace sparkle particles
-  const [fresh, setFresh] = useState({})            // char index -> ts of last insert
+  const [freshRanges, setFreshRanges] = useState([]) // [{start,end,ts}] rolling insert ranges
   const [selActive, setSelActive] = useState(false) // native selection in progress
   const animTimerRef = useRef(null)
   const lastBodyLenRef = useRef(body.length)
@@ -112,7 +166,6 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const editorFont = prefs.editor.font_family || 'monospace'
   const editorFontSize = prefs.editor.font_size || 14
   const editorLineHeight = prefs.editor.line_height || 1.6
-  const chars = useMemo(() => Array.from(body), [body])
 
   // Sync lastBodyLen when note changes
   useEffect(() => { lastBodyLenRef.current = body.length }, [note?.id])
@@ -120,15 +173,10 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   /** Clean up expired animation items. */
   const sweepAnims = useCallback(() => {
     setAnimItems(prev => prev.filter(a => Date.now() - a.ts < ANIM_SPARKLE_MS))
-    setFresh(prev => {
-      const now = Date.now()
-      const n = {}
-      let changed = false
-      for (const k in prev) {
-        if (now - prev[k] < ANIM_FADE_MS) n[k] = prev[k]
-        else changed = true
-      }
-      return changed ? n : prev
+    const now = Date.now()
+    setFreshRanges(prev => {
+      const next = prev.filter(r => now - r.ts < ANIM_FADE_MS)
+      return next.length === prev.length ? prev : next
     })
   }, [])
 
@@ -154,11 +202,11 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
 
   // Stop sweep timer when nothing left
   useEffect(() => {
-    if (animItems.length === 0 && Object.keys(fresh).length === 0 && animTimerRef.current) {
+    if (animItems.length === 0 && freshRanges.length === 0 && animTimerRef.current) {
       clearInterval(animTimerRef.current)
       animTimerRef.current = null
     }
-  }, [animItems.length, fresh])
+  }, [animItems.length, freshRanges.length])
 
   // Cleanup timer on unmount
   useEffect(() => () => { if (animTimerRef.current) clearInterval(animTimerRef.current) }, [])
@@ -294,17 +342,13 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     // Animated text: mark inserted chars so they animate in place.
     if (animatedEnabled) {
       const diff = newBody.length - lastBodyLenRef.current
+      const ta = taRef.current
       if (diff > 0) {
-        const ta = taRef.current
         const insertStart = ta ? ta.selectionStart - diff : 0
-        const now = Date.now()
-        setFresh(prev => {
-          const n = { ...prev }
-          for (let k = 0; k < diff; k++) n[String(insertStart + k)] = now
-          return n
-        })
+        setFreshRanges(prev => pushFreshRange(prev, insertStart, diff))
         if (!animTimerRef.current) animTimerRef.current = setInterval(sweepAnims, 60)
       } else if (diff < 0) {
+        setFreshRanges(prev => cutFreshRanges(prev, ta ? ta.selectionStart : 0, diff))
         triggerSparkles()
       }
     }
@@ -736,17 +780,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                     lineHeight: editorLineHeight, whiteSpace: 'pre-wrap', overflowWrap: 'break-word',
                     display: selActive ? 'none' : 'block' }}>
                   <div ref={overlayInnerRef} style={{ transform: 'translateY(0px)', willChange: 'transform' }}>
-                    {chars.map((c, i) => (
-                      c === '\n' ? (
-                        <br key={i} />
-                      ) : (
-                        <span key={i}
-                          style={{ display: 'inline-block',
-                            animation: fresh[String(i)] ? `char${cap(typingStyle)} ${ANIM_FADE_MS}ms ease-out` : undefined }}>
-                          {c}
-                        </span>
-                      )
-                    ))}
+                    {renderSegments(body, freshRanges, typingStyle)}
                   </div>
                 </div>
               )}
@@ -803,17 +837,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                     lineHeight: editorLineHeight, whiteSpace: 'pre-wrap', overflowWrap: 'break-word',
                     display: selActive ? 'none' : 'block' }}>
                   <div ref={overlayInnerRef} style={{ transform: 'translateY(0px)', willChange: 'transform' }}>
-                    {chars.map((c, i) => (
-                      c === '\n' ? (
-                        <br key={i} />
-                      ) : (
-                        <span key={i}
-                          style={{ display: 'inline-block',
-                            animation: fresh[String(i)] ? `char${cap(typingStyle)} ${ANIM_FADE_MS}ms ease-out` : undefined }}>
-                          {c}
-                        </span>
-                      )
-                    ))}
+                    {renderSegments(body, freshRanges, typingStyle)}
                   </div>
                 </div>
               )}
