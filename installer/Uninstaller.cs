@@ -38,7 +38,10 @@ namespace GleanUninstaller
         Button uninstallBtn, cancelBtn, closeBtn;
         string installDir;
 
-        static readonly string[] FilesToRemove = { "glean.exe", "gleanUninstaller.exe" };
+        // The uninstaller cannot delete its own exe in-process (a running
+        // exe is locked on Windows); the cleanup batch removes everything
+        // after this process exits, including gleanUninstaller.exe.
+        static readonly string[] FilesToRemove = { "glean.exe" };
 
         public UninstallWindow()
         {
@@ -347,32 +350,50 @@ namespace GleanUninstaller
                 update(70, "Removing registry entries...");
                 System.Threading.Thread.Sleep(200);
 
-                try
-                {
-                    RunRegDelete(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Glean");
-                }
-                catch { }
+                // Registry removal is owned by the cleanup batch (it can
+                // outlive this process, so the hive never survives even if
+                // the uninstaller is still exiting). Done there, not here.
+                // The batch runs reg delete for both HKCU and HKLM.
 
                 update(85, "Cleaning up...");
                 System.Threading.Thread.Sleep(200);
 
-                // Spawn a batch script to delete the uninstaller and folder after we exit
+                // Spawn a detached batch to finish the removal. It must NOT
+                // run from inside the install dir: the old script inherited
+                // the install dir as its working directory, so rmdir failed
+                // (directory busy) and the folder + registry survived.
+                // The uninstaller itself cannot delete a running exe, so the
+                // batch waits for this process to exit, then removes the
+                // files, the folder, and finally itself.
                 try
                 {
-                    string batPath = Path.Combine(Path.GetTempPath(), "glean_cleanup.bat");
+                    string tempDir = Path.GetTempPath();
+                    string batPath = Path.Combine(tempDir, "glean_cleanup.bat");
                     string dirToDelete = installDir;
+
+                    // cd /d to temp so the batch never holds the install dir
+                    // open; kill glean (already attempted, but belt-and-
+                    // suspenders since a new instance may have started);
+                    // remove the uninstaller and any leftover files, then
+                    // the folder, then both registry hives, then the batch.
                     string batContent =
                         "@echo off\r\n" +
-                        "ping 127.0.0.1 -n 3 > nul\r\n" +
-                        "del \"" + Path.Combine(dirToDelete, "gleanUninstaller.exe") + "\"\r\n" +
-                        "rmdir \"" + dirToDelete + "\" 2>nul\r\n" +
-                        "del \"" + batPath + "\"\r\n";
+                        "cd /d \"" + tempDir + "\"\r\n" +
+                        "taskkill /f /im glean.exe >nul 2>&1\r\n" +
+                        "ping 127.0.0.1 -n 3 >nul\r\n" +
+                        "del /f /q \"" + Path.Combine(dirToDelete, "gleanUninstaller.exe") + "\" >nul 2>&1\r\n" +
+                        "del /f /q \"" + Path.Combine(dirToDelete, "glean.exe") + "\" >nul 2>&1\r\n" +
+                        "rd /s /q \"" + dirToDelete + "\" >nul 2>&1\r\n" +
+                        "reg delete \"HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Glean\" /f >nul 2>&1\r\n" +
+                        "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Glean\" /f >nul 2>&1\r\n" +
+                        "del /f /q \"" + batPath + "\" >nul 2>&1\r\n";
                     File.WriteAllText(batPath, batContent);
                     var psi = new ProcessStartInfo("cmd", "/c \"" + batPath + "\"")
                     {
                         UseShellExecute = false,
                         CreateNoWindow = true,
-                        WindowStyle = ProcessWindowStyle.Hidden
+                        WindowStyle = ProcessWindowStyle.Hidden,
+                        WorkingDirectory = tempDir  // never the install dir
                     };
                     Process.Start(psi);
                 }
@@ -403,13 +424,6 @@ namespace GleanUninstaller
             });
             t.IsBackground = true;
             t.Start();
-        }
-
-        void RunRegDelete(string key)
-        {
-            var psi = new ProcessStartInfo("reg", "delete \"" + key + "\" /f")
-            { UseShellExecute = false, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden };
-            Process.Start(psi).WaitForExit();
         }
     }
 }
