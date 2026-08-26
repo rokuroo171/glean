@@ -1,7 +1,7 @@
 import { colors } from '../lib/theme'
-import Sky from './Sky'
+import Constellation from './Constellation'
 
-export default function FullSky({ notes, links, onNoteClick, onClose }) {
+export default function FullConstellation({ notes, links, onNoteClick, onClose }) {
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 40, background: colors.bg }}>
       <button type="button" onClick={onClose} aria-label="return to workspace"
@@ -10,7 +10,7 @@ export default function FullSky({ notes, links, onNoteClick, onClose }) {
           color: colors.text, borderRadius: 6, padding: '6px 14px', cursor: 'pointer' }}>
         back to workspace
       </button>
-      <Sky notes={notes} links={links} onNoteClick={onNoteClick}
+      <Constellation notes={notes} links={links} onNoteClick={onNoteClick}
         selectedNote={null} onCloseNote={() => {}}
         onSave={async () => {}} onWish={async () => false} onDelete={async () => {}}
         onCreate={async () => null}

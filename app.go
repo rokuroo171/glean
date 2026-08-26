@@ -77,9 +77,10 @@ type NoteView struct {
 	Positioned      bool      `json:"positioned"`
 	Stage           string    `json:"stage"`
 	Species         string    `json:"species"`
+	LinkCount       int       `json:"link_count"`
 }
 
-func noteToView(n note.Note) NoteView {
+func noteToView(n note.Note, linkCounts map[string]int) NoteView {
 	return NoteView{
 		ID:              n.ID,
 		Title:           n.Title,
@@ -94,7 +95,47 @@ func noteToView(n note.Note) NoteView {
 		Positioned:      n.Positioned,
 		Stage:           stageName(growth.BrightnessStage(n)),
 		Species:         colorTempFromID(n.ID),
+		LinkCount:       linkCounts[n.ID],
 	}
+}
+
+// outboundLinkCounts scans every note body once and counts how many
+// distinct notes each note links to by [[wikilink]]. Unresolved targets
+// (no matching note title) are skipped, matching GetLinks. Reading each
+// body is the same cost GetLinks already pays, and the map is reused
+// across the whole scan (files are read once, not per note).
+func (a *App) outboundLinkCounts() map[string]int {
+	counts := make(map[string]int)
+	if a.store == nil {
+		return counts
+	}
+	notes := a.store.All()
+	byTitle := make(map[string]string, len(notes))
+	for _, n := range notes {
+		byTitle[strings.ToLower(n.Title)] = n.ID
+	}
+	for _, n := range notes {
+		path, err := a.notePath(n)
+		if err != nil {
+			continue
+		}
+		body, err := store.ReadNoteFile(path)
+		if err != nil {
+			continue
+		}
+		seen := make(map[string]bool)
+		for _, l := range wikilink.Scan(body) {
+			to, ok := byTitle[strings.ToLower(l.Target)]
+			if !ok || to == n.ID {
+				continue
+			}
+			if !seen[to] {
+				seen[to] = true
+				counts[n.ID]++
+			}
+		}
+	}
+	return counts
 }
 
 func stageName(s growth.Stage) string {
@@ -135,9 +176,10 @@ func (a *App) GetNotes() []NoteView {
 		return nil
 	}
 	notes := a.store.All()
+	linkCounts := a.outboundLinkCounts()
 	views := make([]NoteView, len(notes))
 	for i, n := range notes {
-		v := noteToView(n)
+		v := noteToView(n, linkCounts)
 		if path, err := a.notePath(n); err == nil {
 			if body, err := store.ReadNoteFile(path); err == nil {
 				v.Body = body
@@ -145,6 +187,7 @@ func (a *App) GetNotes() []NoteView {
 		}
 		views[i] = v
 	}
+
 	return views
 }
 
@@ -159,9 +202,10 @@ func (a *App) ScanSky() []NoteView {
 	added, _ := store.ScanAddOnly(a.skyDir, a.store)
 	_ = added // new notes are already in the registry
 	notes := a.store.All()
+	linkCounts := a.outboundLinkCounts()
 	views := make([]NoteView, len(notes))
 	for i, n := range notes {
-		v := noteToView(n)
+		v := noteToView(n, linkCounts)
 		if path, err := a.notePath(n); err == nil {
 			if body, err := store.ReadNoteFile(path); err == nil {
 				v.Body = body
@@ -169,6 +213,7 @@ func (a *App) ScanSky() []NoteView {
 		}
 		views[i] = v
 	}
+
 	return views
 }
 
@@ -211,7 +256,7 @@ func (a *App) GetNote(id string) (NoteView, bool) {
 		return NoteView{}, false
 	}
 	n.Body = body
-	return noteToView(n), true
+	return noteToView(n, nil), true
 }
 
 // CreateNote creates a new note with a title and returns it.
@@ -258,7 +303,7 @@ func (a *App) CreateNote(title string, contextID string, folder string) (NoteVie
 		return NoteView{}, err
 	}
 	a.recordActivity()
-	return noteToView(n), nil
+	return noteToView(n, nil), nil
 }
 
 // SaveNote writes the md file, renames on title change, updates the registry.
@@ -380,7 +425,7 @@ func (a *App) OpenNote(id string) (NoteView, error) {
 		return NoteView{}, err
 	}
 	a.recordActivity()
-	return noteToView(n), nil
+	return noteToView(n, nil), nil
 } // TrailView is the JSON-safe trail representation for the frontend.
 // Wails auto-serializes return values, so we return this directly.
 type TrailView struct {

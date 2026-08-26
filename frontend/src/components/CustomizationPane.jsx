@@ -451,8 +451,8 @@ export default function CustomizationPane() {
         )}
       </Section>
 
-      {/* Sky section: starfield appearance knobs */}
-      <Section title="Sky" icon="moon">
+      {/* Constellation section: starfield appearance knobs */}
+      <Section title="Constellation" icon="moon">
         <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 6 }}>Star density</div>
         <OptionGroup
           options={[

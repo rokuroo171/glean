@@ -10,7 +10,7 @@ import DetailsPanel from './DetailsPanel'
 import StatsOverlay from './StatsOverlay'
 import SettingsPane from './SettingsPane'
 import CustomizationPane from './CustomizationPane'
-import FullSky from './FullSky'
+import FullConstellation from './FullConstellation'
 import CommandCenter from './CommandCenter'
 import Icon from './Icon'
 import ManageSky from './ManageSky'
@@ -29,7 +29,7 @@ export default function Workspace({
   const [pseudoTab, setPseudoTab] = useState(null) // null | 'stats' | 'settings' | 'customization'
   const [nightOpen, setNightOpen] = useState(true)
   const [commandOpen, setCommandOpen] = useState(false)
-  const [fullSky, setFullSky] = useState(false)
+  const [showConstellation, setShowConstellation] = useState(false)
   const [skyCollapsed, setSkyCollapsed] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [openIds, setOpenIds] = useState([])
@@ -151,7 +151,7 @@ export default function Workspace({
     else if (actionId === 'stats') { setPseudoTab('stats'); onOpenStats() }
     else if (actionId === 'new-note') onNewNote()
     else if (actionId === 'night') openNight()
-    else if (actionId === 'full-sky') setFullSky(true)
+    else if (actionId === 'constellation') setShowConstellation(true)
     else if (actionId === 'refresh-window') window.location.reload()
     else if (actionId === 'replay-tour') { if (onReplayTour) onReplayTour() }
   }
@@ -295,7 +295,7 @@ export default function Workspace({
               <Icon name="chevron-right" size={16} />
             </span>
           </button>
-          <button type="button" onClick={() => setFullSky(true)} aria-label="sky view" data-tip="Sky"
+          <button type="button" onClick={() => setShowConstellation(true)} aria-label="constellation view" data-tip="Constellation"
             style={{ background: 'none', border: 'none', color: colors.textMuted,
               cursor: 'pointer', padding: 4, borderRadius: 4 }}>
             <Icon name="sparkles" size={16} />
@@ -409,9 +409,9 @@ export default function Workspace({
           </div>
         )}
       </div>
-      {fullSky && (
-        <FullSky notes={notes} links={links} onNoteClick={openNote}
-          onClose={() => setFullSky(false)} />
+      {showConstellation && (
+        <FullConstellation notes={notes} links={links} onNoteClick={openNote}
+          onClose={() => setShowConstellation(false)} />
       )}
       {showManageSky && (
         <ManageSky

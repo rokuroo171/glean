@@ -236,8 +236,129 @@ function dormantDimming(daysSince) {
 }
 
 
+// ─── Fresh constellation layout (Idea 27) ─────────────────────────────
+// Obsidian-style: every open regenerates positions from scratch. Nothing
+// persists; a right-drag move lasts only until the next open.
+function generateLayout(notes, links) {
+  const n = notes.length
+  const area = Math.max(60, Math.sqrt(n) * 300)
+  const pos = {}
+  notes.forEach(note => {
+    const angle = Math.random() * Math.PI * 2
+    const r = Math.sqrt(Math.random()) * area
+    pos[note.id] = { x: Math.cos(angle) * r, y: Math.sin(angle) * r }
+  })
+  const seen = new Set()
+  const edges = []
+  links.forEach(l => {
+    const pairId = [l.note_a, l.note_b].sort().join('-')
+    if (seen.has(pairId)) return
+    seen.add(pairId)
+    edges.push([l.note_a, l.note_b])
+  })
+  const iterations = n > 300 ? 20 : n > 120 ? 40 : 60
+  for (let iter = 0; iter < iterations; iter++) {
+    const cooling = 1 - iter / iterations
+    for (let i = 0; i < n; i++) {
+      const a = pos[notes[i].id]
+      for (let j = i + 1; j < n; j++) {
+        const b = pos[notes[j].id]
+        let dx = a.x - b.x
+        let dy = a.y - b.y
+        let d2 = dx * dx + dy * dy
+        if (d2 < 1) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; d2 = Math.max(dx * dx + dy * dy, 1) }
+        const d = Math.sqrt(d2)
+        const f = (9000 / d2) * cooling
+        a.x += (dx / d) * f
+        a.y += (dy / d) * f
+        b.x -= (dx / d) * f
+        b.y -= (dy / d) * f
+      }
+      // Gentle pull toward center so the field does not drift apart
+      a.x -= a.x * 0.03 * cooling
+      a.y -= a.y * 0.03 * cooling
+    }
+    // Springs along links keep connected notes as close neighbors
+    edges.forEach(([ida, idb]) => {
+      const a = pos[ida]
+      const b = pos[idb]
+      if (!a || !b) return
+      const dx = b.x - a.x
+      const dy = b.y - a.y
+      const d = Math.max(1, Math.sqrt(dx * dx + dy * dy))
+      const f = (d - 140) * 0.05 * cooling
+      const ux = dx / d
+      const uy = dy / d
+      a.x += ux * f
+      a.y += uy * f
+      b.x -= ux * f
+      b.y -= uy * f
+    })
+  }
+  return pos
+}
+
+// ─── Star-drag spring physics (Obsidian graph-view feel) ─────────────
+// The dragged star is pinned to the cursor; every star linked to it is
+// tugged along by a spring (Hooke) with damping, so neighbors lag and
+// wobble instead of moving rigidly. Rest length matches the layout
+// relaxation spring so a released link settles back to its natural gap.
+const STAR_SPRING_REST = 140
+const STAR_SPRING_K = 0.18
+const STAR_SPRING_DAMPING = 0.86
+const STAR_REPEL_STRENGTH = 900
+const STAR_DRAG_SUBSTEPS = 3
+const STAR_DRAG_DT = 1 / 60
+
+function stepStarSprings(r) {
+  const { pos, vel, edges, pinned } = r
+  const ids = Object.keys(pos)
+  // Spring attraction along links. The pinned star is immovable, so all
+  // force goes into its neighbors.
+  edges.forEach(([a, b]) => {
+    const pa = pos[a]
+    const pb = pos[b]
+    let ddx = pb.x - pa.x
+    let ddy = pb.y - pa.y
+    const d = Math.max(1, Math.sqrt(ddx * ddx + ddy * ddy))
+    const ux = ddx / d
+    const uy = ddy / d
+    const f = Math.max(-120, Math.min(120, (d - STAR_SPRING_REST) * STAR_SPRING_K))
+    if (a !== pinned) { vel[a].x += ux * f; vel[a].y += uy * f }
+    if (b !== pinned) { vel[b].x -= ux * f; vel[b].y -= uy * f }
+  })
+  // Light mutual repulsion so linked stars do not pile up on the pinned
+  // one while it is being dragged.
+  for (let i = 0; i < ids.length; i++) {
+    for (let j = i + 1; j < ids.length; j++) {
+      const a = ids[i]
+      const b = ids[j]
+      if (a === pinned && b === pinned) continue
+      const pa = pos[a]
+      const pb = pos[b]
+      let ddx = pb.x - pa.x
+      let ddy = pb.y - pa.y
+      const d2 = Math.max(400, ddx * ddx + ddy * ddy)
+      const d = Math.sqrt(d2)
+      const ux = ddx / d
+      const uy = ddy / d
+      const f = STAR_REPEL_STRENGTH / d2
+      if (a !== pinned) { vel[a].x -= ux * f; vel[a].y -= uy * f }
+      if (b !== pinned) { vel[b].x += ux * f; vel[b].y += uy * f }
+    }
+  }
+  // Integrate with damping (under 1 gives a visible wobble, then settle).
+  ids.forEach(id => {
+    const v = vel[id]
+    v.x *= STAR_SPRING_DAMPING
+    v.y *= STAR_SPRING_DAMPING
+    pos[id].x += v.x * STAR_DRAG_DT
+    pos[id].y += v.y * STAR_DRAG_DT
+  })
+}
+
 // ─── Component ────────────────────────────────────────────────────────
-export default function Sky({
+export default function Constellation({
   notes, links, onNoteClick, selectedNote, onCloseNote,
   onSave, onWish, onDelete, onCreate,
   showStats, onCloseStats, onReturnHome,
@@ -251,8 +372,54 @@ export default function Sky({
   const tapScale = reducedMotion ? 1 : motionTokens.scale.press
   const { prefs } = usePreferences()
   const skyPrefs = prefs.sky || {}
-  // Starfield knobs (from Customization > Sky). Re-render the layers
-  // when they change so the sky responds live.
+
+  // ─── Session layout (Idea 27) ───────────────────────────────────────
+  // Fresh random positions every open, never persisted. Left-drag a star
+  // to reposition it (linked stars follow) until the next open.
+  const layoutDoneRef = useRef(false)
+  const starDragRef = useRef(null)
+  const suppressClickRef = useRef(null)
+  const starSettleRafRef = useRef(null)
+  const [sessionPos, setSessionPos] = useState(() => {
+    if (!notes || notes.length === 0) return null
+    layoutDoneRef.current = true
+    return generateLayout(notes, links)
+  })
+
+  const posOf = useCallback((note) => {
+    const p = sessionPos && sessionPos[note.id]
+    return p ? p : { x: note.world_x || 0, y: note.world_y || 0 }
+  }, [sessionPos])
+
+  // Generate once per open when notes arrive after mount. New notes
+  // created mid-session get a spot anchored to a linked star, or a
+  // random position when unlinked.
+  useEffect(() => {
+    if (!notes || notes.length === 0) return
+    if (!layoutDoneRef.current) {
+      layoutDoneRef.current = true
+      setSessionPos(generateLayout(notes, links))
+      return
+    }
+    const missing = notes.filter(n => !sessionPos?.[n.id])
+    if (missing.length === 0) return
+    setSessionPos(prev => {
+      const next = { ...prev }
+      missing.forEach(n => {
+        const link = links.find(l => l.note_a === n.id || l.note_b === n.id)
+        const anchorId = link ? (link.note_a === n.id ? link.note_b : link.note_a) : null
+        const anchor = anchorId ? next[anchorId] : null
+        const angle = Math.random() * Math.PI * 2
+        const r = anchor ? 60 + Math.random() * 120 : Math.random() * 500
+        next[n.id] = anchor
+          ? { x: anchor.x + Math.cos(angle) * r, y: anchor.y + Math.sin(angle) * r }
+          : { x: Math.cos(angle) * r, y: Math.sin(angle) * r }
+      })
+      return next
+    })
+  }, [notes, links, sessionPos])
+  // Starfield knobs (from Customization > Constellation). Re-render the
+  // layers when they change so the field responds live.
   const starDensity = skyPrefs.density || 'normal'
   const twinkleSpeed = skyPrefs.twinkle_speed || 'normal'
   const starColor = skyPrefs.star_color || 'natural'
@@ -356,21 +523,23 @@ export default function Sky({
   // ─── Initial camera (center on oldest note, with drift-in) ────────────
   const driftRafRef = useRef(null)
   const getInitialCamera = useCallback(() => {
-    if (!notes || notes.length === 0) return { x: 0, y: 0 }
+    if (!notes || notes.length === 0 || !sessionPos) return { x: 0, y: 0 }
     const oldest = notes.reduce((a, b) => {
       const aTime = new Date(a.created_at || 0).getTime()
       const bTime = new Date(b.created_at || 0).getTime()
       return aTime < bTime ? a : b
     })
+    const p = posOf(oldest)
     return {
-      x: window.innerWidth / 2 - oldest.world_x,
-      y: window.innerHeight / 2 - oldest.world_y,
+      x: window.innerWidth / 2 - p.x,
+      y: window.innerHeight / 2 - p.y,
     }
-  }, [notes])
+  }, [notes, posOf])
 
   // Entrance drift-in: camera starts offset, eases into target over ~600ms
   const driftedRef = useRef(false)
   useEffect(() => {
+    if (!sessionPos) { driftedRef.current = false; return } // wait for the fresh layout
     if (driftedRef.current) return // only run once on initial mount
     if (!notes || notes.length === 0) return // wait for notes to load first
     const target = getInitialCamera()
@@ -400,7 +569,7 @@ export default function Sky({
     }
     driftRafRef.current = requestAnimationFrame(tick)
     return () => { if (driftRafRef.current) cancelAnimationFrame(driftRafRef.current) }
-  }, [getInitialCamera, reducedMotion, notes])
+  }, [getInitialCamera, reducedMotion, notes, sessionPos])
 
   // ─── Pending note from Home ──────────────────────────────────────────
   useEffect(() => {
@@ -547,8 +716,9 @@ export default function Sky({
 
     if (!reducedMotion) {
       const targetScale = Math.min(3, Math.max(1.2, scale * 1.15))
-      const targetCamX = window.innerWidth / 2 - note.world_x * targetScale
-      const targetCamY = window.innerHeight / 2 - note.world_y * targetScale
+      const pSel = posOf(note)
+      const targetCamX = window.innerWidth / 2 - pSel.x * targetScale
+      const targetCamY = window.innerHeight / 2 - pSel.y * targetScale
       const startCam = { ...camera }
       const startScale = scale
       const startTime = performance.now()
@@ -570,7 +740,7 @@ export default function Sky({
       flyToRafRef.current = requestAnimationFrame(tick)
     }
     onNoteClick(note.id)
-  }, [notes, onNoteClick, reducedMotion, scale, camera])
+  }, [notes, onNoteClick, reducedMotion, scale, camera, posOf])
 
   // ─── World → screen coordinate transform ─────────────────────────────
   const worldToScreen = useCallback((wx, wy, layer) => {
@@ -591,8 +761,13 @@ export default function Sky({
   // ─── Mouse handlers ──────────────────────────────────────────────────
   const handleMouseDown = useCallback((e) => {
     if (selectedNote || showNewPrompt || showStats) return
+    if (e.evt.button !== 0) return // left button only
     const target = e.target
-    if (target.attrs.name === 'star' || target.attrs.name === 'constellation') return
+    // Any hit on a shape (a star, or one of its inner paths/labels) must
+    // not pan. Only an empty-canvas hit reaches the stage itself. The old
+    // name check missed the star's children, so pan engaged underneath a
+    // star drag and kept chasing the cursor after release.
+    if (target && target !== e.target.getStage()) return
     // Cancel entrance drift if user starts panning
     if (driftRafRef.current) {
       cancelAnimationFrame(driftRafRef.current)
@@ -608,6 +783,11 @@ export default function Sky({
       cancelAnimationFrame(inertiaRafRef.current)
       inertiaRafRef.current = null
     }
+    // A settle left over from a released star drag must not survive into
+    // a pan (it would keep moving stars and re-arm on the pan's release).
+    cancelStarSettle()
+    starDragRef.current = null
+
     isDraggingRef.current = true
     setIsDragging(true)
     dragStartRef.current = { x: e.evt.clientX - camera.x, y: e.evt.clientY - camera.y }
@@ -615,6 +795,30 @@ export default function Sky({
   }, [camera, selectedNote, showNewPrompt, showStats])
 
   const handleMouseMove = useCallback((e) => {
+    // Star drag (Idea 27). The pinned star snaps to the cursor; linked
+    // stars wobble after it on springs, graph-view style.
+    if (starDragRef.current) {
+      const r = starDragRef.current
+      // Released: the settle loop owns the simulation now. A stray
+      // mousemove must not re-pin the star or the cursor keeps dragging
+      // it (the delayed-detach feel).
+      if (r.settling) return
+      const dx = (e.evt.clientX - r.clientX) / scale
+      const dy = (e.evt.clientY - r.clientY) / scale
+      if (Math.hypot(e.evt.clientX - r.clientX, e.evt.clientY - r.clientY) > 4) {
+        r.moved = true
+        setPressedStar(null)
+      }
+      // Pinned star follows the cursor exactly.
+      r.pos[r.pinned] = { x: r.startX + dx, y: r.startY + dy }
+      // Spring relaxation of the linked neighborhood.
+      for (let s = 0; s < STAR_DRAG_SUBSTEPS; s++) stepStarSprings(r)
+      const next = {}
+      for (const id in r.pos) next[id] = r.pos[id]
+      setSessionPos(prev => prev ? { ...prev, ...next } : prev)
+      e.target.getStage().container().style.cursor = 'grabbing'
+      return
+    }
     // Pan (drag to move camera). Use ref to avoid stale closure.
     if (isDraggingRef.current && dragStartRef.current) {
       const now = performance.now()
@@ -668,7 +872,7 @@ export default function Sky({
       let nearest = null
       let minDist = Infinity
       notes.forEach(n => {
-        const s = worldToScreen(n.world_x, n.world_y, 'fg')
+        const s = worldToScreen(posOf(n).x, posOf(n).y, 'fg')
         const dx = s.x - cx
         const dy = s.y - cy
         const dist = dx * dx + dy * dy
@@ -679,7 +883,62 @@ export default function Sky({
         setIdleFade(1)
       }
     }, IDLE_THRESHOLD_MS)
-  }, [notes, worldToScreen, reducedMotion, idleStar, idleFade])
+  }, [notes, worldToScreen, reducedMotion, idleStar, idleFade, scale])
+
+  // ─── Star-drag settle + finalize ─────────────────────────────────────
+  // After release, let the linked springs keep wobbling for a moment and
+  // decay to rest before freezing the session positions.
+  const cancelStarSettle = () => {
+    if (starSettleRafRef.current) {
+      cancelAnimationFrame(starSettleRafRef.current)
+      starSettleRafRef.current = null
+    }
+  }
+
+  const settleStarDrag = (r) => {
+    let frames = 0
+    const tick = () => {
+      // A newer drag or press replaced us: stop silently. Finalizing
+      // here would null starDragRef out from under the new drag.
+      if (starDragRef.current !== r) {
+        starSettleRafRef.current = null
+        return
+      }
+      let maxV = 0
+      const ids = Object.keys(r.pos)
+      ids.forEach(id => { maxV = Math.max(maxV, Math.hypot(r.vel[id].x, r.vel[id].y)) })
+      if (maxV < 1.0 || frames > 80) {
+        starSettleRafRef.current = null
+        finalizeStarDrag(r)
+        return
+      }
+      for (let s = 0; s < STAR_DRAG_SUBSTEPS; s++) stepStarSprings(r)
+      frames++
+      const next = {}
+      for (const id in r.pos) next[id] = r.pos[id]
+      setSessionPos(prev => prev ? { ...prev, ...next } : prev)
+      starSettleRafRef.current = requestAnimationFrame(tick)
+    }
+    cancelStarSettle() // never run two settles at once
+    starSettleRafRef.current = requestAnimationFrame(tick)
+  }
+
+  const finalizeStarDrag = (r) => {
+    // Only the drag we own may clear the ref; a newer drag stays intact.
+    if (starDragRef.current === r) starDragRef.current = null
+    cancelStarSettle()
+    // Make sure the pan never stayed engaged underneath the star drag.
+    isDraggingRef.current = false
+    setIsDragging(false)
+    dragStartRef.current = null
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur()
+    if (stageRef.current) stageRef.current.container().style.cursor = 'default'
+    // A real drag must not open the note on release.
+    if (r.moved) {
+      suppressClickRef.current = r.noteId
+      setTimeout(() => { if (suppressClickRef.current === r.noteId) suppressClickRef.current = null }, 600)
+    }
+  }
 
   // ─── Constellation line pulse on hover (Idea 1) ───────────────────────
   // When hover leaves, trigger a 200ms fade-out pulse on previously connected lines.
@@ -701,7 +960,20 @@ export default function Sky({
     requestAnimationFrame(tick)
   }, [])
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = useCallback((e) => {
+    if (starDragRef.current) {
+      const r = starDragRef.current
+      e.target.getStage().container().style.cursor = 'default'
+      // Let the linked stars' springs settle back; a lone star ends now.
+      // The settling flag also stops the window-level fallback from
+      // starting a second simulation for the same release.
+      if (!r.settling) {
+        r.settling = true
+        if (r.moved && r.edges.length > 0) settleStarDrag(r)
+        else finalizeStarDrag(r)
+      }
+      return
+    }
     isDraggingRef.current = false
     setIsDragging(false)
     dragStartRef.current = null
@@ -745,6 +1017,23 @@ export default function Sky({
     }
     const scaleBy = 1.1
     setScale(s => Math.max(0.2, Math.min(3, e.evt.deltaY > 0 ? s / scaleBy : s * scaleBy)))
+  }, [])
+
+  // Safety: end a star drag even when the pointer releases outside the
+  // stage (window-level fallback).
+  useEffect(() => {
+    const up = () => {
+      const r = starDragRef.current
+      // The stage handler already started settling this release; the
+      // bubble-up must not start a second, fighting simulation.
+      if (r && !r.settling) {
+        r.settling = true
+        if (r.moved && r.edges.length > 0) settleStarDrag(r)
+        else finalizeStarDrag(r)
+      }
+    }
+    window.addEventListener('mouseup', up)
+    return () => window.removeEventListener('mouseup', up)
   }, [])
 
   // ─── Keyboard ────────────────────────────────────────────────────────
@@ -842,7 +1131,13 @@ export default function Sky({
 
   // Note click. Fires returning pulse + camera flight (Idea 14) + session trail (Idea 20).
   const handleStarClick = useCallback((noteId) => {
+    // Ignore the click that ends a real star drag.
+    if (suppressClickRef.current === noteId) {
+      suppressClickRef.current = null
+      return
+    }
     const note = notes.find(n => n.id === noteId)
+    const np = note ? posOf(note) : { x: 0, y: 0 }
     if (note && daysSinceVisit(note) > 7) {
       // Prevent re-triggering pulse if one is already active for this note
       setPulseMap(prev => {
@@ -862,7 +1157,7 @@ export default function Sky({
         // Also skip if same note was added within the last 2s (prevents rapid A-B-A-B buildup)
         const recentDupe = prev.find(e => e.id === noteId && (now - e.timestamp) < 2000)
         if (recentDupe) return prev
-        const next = [...prev, { id: noteId, x: note.world_x, y: note.world_y, timestamp: now }]
+        const next = [...prev, { id: noteId, x: np.x, y: np.y, timestamp: now }]
         // Keep only entries younger than 60s
         return next.filter(e => now - e.timestamp < SESSION_TRAIL_MAX_AGE_MS)
       })
@@ -875,12 +1170,13 @@ export default function Sky({
 
       // Target: center the star on screen at a slightly zoomed-in scale
       const targetScale = Math.min(3, Math.max(1.2, scale * 1.15))
-      const targetCamX = window.innerWidth / 2 - note.world_x * targetScale
-      const targetCamY = window.innerHeight / 2 - note.world_y * targetScale
+      const pSel = posOf(note)
+      const targetCamX = window.innerWidth / 2 - pSel.x * targetScale
+      const targetCamY = window.innerHeight / 2 - pSel.y * targetScale
 
       // Current screen position of the star
-      const curScreenX = note.world_x * scale + camera.x
-      const curScreenY = note.world_y * scale + camera.y
+      const curScreenX = np.x * scale + camera.x
+      const curScreenY = np.y * scale + camera.y
       const distFromCenter = Math.hypot(
         curScreenX - window.innerWidth / 2,
         curScreenY - window.innerHeight / 2,
@@ -913,7 +1209,7 @@ export default function Sky({
     }
 
     onNoteClick(noteId)
-  }, [notes, onNoteClick, reducedMotion, scale, camera])
+  }, [notes, onNoteClick, reducedMotion, scale, camera, posOf])
 
   // ─── Stage-up flourish trigger (called by parent after wish changes stage) ─
   useEffect(() => {
@@ -929,8 +1225,8 @@ export default function Sky({
             const burstId = `${noteId}-${now}`
             const streaks = Array.from({ length: 2 + Math.floor(Math.random() * 2) }, (_, i) => ({
               id: `${burstId}-${i}`,
-              startX: note.world_x,
-              startY: note.world_y,
+              startX: posOf(note).x,
+              startY: posOf(note).y,
               angle: Math.random() * Math.PI * 2,
               speed: 150 + Math.random() * 200,
               length: 30 + Math.random() * 40,
@@ -947,7 +1243,7 @@ export default function Sky({
         }
       }
     }
-  }, [onStageUp, notes, reducedMotion])
+  }, [onStageUp, notes, reducedMotion, posOf])
 
   // Wish glow trigger (item 2). Fires on every successful wish.
   useEffect(() => {
@@ -960,8 +1256,8 @@ export default function Sky({
 
 
 
-  // ─── Closing-the-sky animation (item 14) ────────────────────────────
-  const handleCloseSky = useCallback(() => {
+  // ─── Closing-the-constellation animation (item 14) ──────────────────
+  const handleCloseConstellation = useCallback(() => {
     if (isClosing || reducedMotion) {
       clearTimeout(closeTimerRef.current)
       onReturnHome()
@@ -978,6 +1274,8 @@ export default function Sky({
   useEffect(() => () => clearTimeout(closeTimerRef.current), [])
   // Cleanup inertia on unmount
   useEffect(() => () => { if (inertiaRafRef.current) cancelAnimationFrame(inertiaRafRef.current) }, [])
+  // Cleanup the star-drag settle loop on unmount
+  useEffect(() => () => cancelStarSettle(), [])
   // Cleanup zoom-to-note flight on unmount
   useEffect(() => () => { if (flyToRafRef.current) cancelAnimationFrame(flyToRafRef.current) }, [])
   // Cleanup departure timer on unmount
@@ -1028,6 +1326,7 @@ export default function Sky({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onWheel={handleWheel}
+        onContextMenu={(e) => e.evt.preventDefault()}
         style={{ background: colors.bg }}
       >
         {/* ── Far twinkle layer (deepest, non-interactive) ── */}
@@ -1161,8 +1460,8 @@ export default function Sky({
             const pairId = [link.note_a, link.note_b].sort().join('-')
             if (seen.has(pairId)) return null
             seen.add(pairId)
-            const a = worldToScreen(noteA.world_x, noteA.world_y, 'fg')
-            const b = worldToScreen(noteB.world_x, noteB.world_y, 'fg')
+            const a = worldToScreen(posOf(noteA).x, posOf(noteA).y, 'fg')
+            const b = worldToScreen(posOf(noteB).x, posOf(noteB).y, 'fg')
             const birthTime = trailBirth[pairId]
             let drawProgress = 1
             let lineOpacity = link.dimmed ? 0.08 : 0.2
@@ -1215,6 +1514,7 @@ export default function Sky({
           {hoveredStar && !reducedMotion && (() => {
             const note = notes.find(n => n.id === hoveredStar)
             if (!note) return null
+            const hp = posOf(note)
             const constellationPairs = new Set()
             links.forEach(t => {
               if (t.note_a === hoveredStar || t.note_b === hoveredStar) {
@@ -1223,20 +1523,23 @@ export default function Sky({
             })
             const nearest = notes
               .filter(n => n.id !== hoveredStar)
-              .map(n => ({
-                id: n.id,
-                dx: n.world_x - note.world_x,
-                dy: n.world_y - note.world_y,
-                hasLine: constellationPairs.has([hoveredStar, n.id].sort().join('-')),
-              }))
+              .map(n => {
+                const np = posOf(n)
+                return {
+                  id: n.id,
+                  dx: np.x - hp.x,
+                  dy: np.y - hp.y,
+                  hasLine: constellationPairs.has([hoveredStar, n.id].sort().join('-')),
+                }
+              })
               .sort((a, b) => (a.dx * a.dx + a.dy * a.dy) - (b.dx * b.dx + b.dy * b.dy))
               .filter(n => !n.hasLine)
               .slice(0, 3)
-            const hs = worldToScreen(note.world_x, note.world_y, 'fg')
+            const hs = worldToScreen(hp.x, hp.y, 'fg')
             return nearest.map(n => {
               const target = notes.find(nn => nn.id === n.id)
               if (!target) return null
-              const ts = worldToScreen(target.world_x, target.world_y, 'fg')
+              const ts = worldToScreen(posOf(target).x, posOf(target).y, 'fg')
               return (
                 <Line
                   key={`prox-${hoveredStar}-${n.id}`}
@@ -1253,12 +1556,17 @@ export default function Sky({
 
           {/* Note-stars */}
           {notes.map((note) => {
-            const s = worldToScreen(note.world_x, note.world_y, 'fg')
+            const np = posOf(note)
+            const s = worldToScreen(np.x, np.y, 'fg')
             const days = daysSinceVisit(note)
             // Color temperature evolution (Idea 7). Blend warm/cold based on visit recency.
             const warmth = warmthFromVisits(days)
             const noteColors = blendColors(COLOR_COLD, COLOR_WARM, warmth)
-            const baseRadius = (STAGE_RADIUS[note.stage] || 4)
+            // Hub-star sizing (Idea 27): a note with many wikilinks grows
+            // into a bigger star, accumulating with its outbound link count.
+            const linkCount = note.link_count || 0
+            const hubBoost = 1 + Math.min(2, linkCount) * 0.45
+            const baseRadius = (STAGE_RADIUS[note.stage] || 4) * hubBoost
             const radius = baseRadius * scale
             const isSelected = selectedNote?.id === note.id
             const isHovered = hoveredStar === note.id
@@ -1353,7 +1661,52 @@ export default function Sky({
                 scaleY={(pressedStar === note.id ? tapScale : 1) * arrivalScale * departScale}
                 opacity={departOpacity}
                 onClick={() => handleStarClick(note.id)}
-                onMouseDown={() => { if (!reducedMotion) setPressedStar(note.id) }}
+                onMouseDown={(e) => {
+                  // Left-drag reposition (Idea 27). Session-only physics:
+                  // the pinned star follows the cursor and linked stars
+                  // wobble behind it on springs, graph-view style.
+                  if (e.evt.button === 0) {
+                    // Stop the browser from moving keyboard focus to the
+                    // canvas during the drag (the focus-collision bug).
+                    e.evt.preventDefault()
+                    // A previous drag may still be settling; cancel it
+                    // so its stale loop cannot fight this new drag.
+                    cancelStarSettle()
+                    const memberIds = new Set([note.id])
+                    const queue = [note.id]
+                    while (queue.length) {
+                      const cur = queue.shift()
+                      links.forEach(l => {
+                        if (l.note_a === cur && !memberIds.has(l.note_b)) { memberIds.add(l.note_b); queue.push(l.note_b) }
+                        else if (l.note_b === cur && !memberIds.has(l.note_a)) { memberIds.add(l.note_a); queue.push(l.note_a) }
+                      })
+                    }
+                    const pos = {}
+                    const vel = {}
+                    memberIds.forEach(id => {
+                      const p = sessionPos && sessionPos[id]
+                      const nn = notes.find(x => x.id === id)
+                      pos[id] = { x: p ? p.x : (nn ? nn.world_x || 0 : 0), y: p ? p.y : (nn ? nn.world_y || 0 : 0) }
+                      vel[id] = { x: 0, y: 0 }
+                    })
+                    const edges = links
+                      .filter(l => memberIds.has(l.note_a) && memberIds.has(l.note_b))
+                      .map(l => [l.note_a, l.note_b])
+                    starDragRef.current = {
+                      noteId: note.id,
+                      clientX: e.evt.clientX,
+                      clientY: e.evt.clientY,
+                      startX: np.x,
+                      startY: np.y,
+                      pos, vel, edges,
+                      pinned: note.id,
+                      moved: false,
+                    }
+                    e.target.getStage().container().style.cursor = 'grabbing'
+                    return
+                  }
+                  if (!reducedMotion) setPressedStar(note.id)
+                }}
                 onMouseUp={() => setPressedStar(null)}
                 onMouseEnter={(e) => {
                   e.target.getStage().container().style.cursor = 'pointer'
@@ -1583,7 +1936,8 @@ export default function Sky({
       {hoveredStar && (() => {
         const note = notes.find(n => n.id === hoveredStar)
         if (!note) return null
-        const s = worldToScreen(note.world_x, note.world_y, 'fg')
+        const p = posOf(note)
+        const s = worldToScreen(p.x, p.y, 'fg')
         return (
           <div
             style={{
@@ -1755,7 +2109,7 @@ export default function Sky({
       {showHomeButton && (
         <button
           type="button"
-          onClick={handleCloseSky}
+          onClick={handleCloseConstellation}
           aria-label="Return home"
           style={{
             position: 'absolute',
