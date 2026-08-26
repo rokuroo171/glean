@@ -84,7 +84,7 @@ function nativeCaretRect(ta) {
  * and read the caret marker's position. Used only when the native
  * selection is unavailable.
  */
-function mirrorCaretRect(ta, container, cs, fs, lh) {
+function mirrorCaretRect(ta, container, cs, fs, lh, offset) {
   // The absolute mirror is positioned at the host's padding box origin;
   // the textarea's own content starts at the host's CONTENT box (it lies
   // inside the host's padding). Offset the mirror by the host's padding
@@ -131,7 +131,7 @@ function mirrorCaretRect(ta, container, cs, fs, lh) {
   // matches the textarea exactly - never subtract the scrollbar again.
   mirror.style.width = Math.max(1, ta.clientWidth) + 'px'
 
-  const sel = ta.selectionEnd ?? ta.selectionStart ?? 0
+  const sel = offset ?? ta.selectionEnd ?? ta.selectionStart ?? 0
   mirror.textContent = ta.value.slice(0, sel)
   const marker = document.createElement('span')
   marker.style.display = 'inline'
@@ -161,4 +161,75 @@ function mirrorCaretRect(ta, container, cs, fs, lh) {
   }
 
   return { x, y, w: fs * 0.6, h: r.height > 0 ? r.height : lh, fs, lh }
+}
+
+/**
+ * How the animated overlay text sits relative to the textarea's layout.
+ * A div and a textarea lay out text differently (a textarea has its own
+ * internal leading), so even with identical font, padding and wrap width
+ * the visible glyphs can sit a couple of pixels off the layout the caret
+ * is measured against. Measure the real delta at offset 0 with a probe
+ * replicating the overlay's exact structure, so the app can translate
+ * the overlay onto the textarea's pixels. Scroll cancels out: the delta
+ * is measured unscrolled and the overlay adds -scrollTop when rendering.
+ */
+export function overlayCaretDelta(ta, container) {
+  if (!ta || !container) return { dx: 0, dy: 0 }
+  const cs = getComputedStyle(ta)
+  const fs = parseFloat(cs.fontSize) || 14
+  const lh = parseFloat(cs.lineHeight) || fs * 1.6
+  const m = mirrorCaretRect(ta, container, cs, fs, lh, 0)
+  if (!m) return { dx: 0, dy: 0 }
+  // mirrorCaretRect subtracts the textarea's internal scroll; add it back
+  // so both sides of the delta are in unscrolled content coordinates.
+  const scrolling = ta.scrollHeight > ta.clientHeight + 1
+  const mx = m.x + (scrolling ? (ta.scrollLeft || 0) : 0)
+  const my = m.y + (scrolling ? (ta.scrollTop || 0) : 0)
+
+  // Probe replicating the app's overlay box exactly: positioned at the
+  // textarea's offset, sized to its client box, its own padding,
+  // pre-wrap + break-word, border-box.
+  const probe = document.createElement('div')
+  for (let i = 0; i < cs.length; i++) {
+    const prop = cs[i]
+    if (['position', 'top', 'left', 'right', 'bottom', 'z-index', 'visibility',
+      'pointer-events', 'overflow', 'resize', 'cursor', 'display', 'width',
+      'height', 'margin', 'float', 'opacity', 'contain'].includes(prop)) continue
+    probe.style.setProperty(prop, cs.getPropertyValue(prop), cs.getPropertyPriority(prop))
+  }
+  Object.assign(probe.style, {
+    position: 'absolute',
+    left: (ta.offsetLeft || 0) + 'px',
+    top: (ta.offsetTop || 0) + 'px',
+    width: Math.max(1, ta.clientWidth) + 'px',
+    height: Math.max(1, ta.clientHeight) + 'px',
+    boxSizing: 'border-box',
+    visibility: 'hidden',
+    pointerEvents: 'none',
+    overflow: 'hidden',
+    margin: '0',
+    resize: 'none',
+    whiteSpace: 'pre-wrap',
+    overflowWrap: 'break-word',
+    paddingTop: cs.paddingTop,
+    paddingRight: cs.paddingRight,
+    paddingBottom: cs.paddingBottom,
+    paddingLeft: cs.paddingLeft,
+  })
+  const marker = document.createElement('span')
+  marker.textContent = '\uFEFF'
+  probe.appendChild(marker)
+  container.appendChild(probe)
+  const r = marker.getBoundingClientRect()
+  try { probe.remove() } catch { /* noop */ }
+  const hr = container.getBoundingClientRect()
+  return {
+    dx: mx - (r.left - hr.left),
+    dy: my - (r.top - hr.top),
+  }
+}
+
+/** Whether the browser currently exposes the textarea's real caret rect. */
+export function nativeCaretAvailable(ta) {
+  return !!nativeCaretRect(ta)
 }

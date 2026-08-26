@@ -6,7 +6,7 @@ import StarIcon from './StarIcon'
 import Icon from './Icon'
 import CursorTrail from './CursorTrail'
 import ContextMenu from './ContextMenu'
-import { caretPosition } from '../lib/caret-position'
+import { caretPosition, overlayCaretDelta } from '../lib/caret-position'
 
 const AUTOSAVE_DELAY = 1500
 const LINE_HEIGHT = 22
@@ -65,22 +65,22 @@ const ANIM_SPARKLE_MS = 450
 /** Capitalize first letter (drop -> Drop) for keyframe names. */
 function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : 'Drop' }
 
-/** Rolling list of freshly inserted ranges, merged as the user types. */
+/** Rolling list of freshly inserted ranges.
+ *  Each keystroke gets its OWN range with a stable id and its own start
+ *  time. Merging ranges into one and re-stamping the timestamp made the
+ *  span's key change on every repeat, so React remounted it and the
+ *  animation restarted from opacity 0 each repeat - during a held key
+ *  nothing ever became visible until release. With per-keystroke ranges
+ *  the characters stream in one by one, each animating in place. */
+let _rangeId = 1
 function pushFreshRange(prev, start, len) {
   const now = Date.now()
   const next = prev
     .filter(r => now - r.ts < ANIM_FADE_MS)
     .map(r => (r.start >= start ? { ...r, start: r.start + len, end: r.end + len } : r))
-  const nr = { start, end: start + len, ts: now }
-  for (const r of next) {
-    if (r.start <= nr.end && r.end >= nr.start) {
-      nr.start = Math.min(nr.start, r.start)
-      nr.end = Math.max(nr.end, r.end)
-    }
-  }
-  const out = next.filter(r => !(r.start <= nr.end && r.end >= nr.start)).concat(nr)
-  out.sort((a, b) => a.start - b.start)
-  return out.slice(-6)
+  next.push({ id: ++_rangeId, start, end: start + len, ts: now })
+  next.sort((a, b) => a.start - b.start)
+  return next.slice(-14)
 }
 
 /** Adjust fresh ranges after a deletion of `len` chars at `at`. */
@@ -109,7 +109,7 @@ function renderSegments(body, ranges, typingStyle) {
   for (const r of list) {
     if (r.start < last) continue
     if (r.start > last) segs.push({ text: body.slice(last, r.start), key: null, fresh: false })
-    segs.push({ text: body.slice(r.start, r.end), key: r.ts + ':' + r.start, fresh: true })
+    segs.push({ text: body.slice(r.start, r.end), key: r.id, fresh: true })
     last = r.end
   }
   if (last < body.length) segs.push({ text: body.slice(last), key: null, fresh: false })
@@ -159,6 +159,8 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const [animItems, setAnimItems] = useState([])    // backspace sparkle particles
   const [freshRanges, setFreshRanges] = useState([]) // [{start,end,ts}] rolling insert ranges
   const [selActive, setSelActive] = useState(false) // native selection in progress
+  const [overlayGeo, setOverlayGeo] = useState(null) // textarea's exact box + padding
+  const deltaRef = useRef({ dx: 0, dy: 0 }) // measured overlay-to-textarea offset
   const animTimerRef = useRef(null)
   const lastBodyLenRef = useRef(body.length)
   const overlayInnerRef = useRef(null)
@@ -170,10 +172,15 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   // Sync lastBodyLen when note changes
   useEffect(() => { lastBodyLenRef.current = body.length }, [note?.id])
 
-  /** Clean up expired animation items. */
+  /** Clean up expired animation items. Identity-bails when nothing
+   *  expired so the 60ms sweep never forces overlay re-renders while
+   *  the user types (that churn is what makes typing feel laggy). */
   const sweepAnims = useCallback(() => {
-    setAnimItems(prev => prev.filter(a => Date.now() - a.ts < ANIM_SPARKLE_MS))
     const now = Date.now()
+    setAnimItems(prev => {
+      const next = prev.filter(a => now - a.ts < ANIM_SPARKLE_MS)
+      return next.length === prev.length ? prev : next
+    })
     setFreshRanges(prev => {
       const next = prev.filter(r => now - r.ts < ANIM_FADE_MS)
       return next.length === prev.length ? prev : next
@@ -211,18 +218,58 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   // Cleanup timer on unmount
   useEffect(() => () => { if (animTimerRef.current) clearInterval(animTimerRef.current) }, [])
 
-  // Sync overlay scroll when the feature toggles on or the note changes
+  // Sync overlay scroll when the feature toggles on or the note changes.
+  // The overlay is shifted by the MEASURED structural delta (a div lays
+  // out text slightly differently than a textarea) plus the textarea's
+  // internal scroll, so the visible glyphs sit exactly on the layout the
+  // caret is measured against.
   useEffect(() => {
-    if (animatedEnabled && taRef.current && overlayInnerRef.current) {
-      overlayInnerRef.current.style.transform = `translateY(${-taRef.current.scrollTop}px)`
+    const ta = taRef.current
+    if (animatedEnabled && ta && overlayInnerRef.current) {
+      overlayInnerRef.current.style.transform =
+        `translate(${deltaRef.current.dx}px, ${deltaRef.current.dy - ta.scrollTop}px)`
     }
-  }, [animatedEnabled, note?.id])
+  }, [animatedEnabled, note?.id, overlayGeo])
 
-  /** Keep the visible text layer scrolled in lockstep with the textarea. */
+  // The overlay must lay out EXACTLY like the textarea or lines wrap
+  // differently and everything below drifts. Size it to the textarea's
+  // own box (offsetLeft/offsetTop/clientWidth/clientHeight) and clone the
+  // textarea's computed padding - never a hardcoded value. The textarea's
+  // scrollbar steals width, so only clientWidth matches its wrap width.
+  useEffect(() => {
+    if (!animatedEnabled) { setOverlayGeo(null); return }
+    const ta = taRef.current
+    const container = editorContainerRef.current
+    if (!ta || !container) { setOverlayGeo(null); return }
+    const update = () => {
+      const cs = getComputedStyle(ta)
+      setOverlayGeo({
+        left: ta.offsetLeft, top: ta.offsetTop,
+        width: ta.clientWidth, height: ta.clientHeight,
+        padT: cs.paddingTop, padR: cs.paddingRight,
+        padB: cs.paddingBottom, padL: cs.paddingLeft,
+      })
+      deltaRef.current = overlayCaretDelta(ta, container)
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(container)
+    ro.observe(ta)
+    // Fonts can finish loading after mount; re-measure once settled.
+    const tid = setTimeout(update, 400)
+    return () => { ro.disconnect(); clearTimeout(tid) }
+  }, [mode, animatedEnabled, note?.id, editorFont, editorFontSize, editorLineHeight])
+
+
+
+  /** Keep the visible text layer scrolled in lockstep with the textarea,
+   *  plus the measured overlay offset so the glyphs sit on the textarea's
+   *  exact layout. */
   const syncOverlayScroll = () => {
     const ta = taRef.current
     if (ta && overlayInnerRef.current) {
-      overlayInnerRef.current.style.transform = `translateY(${-ta.scrollTop}px)`
+      overlayInnerRef.current.style.transform =
+        `translate(${deltaRef.current.dx}px, ${deltaRef.current.dy - ta.scrollTop}px)`
     }
   }
 
@@ -628,7 +675,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     padding: '5px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center' }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, minWidth: 0, flex: 1, position: 'relative' }}>
       {animatedEnabled && (
         <style>{`
           @keyframes charDrop {
@@ -724,8 +771,11 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
         </div>
       )}
 
-      {/* Editor area */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+      {/* Editor area. minWidth: 0 is critical: without it a flex row
+          child refuses to shrink below its content, so an unbroken wall
+          of text in the preview stretches the row and the editor column
+          gets pushed off-screen (and the UI follows). */}
+      <div style={{ flex: 1, minHeight: 0, minWidth: 0, display: 'flex' }}>
         {/* Outline (edit mode only, not split) */}
         {showOutline && (
           <div style={{ width: 180, borderRight: `1px solid ${colors.border}`,
@@ -772,10 +822,12 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                   transition: 'box-shadow 0.6s ease-out',
                   boxShadow: typing ? `inset 0 0 30px rgba(180, 140, 80, 0.06)` : 'none' }}
               />
-              {animatedEnabled && (
+              {animatedEnabled && overlayGeo && (
                 <div aria-hidden="true"
-                  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                    overflow: 'hidden', pointerEvents: 'none', padding: space[3],
+                  style={{ position: 'absolute', left: overlayGeo.left, top: overlayGeo.top,
+                    width: overlayGeo.width, height: overlayGeo.height, boxSizing: 'border-box',
+                    overflow: 'hidden', pointerEvents: 'none',
+                    padding: `${overlayGeo.padT} ${overlayGeo.padR} ${overlayGeo.padB} ${overlayGeo.padL}`,
                     color: colors.text, fontFamily: editorFont, fontSize: editorFontSize,
                     lineHeight: editorLineHeight, whiteSpace: 'pre-wrap', overflowWrap: 'break-word',
                     display: selActive ? 'none' : 'block' }}>
@@ -791,6 +843,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
             </div>
             <div style={{ width: 1, background: colors.border, flexShrink: 0 }} />
             <div ref={previewRef} style={{ flex: 1, minWidth: 0, overflow: 'auto',
+              overflowWrap: 'anywhere',
               padding: space[3], color: colors.text, lineHeight: prefs.editor.line_height || 1.6 }}>
               {renderMarkdown(body, { onToggle: handleToggleTask, noteNames, onNoteLink: handleNoteLink })}
             </div>
@@ -803,7 +856,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
               transition: 'box-shadow 0.6s ease-out',
               boxShadow: typing ? `inset 0 0 30px rgba(180, 140, 80, 0.06)` : 'none' }}>
             {mode === 'preview' ? (
-              <div style={{ color: colors.text, lineHeight: 1.6 }}>{renderMarkdown(body, { onToggle: handleToggleTask, noteNames, onNoteLink: handleNoteLink })}</div>
+              <div style={{ color: colors.text, lineHeight: 1.6, overflowWrap: 'anywhere' }}>{renderMarkdown(body, { onToggle: handleToggleTask, noteNames, onNoteLink: handleNoteLink })}</div>
             ) : (
               <>
               {(mode === 'edit') && prefs.editor.cursor_trail_enabled !== false && prefs.editor.cursor_trail_mode !== 'off' && (
@@ -829,10 +882,12 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                   fontFamily: editorFont, fontSize: editorFontSize, lineHeight: editorLineHeight,
                   overflowWrap: 'break-word' }}
               />
-              {animatedEnabled && (
+              {animatedEnabled && overlayGeo && (
                 <div aria-hidden="true"
-                  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                    overflow: 'hidden', pointerEvents: 'none', padding: space[3],
+                  style={{ position: 'absolute', left: overlayGeo.left, top: overlayGeo.top,
+                    width: overlayGeo.width, height: overlayGeo.height, boxSizing: 'border-box',
+                    overflow: 'hidden', pointerEvents: 'none',
+                    padding: `${overlayGeo.padT} ${overlayGeo.padR} ${overlayGeo.padB} ${overlayGeo.padL}`,
                     color: colors.text, fontFamily: editorFont, fontSize: editorFontSize,
                     lineHeight: editorLineHeight, whiteSpace: 'pre-wrap', overflowWrap: 'break-word',
                     display: selActive ? 'none' : 'block' }}>
