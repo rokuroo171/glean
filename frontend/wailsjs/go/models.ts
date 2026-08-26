@@ -103,6 +103,7 @@ export namespace main {
 	    positioned: boolean;
 	    stage: string;
 	    species: string;
+	    link_count: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new NoteView(source);
@@ -123,6 +124,7 @@ export namespace main {
 	        this.positioned = source["positioned"];
 	        this.stage = source["stage"];
 	        this.species = source["species"];
+	        this.link_count = source["link_count"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
