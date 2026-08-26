@@ -546,12 +546,16 @@ func timeToStr(t *time.Time) *string {
 
 // PaletteView is the JSON-safe ambient palette for the frontend.
 type PaletteView struct {
-	Primary   string `json:"primary"`
-	Secondary string `json:"secondary"`
-	Accent    string `json:"accent"`
-	Muted     string `json:"muted"`
-	Heading   string `json:"heading"`
-	List      string `json:"list"`
+	Primary     string `json:"primary"`
+	Secondary   string `json:"secondary"`
+	Accent      string `json:"accent"`
+	Muted       string `json:"muted"`
+	Heading     string `json:"heading"`
+	List        string `json:"list"`
+	Sky         string `json:"sky"`
+	Nebula      string `json:"nebula"`
+	Aurora      bool   `json:"aurora"`
+	MeteorBoost int    `json:"meteor_boost"`
 }
 
 // GetSkyName returns the configured sky's display name.
@@ -570,17 +574,51 @@ func (a *App) GetSkyPath() string {
 
 // GetPalette returns the ambient color palette based on current time-of-day and season.
 func (a *App) GetPalette() PaletteView {
-	p := ambient.Palette(time.Now())
+	// The user can pin a season in Customization to preview any sky;
+	// an empty override means the real wall-clock palette.
+	season := ""
+	if a.store != nil {
+		prefs := store.LoadPreferences()
+		season = prefs.Sky.Season
+	}
+	when := time.Now()
+	if season != "" {
+		when = seasonDate(season)
+	}
+	p := ambient.Palette(when)
 	return PaletteView{
-		Primary:   p.Primary,
-		Secondary: p.Secondary,
-		Accent:    p.Accent,
-		Muted:     p.Muted,
-		Heading:   p.Heading,
-		List:      p.List,
+		Primary:     p.Primary,
+		Secondary:   p.Secondary,
+		Accent:      p.Accent,
+		Muted:       p.Muted,
+		Heading:     p.Heading,
+		List:        p.List,
+		Sky:         p.Sky,
+		Nebula:      p.Nebula,
+		Aurora:      p.Aurora,
+		MeteorBoost: p.MeteorBoost,
 	}
 }
 
+// seasonDate returns a representative date for a pinned season so the
+// ambient palette can render it. ("" is never passed here; the caller
+// checks first.) Each choice lands mid-season with a nearby meteor
+// shower so previews show the seasonal extras too.
+func seasonDate(season string) time.Time {
+	year := time.Now().Year()
+	switch season {
+	case "winter":
+		return time.Date(year, time.January, 3, 22, 0, 0, 0, time.Local) // Quadrantids
+	case "spring":
+		return time.Date(year, time.April, 22, 22, 0, 0, 0, time.Local) // Lyrids
+	case "summer":
+		return time.Date(year, time.August, 11, 22, 0, 0, 0, time.Local) // Perseids
+	case "autumn":
+		return time.Date(year, time.October, 21, 22, 0, 0, 0, time.Local) // Orionids
+	default:
+		return time.Now()
+	}
+}
 func (a *App) recordActivity() {
 	if a.activity == nil {
 		return
@@ -923,6 +961,7 @@ type SkyPrefsView struct {
 	SpeciesCool    string `json:"species_cool"`
 	SpeciesHot     string `json:"species_hot"`
 	SpeciesNeutral string `json:"species_neutral"`
+	Season         string `json:"season"`
 }
 
 // GetPreferences returns the user's customization preferences.
@@ -967,6 +1006,7 @@ func (a *App) GetPreferences() PreferencesView {
 			SpeciesCool:    p.Sky.SpeciesCool,
 			SpeciesHot:     p.Sky.SpeciesHot,
 			SpeciesNeutral: p.Sky.SpeciesNeutral,
+			Season:         p.Sky.Season,
 		},
 	}
 }
@@ -989,6 +1029,12 @@ func (a *App) SavePreferences(p PreferencesView) error {
 	validTrails := map[string]bool{"beam": true, "sparkle": true, "ink": true, "off": true}
 	if !validTrails[p.Editor.CursorTrailMode] {
 		p.Editor.CursorTrailMode = "beam"
+	}
+	// Season override: empty = auto (wall-clock), otherwise one of the
+	// four previews so the user can see any sky any day.
+	validSeasons := map[string]bool{"": true, "winter": true, "spring": true, "summer": true, "autumn": true}
+	if !validSeasons[p.Sky.Season] {
+		p.Sky.Season = ""
 	}
 	if p.Editor.CursorTrailColor != "accent" && !isValidHex(p.Editor.CursorTrailColor) {
 		p.Editor.CursorTrailColor = "accent"
@@ -1078,6 +1124,7 @@ func (a *App) SavePreferences(p PreferencesView) error {
 			SpeciesCool:    p.Sky.SpeciesCool,
 			SpeciesHot:     p.Sky.SpeciesHot,
 			SpeciesNeutral: p.Sky.SpeciesNeutral,
+			Season:         p.Sky.Season,
 		},
 	})
 }

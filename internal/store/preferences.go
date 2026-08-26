@@ -38,6 +38,7 @@ type SkyPrefs struct {
 	SpeciesCool    string `json:"species_cool"`    // hex override for cool stars; "" = theme default
 	SpeciesHot     string `json:"species_hot"`     // hex override for hot stars; "" = theme default
 	SpeciesNeutral string `json:"species_neutral"` // hex override for neutral stars; "" = theme default
+	Season         string `json:"season"`          // "" (auto, default), "winter", "spring", "summer", "autumn" (preview)
 }
 
 // EditorPrefs controls editor behavior and appearance.
@@ -68,8 +69,7 @@ func DefaultPreferences() Preferences {
 			Preset:    "midnight",
 			AccentHex: "#5b9fd4",
 		},
-		Sky: SkyPrefs{
-			Density:        "normal",
+		Sky: SkyPrefs{Density: "normal",
 			TwinkleSpeed:   "normal",
 			StarColor:      "natural",
 			NebulaEnabled:  &nebula,
@@ -77,6 +77,7 @@ func DefaultPreferences() Preferences {
 			SpeciesCool:    "",
 			SpeciesHot:     "",
 			SpeciesNeutral: "",
+			Season:         "",
 		},
 		Layout: LayoutPrefs{
 			SidebarPosition: "left",

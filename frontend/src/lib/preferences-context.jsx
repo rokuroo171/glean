@@ -31,6 +31,7 @@ const defaultPrefs = {
     species_cool: '',
     species_hot: '',
     species_neutral: '',
+    season: '',
   },
 }
 
