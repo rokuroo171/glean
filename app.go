@@ -20,8 +20,6 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-
-
 // App is the Wails application struct. Bound methods are exposed to the React frontend.
 type App struct {
 	ctx          context.Context
@@ -840,6 +838,7 @@ type PreferencesView struct {
 	Theme  ThemePrefsView  `json:"theme"`
 	Layout LayoutPrefsView `json:"layout"`
 	Editor EditorPrefsView `json:"editor"`
+	Sky    SkyPrefsView    `json:"sky"`
 }
 
 type ThemePrefsView struct {
@@ -854,20 +853,27 @@ type LayoutPrefsView struct {
 }
 
 type EditorPrefsView struct {
-	FontFamily                string `json:"font_family"`
-	FontSize                  int    `json:"font_size"`
+	FontFamily                string  `json:"font_family"`
+	FontSize                  int     `json:"font_size"`
 	LineHeight                float64 `json:"line_height"`
-	SpellCheckEnabled         bool   `json:"spell_check_enabled"`
-	CursorTrailEnabled        bool   `json:"cursor_trail_enabled"`
-	CursorTrailMode           string `json:"cursor_trail_mode"`
-	CursorTrailColor          string `json:"cursor_trail_color"`
-	CursorTrailIntensity      string `json:"cursor_trail_intensity"`
-	CursorTrailDecayFast      int    `json:"cursor_trail_decay_fast"`
-	CursorTrailDecaySlow      int    `json:"cursor_trail_decay_slow"`
-	CursorTrailLength         int    `json:"cursor_trail_length"`
-	CursorTrailStartThreshold int    `json:"cursor_trail_start_threshold"`
-	AnimatedTextEnabled        bool   `json:"animated_text_enabled"`
-	AnimatedTextStyle          string `json:"animated_text_style"`
+	SpellCheckEnabled         bool    `json:"spell_check_enabled"`
+	CursorTrailEnabled        bool    `json:"cursor_trail_enabled"`
+	CursorTrailMode           string  `json:"cursor_trail_mode"`
+	CursorTrailColor          string  `json:"cursor_trail_color"`
+	CursorTrailIntensity      string  `json:"cursor_trail_intensity"`
+	CursorTrailDecayFast      int     `json:"cursor_trail_decay_fast"`
+	CursorTrailDecaySlow      int     `json:"cursor_trail_decay_slow"`
+	CursorTrailLength         int     `json:"cursor_trail_length"`
+	CursorTrailStartThreshold int     `json:"cursor_trail_start_threshold"`
+	AnimatedTextEnabled       bool    `json:"animated_text_enabled"`
+	AnimatedTextStyle         string  `json:"animated_text_style"`
+}
+
+type SkyPrefsView struct {
+	Density       string `json:"density"`
+	TwinkleSpeed  string `json:"twinkle_speed"`
+	StarColor     string `json:"star_color"`
+	NebulaEnabled bool   `json:"nebula_enabled"`
 }
 
 // GetPreferences returns the user's customization preferences.
@@ -899,10 +905,15 @@ func (a *App) GetPreferences() PreferencesView {
 			CursorTrailDecayFast:      p.Editor.CursorTrailDecayFast,
 			CursorTrailDecaySlow:      p.Editor.CursorTrailDecaySlow,
 			CursorTrailLength:         p.Editor.CursorTrailLength,
-			CursorTrailStartThreshold: p.Editor.CursorTrailStartThreshold,			AnimatedTextEnabled:        p.Editor.AnimatedTextEnabled != nil && *p.Editor.AnimatedTextEnabled,
-			AnimatedTextStyle:          p.Editor.AnimatedTextStyle,
-
-
+			CursorTrailStartThreshold: p.Editor.CursorTrailStartThreshold,
+			AnimatedTextEnabled:       p.Editor.AnimatedTextEnabled != nil && *p.Editor.AnimatedTextEnabled,
+			AnimatedTextStyle:         p.Editor.AnimatedTextStyle,
+		},
+		Sky: SkyPrefsView{
+			Density:       p.Sky.Density,
+			TwinkleSpeed:  p.Sky.TwinkleSpeed,
+			StarColor:     p.Sky.StarColor,
+			NebulaEnabled: p.Sky.NebulaEnabled != nil && *p.Sky.NebulaEnabled,
 		},
 	}
 }
@@ -959,11 +970,26 @@ func (a *App) SavePreferences(p PreferencesView) error {
 	}
 	validSidebar := map[string]bool{"left": true, "right": true}
 	if !validSidebar[p.Layout.SidebarPosition] {
-		p.Layout.SidebarPosition = "left"	}
+		p.Layout.SidebarPosition = "left"
+	}
 	showStatus := &p.Layout.ShowStatusBar
 	enabled := p.Editor.CursorTrailEnabled
 	spell := p.Editor.SpellCheckEnabled
 	animated := p.Editor.AnimatedTextEnabled
+	// Sky validation: fall back to defaults when out of range.
+	validSkyDensity := map[string]bool{"sparse": true, "normal": true, "dense": true}
+	if !validSkyDensity[p.Sky.Density] {
+		p.Sky.Density = "normal"
+	}
+	validSkySpeed := map[string]bool{"slow": true, "normal": true, "fast": true}
+	if !validSkySpeed[p.Sky.TwinkleSpeed] {
+		p.Sky.TwinkleSpeed = "normal"
+	}
+	validSkyColor := map[string]bool{"natural": true, "warm": true, "cool": true}
+	if !validSkyColor[p.Sky.StarColor] {
+		p.Sky.StarColor = "natural"
+	}
+	nebula := p.Sky.NebulaEnabled
 	return store.SavePreferences(store.Preferences{
 		Theme: store.ThemePrefs{
 			Preset:    p.Theme.Preset,
@@ -987,8 +1013,14 @@ func (a *App) SavePreferences(p PreferencesView) error {
 			CursorTrailDecaySlow:      p.Editor.CursorTrailDecaySlow,
 			CursorTrailLength:         p.Editor.CursorTrailLength,
 			CursorTrailStartThreshold: p.Editor.CursorTrailStartThreshold,
-			AnimatedTextEnabled:        &animated,
-			AnimatedTextStyle:          p.Editor.AnimatedTextStyle,
+			AnimatedTextEnabled:       &animated,
+			AnimatedTextStyle:         p.Editor.AnimatedTextStyle,
+		},
+		Sky: store.SkyPrefs{
+			Density:       p.Sky.Density,
+			TwinkleSpeed:  p.Sky.TwinkleSpeed,
+			StarColor:     p.Sky.StarColor,
+			NebulaEnabled: &nebula,
 		},
 	})
 }

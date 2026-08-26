@@ -22,6 +22,12 @@ const defaultPrefs = {
     animated_text_enabled: false,
     animated_text_style: 'drop',
   },
+  sky: {
+    density: 'normal',
+    twinkle_speed: 'normal',
+    star_color: 'natural',
+    nebula_enabled: true,
+  },
 }
 
 // Merge loaded prefs over the defaults so any field the backend does not
@@ -33,6 +39,7 @@ function mergePrefs(base, loaded) {
     theme: { ...base.theme, ...(loaded.theme || {}) },
     layout: { ...base.layout, ...(loaded.layout || {}) },
     editor: { ...base.editor, ...(loaded.editor || {}) },
+    sky: { ...base.sky, ...(loaded.sky || {}) },
   }
 }
 

@@ -450,6 +450,46 @@ export default function CustomizationPane() {
           </>
         )}
       </Section>
+
+      {/* Sky section: starfield appearance knobs */}
+      <Section title="Sky" icon="moon">
+        <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 6 }}>Star density</div>
+        <OptionGroup
+          options={[
+            { id: 'sparse', label: 'Sparse' },
+            { id: 'normal', label: 'Normal' },
+            { id: 'dense', label: 'Dense' },
+          ]}
+          value={prefs.sky.density}
+          onChange={(v) => updatePrefs({ sky: { density: v } })} />
+
+        <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 6, marginTop: 14 }}>Twinkle speed</div>
+        <OptionGroup
+          options={[
+            { id: 'slow', label: 'Slow' },
+            { id: 'normal', label: 'Normal' },
+            { id: 'fast', label: 'Fast' },
+          ]}
+          value={prefs.sky.twinkle_speed}
+          onChange={(v) => updatePrefs({ sky: { twinkle_speed: v } })} />
+
+        <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 6, marginTop: 14 }}>Star color</div>
+        <OptionGroup
+          options={[
+            { id: 'natural', label: 'Natural' },
+            { id: 'warm', label: 'Warm' },
+            { id: 'cool', label: 'Cool' },
+          ]}
+          value={prefs.sky.star_color}
+          onChange={(v) => updatePrefs({ sky: { star_color: v } })} />
+
+        <div style={{ marginTop: 14 }}>
+          <Toggle label="Nebula clouds"
+            hint="Faint colored dust clouds in the deep background."
+            checked={prefs.sky.nebula_enabled !== false}
+            onChange={(v) => updatePrefs({ sky: { nebula_enabled: v } })} />
+        </div>
+      </Section>
     </div>
   )
 }

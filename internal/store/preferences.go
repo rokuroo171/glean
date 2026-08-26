@@ -9,15 +9,16 @@ import (
 
 // Preferences holds all user customization settings.
 type Preferences struct {
-	Theme    ThemePrefs    `json:"theme"`
-	Layout   LayoutPrefs   `json:"layout"`
-	Editor   EditorPrefs   `json:"editor"`
+	Theme  ThemePrefs  `json:"theme"`
+	Layout LayoutPrefs `json:"layout"`
+	Editor EditorPrefs `json:"editor"`
+	Sky    SkyPrefs    `json:"sky"`
 }
 
 // ThemePrefs controls colors and visual appearance.
 type ThemePrefs struct {
-	Preset     string `json:"preset"`      // "midnight", "aurora", "ember", "ocean", "lavender"
-	AccentHex  string `json:"accent_hex"`  // e.g. "#5b9fd4"
+	Preset    string `json:"preset"`     // "midnight", "aurora", "ember", "ocean", "lavender"
+	AccentHex string `json:"accent_hex"` // e.g. "#5b9fd4"
 }
 
 // LayoutPrefs controls panel positions and density.
@@ -27,32 +28,47 @@ type LayoutPrefs struct {
 	ShowStatusBar   *bool  `json:"show_status_bar"`  // nil = true (default)
 }
 
+// SkyPrefs controls the starfield appearance in the Sky view.
+type SkyPrefs struct {
+	Density       string `json:"density"`        // "sparse", "normal" (default), "dense"
+	TwinkleSpeed  string `json:"twinkle_speed"`  // "slow", "normal" (default), "fast"
+	StarColor     string `json:"star_color"`     // "natural" (default), "warm", "cool"
+	NebulaEnabled *bool  `json:"nebula_enabled"` // nil = true (default)
+}
+
 // EditorPrefs controls editor behavior and appearance.
 type EditorPrefs struct {
-	FontFamily                string `json:"font_family"`                  // CSS font-family value
-	FontSize                  int    `json:"font_size"`                    // px
-	LineHeight                float64 `json:"line_height"`                 // e.g. 1.6
-	SpellCheckEnabled         *bool  `json:"spell_check_enabled"`          // nil = true (default); native spelling squiggles
-	CursorTrailEnabled        *bool  `json:"cursor_trail_enabled"`         // nil = false (default)
-	CursorTrailMode           string `json:"cursor_trail_mode"`            // "beam" (default), "sparkle", "ink"
-	CursorTrailColor          string `json:"cursor_trail_color"`           // "accent" (default), or hex
-	CursorTrailIntensity      string `json:"cursor_trail_intensity"`       // "subtle", "normal" (default), "vivid"
-	CursorTrailDecayFast      int    `json:"cursor_trail_decay_fast"`      // ms, fast fade stage
-	CursorTrailDecaySlow      int    `json:"cursor_trail_decay_slow"`      // ms, slow tail stage
-	CursorTrailLength         int    `json:"cursor_trail_length"`          // trail buffer size (points)
-	CursorTrailStartThreshold int    `json:"cursor_trail_start_threshold"` // px, movement needed to trigger
-	AnimatedTextEnabled        *bool  `json:"animated_text_enabled"`          // nil = false (default)
-	AnimatedTextStyle          string `json:"animated_text_style"`             // "drop" (default), "fade", "pop"
+	FontFamily                string  `json:"font_family"`                  // CSS font-family value
+	FontSize                  int     `json:"font_size"`                    // px
+	LineHeight                float64 `json:"line_height"`                  // e.g. 1.6
+	SpellCheckEnabled         *bool   `json:"spell_check_enabled"`          // nil = true (default); native spelling squiggles
+	CursorTrailEnabled        *bool   `json:"cursor_trail_enabled"`         // nil = false (default)
+	CursorTrailMode           string  `json:"cursor_trail_mode"`            // "beam" (default), "sparkle", "ink"
+	CursorTrailColor          string  `json:"cursor_trail_color"`           // "accent" (default), or hex
+	CursorTrailIntensity      string  `json:"cursor_trail_intensity"`       // "subtle", "normal" (default), "vivid"
+	CursorTrailDecayFast      int     `json:"cursor_trail_decay_fast"`      // ms, fast fade stage
+	CursorTrailDecaySlow      int     `json:"cursor_trail_decay_slow"`      // ms, slow tail stage
+	CursorTrailLength         int     `json:"cursor_trail_length"`          // trail buffer size (points)
+	CursorTrailStartThreshold int     `json:"cursor_trail_start_threshold"` // px, movement needed to trigger
+	AnimatedTextEnabled       *bool   `json:"animated_text_enabled"`        // nil = false (default)
+	AnimatedTextStyle         string  `json:"animated_text_style"`          // "drop" (default), "fade", "pop"
 }
 
 // DefaultPreferences returns the built-in defaults.
 func DefaultPreferences() Preferences {
 	showStatus := true
 	spell := true
+	nebula := true
 	return Preferences{
 		Theme: ThemePrefs{
 			Preset:    "midnight",
 			AccentHex: "#5b9fd4",
+		},
+		Sky: SkyPrefs{
+			Density:       "normal",
+			TwinkleSpeed:  "normal",
+			StarColor:     "natural",
+			NebulaEnabled: &nebula,
 		},
 		Layout: LayoutPrefs{
 			SidebarPosition: "left",
@@ -72,7 +88,7 @@ func DefaultPreferences() Preferences {
 			CursorTrailDecaySlow:      300,
 			CursorTrailLength:         12,
 			CursorTrailStartThreshold: 4,
-			AnimatedTextStyle:          "drop",
+			AnimatedTextStyle:         "drop",
 		},
 	}
 }
@@ -108,6 +124,18 @@ func LoadPreferences() Preferences {
 	}
 	// Merge nil fields with defaults.
 	def := DefaultPreferences()
+	if p.Sky.Density == "" {
+		p.Sky.Density = def.Sky.Density
+	}
+	if p.Sky.TwinkleSpeed == "" {
+		p.Sky.TwinkleSpeed = def.Sky.TwinkleSpeed
+	}
+	if p.Sky.StarColor == "" {
+		p.Sky.StarColor = def.Sky.StarColor
+	}
+	if p.Sky.NebulaEnabled == nil {
+		p.Sky.NebulaEnabled = def.Sky.NebulaEnabled
+	}
 	if p.Theme.Preset == "" {
 		p.Theme.Preset = def.Theme.Preset
 	}
