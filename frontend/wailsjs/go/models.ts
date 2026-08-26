@@ -172,6 +172,10 @@ export namespace main {
 	    twinkle_speed: string;
 	    star_color: string;
 	    nebula_enabled: boolean;
+	    species_warm: string;
+	    species_cool: string;
+	    species_hot: string;
+	    species_neutral: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new SkyPrefsView(source);
@@ -183,6 +187,10 @@ export namespace main {
 	        this.twinkle_speed = source["twinkle_speed"];
 	        this.star_color = source["star_color"];
 	        this.nebula_enabled = source["nebula_enabled"];
+	        this.species_warm = source["species_warm"];
+	        this.species_cool = source["species_cool"];
+	        this.species_hot = source["species_hot"];
+	        this.species_neutral = source["species_neutral"];
 	    }
 	}
 	export class ThemePrefsView {

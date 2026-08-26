@@ -27,7 +27,26 @@ const defaultPrefs = {
     twinkle_speed: 'normal',
     star_color: 'natural',
     nebula_enabled: true,
+    species_warm: '',
+    species_cool: '',
+    species_hot: '',
+    species_neutral: '',
   },
+}
+
+// Palette used by every star-rendering surface (icons, panels, konva).
+// An empty override falls back to the theme's preset species color.
+// Importing colors from theme.js directly is unsafe because applyTheme
+// mutates it, so this closure keeps the same live reference.
+import { colors } from './theme'
+
+export function speciesPalette(skyPrefs, fallbackColors = colors) {
+  return {
+    warm: skyPrefs.species_warm || fallbackColors.starWarm,
+    cool: skyPrefs.species_cool || fallbackColors.starCool,
+    hot: skyPrefs.species_hot || fallbackColors.starHot,
+    neutral: skyPrefs.species_neutral || fallbackColors.starNeutral,
+  }
 }
 
 // Merge loaded prefs over the defaults so any field the backend does not
@@ -79,6 +98,7 @@ export function PreferencesProvider({ children }) {
         theme: { ...prev.theme, ...(partial.theme || {}) },
         layout: { ...prev.layout, ...(partial.layout || {}) },
         editor: { ...prev.editor, ...(partial.editor || {}) },
+        sky: { ...prev.sky, ...(partial.sky || {}) },
       }
       // Apply theme immediately
       applyTheme(next.theme.preset, next.theme.accent_hex)

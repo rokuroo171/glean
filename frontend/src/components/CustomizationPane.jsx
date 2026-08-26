@@ -489,6 +489,39 @@ export default function CustomizationPane() {
             checked={prefs.sky.nebula_enabled !== false}
             onChange={(v) => updatePrefs({ sky: { nebula_enabled: v } })} />
         </div>
+
+        <div style={{ ...typography.sectionLabel, color: colors.textMuted, marginBottom: 8, marginTop: 14 }}>
+          Star species colors
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[
+            { key: 'species_warm', label: 'Warm', def: colors.starWarm },
+            { key: 'species_cool', label: 'Cool', def: colors.starCool },
+            { key: 'species_hot', label: 'Hot', def: colors.starHot },
+            { key: 'species_neutral', label: 'Neutral', def: colors.starNeutral },
+          ].map(s => (
+            <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <label style={{ width: 64, fontSize: 12, color: colors.textMuted, flexShrink: 0 }}>{s.label}</label>
+              {accentSwatches.map(sw => (
+                <AccentSwatch key={sw.hex} hex={sw.hex}
+                  active={prefs.sky[s.key] === sw.hex}
+                  onClick={() => updatePrefs({ sky: { [s.key]: sw.hex } })} />
+              ))}
+              <input
+                value={prefs.sky[s.key] || ''}
+                onChange={(e) => {
+                  const val = e.target.value
+                  if (val === '' || /^#[0-9a-fA-F]{6}$/.test(val)) {
+                    updatePrefs({ sky: { [s.key]: val } })
+                  }
+                }}
+                placeholder={s.def}
+                style={{ width: 84, padding: '4px 8px', fontSize: 12, fontFamily: 'monospace',
+                  background: colors.bg, border: `1px solid ${colors.border}`,
+                  borderRadius: 4, color: colors.text, outline: 'none' }} />
+            </div>
+          ))}
+        </div>
       </Section>
     </div>
   )

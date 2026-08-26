@@ -1,10 +1,13 @@
-import { speciesColor, colors } from '../lib/theme'
+import { colors } from '../lib/theme'
+import { usePreferences, speciesPalette } from '../lib/preferences-context'
 
 const SIZE_MAP = { sm: 14, md: 18, lg: 24 }
 
 /** Four-point star icon. Color from note species or explicit color prop. */
 export default function StarIcon({ species = 'neutral', color, size = 'md', glow = true }) {
-  const fill = color || speciesColor[species] || colors.starNeutral
+  const { prefs } = usePreferences()
+  const palette = speciesPalette(prefs.sky || {})
+  const fill = color || palette[species] || colors.starNeutral
   const px = SIZE_MAP[size] || SIZE_MAP.md
 
   return (

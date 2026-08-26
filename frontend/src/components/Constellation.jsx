@@ -5,7 +5,7 @@ import NoteOverlay from './NoteOverlay'
 import EditOverlay from './EditOverlay'
 import NewNotePrompt from './NewNotePrompt'
 import HomeIcon from './HomeIcon'
-import { usePreferences } from '../lib/preferences-context'
+import { usePreferences, speciesPalette } from '../lib/preferences-context'
 import { colors } from '../lib/theme'
 import { motionTokens } from '../lib/motion-tokens'
 import { useReducedMotion } from '../hooks/useReducedMotion'
@@ -1561,7 +1561,14 @@ export default function Constellation({
             const days = daysSinceVisit(note)
             // Color temperature evolution (Idea 7). Blend warm/cold based on visit recency.
             const warmth = warmthFromVisits(days)
-            const noteColors = blendColors(COLOR_COLD, COLOR_WARM, warmth)
+            // Species remap: the blend endpoints come from the user's
+            // override palette so custom colors tint every star.
+            const sp = speciesPalette(skyPrefs)
+            const noteColors = blendColors(
+              { core: sp.cool, glow: sp.cool, accent: sp.cool },
+              { core: sp.warm, glow: sp.warm, accent: sp.warm },
+              warmth,
+            )
             // Hub-star sizing (Idea 27): a note with many wikilinks grows
             // into a bigger star, accumulating with its outbound link count.
             const linkCount = note.link_count || 0

@@ -30,10 +30,14 @@ type LayoutPrefs struct {
 
 // SkyPrefs controls the starfield appearance in the Sky view.
 type SkyPrefs struct {
-	Density       string `json:"density"`        // "sparse", "normal" (default), "dense"
-	TwinkleSpeed  string `json:"twinkle_speed"`  // "slow", "normal" (default), "fast"
-	StarColor     string `json:"star_color"`     // "natural" (default), "warm", "cool"
-	NebulaEnabled *bool  `json:"nebula_enabled"` // nil = true (default)
+	Density        string `json:"density"`         // "sparse", "normal" (default), "dense"
+	TwinkleSpeed   string `json:"twinkle_speed"`   // "slow", "normal" (default), "fast"
+	StarColor      string `json:"star_color"`      // "natural" (default), "warm", "cool"
+	NebulaEnabled  *bool  `json:"nebula_enabled"`  // nil = true (default)
+	SpeciesWarm    string `json:"species_warm"`    // hex override for warm stars; "" = theme default
+	SpeciesCool    string `json:"species_cool"`    // hex override for cool stars; "" = theme default
+	SpeciesHot     string `json:"species_hot"`     // hex override for hot stars; "" = theme default
+	SpeciesNeutral string `json:"species_neutral"` // hex override for neutral stars; "" = theme default
 }
 
 // EditorPrefs controls editor behavior and appearance.
@@ -65,10 +69,14 @@ func DefaultPreferences() Preferences {
 			AccentHex: "#5b9fd4",
 		},
 		Sky: SkyPrefs{
-			Density:       "normal",
-			TwinkleSpeed:  "normal",
-			StarColor:     "natural",
-			NebulaEnabled: &nebula,
+			Density:        "normal",
+			TwinkleSpeed:   "normal",
+			StarColor:      "natural",
+			NebulaEnabled:  &nebula,
+			SpeciesWarm:    "",
+			SpeciesCool:    "",
+			SpeciesHot:     "",
+			SpeciesNeutral: "",
 		},
 		Layout: LayoutPrefs{
 			SidebarPosition: "left",
