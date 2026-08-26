@@ -8,7 +8,7 @@ const actions = [
   { id: 'settings', label: 'Open Settings', icon: 'settings', section: 'Actions' },
   { id: 'stats', label: 'Sky Overview', icon: 'bar-chart', section: 'Actions' },
   { id: 'new-note', label: 'New Note', icon: 'plus', section: 'Actions' },
-  { id: 'full-sky', label: 'Full Sky View', icon: 'sparkles', section: 'Actions' },
+  { id: 'constellation', label: 'Constellation', icon: 'sparkles', section: 'Actions' },
   { id: 'refresh-window', label: 'Refresh Window', icon: 'refresh-cw', section: 'Actions' },
   { id: 'replay-tour', label: 'Replay Onboarding Tour', icon: 'sparkles', section: 'Actions' },
 ]
