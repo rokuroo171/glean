@@ -62,6 +62,10 @@ export function GetWorkspaceState() {
   return window['go']['main']['App']['GetWorkspaceState']();
 }
 
+export function ImportImage(arg1, arg2) {
+  return window['go']['main']['App']['ImportImage'](arg1, arg2);
+}
+
 export function ListFolders() {
   return window['go']['main']['App']['ListFolders']();
 }

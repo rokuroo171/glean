@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"os"
@@ -12,6 +14,7 @@ import (
 	"github.com/glean/glean/internal/activity"
 	"github.com/glean/glean/internal/adjacency"
 	"github.com/glean/glean/internal/ambient"
+	vaultassets "github.com/glean/glean/internal/assets"
 	"github.com/glean/glean/internal/growth"
 	"github.com/glean/glean/internal/note"
 	"github.com/glean/glean/internal/store"
@@ -341,6 +344,36 @@ func (a *App) SaveNote(id, title, body string) error {
 	rel, _ := filepath.Rel(a.skyDir, newPath)
 	n.File = rel
 	return a.store.Update(n)
+}
+
+// ImportImage stores an image (base64 data URI) in the vault's
+// .glean/assets/ folder and returns the vault-relative path to embed
+// in a note, e.g. ".glean/assets/sunset.png". The md file stays
+// portable: it references a location inside the vault, not an
+// absolute path or a pasted blob.
+func (a *App) ImportImage(name, dataURI string) (string, error) {
+	if a.store == nil {
+		return "", fmt.Errorf("no sky configured")
+	}
+	raw, err := base64FromDataURI(dataURI)
+	if err != nil {
+		return "", err
+	}
+	return vaultassets.ImportImage(a.skyDir, name, raw)
+}
+
+// base64FromDataURI strips the "data:<mime>;base64," prefix and
+// decodes the rest. Anything without a comma is rejected.
+func base64FromDataURI(dataURI string) ([]byte, error) {
+	_, b64, ok := strings.Cut(dataURI, ",")
+	if !ok {
+		return nil, errors.New("invalid image payload")
+	}
+	raw, err := base64.StdEncoding.DecodeString(strings.TrimSpace(b64))
+	if err != nil {
+		return nil, fmt.Errorf("decode image: %w", err)
+	}
+	return raw, nil
 }
 
 // DeleteNote removes the registry entry and the md file.
