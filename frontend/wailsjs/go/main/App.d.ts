@@ -33,6 +33,8 @@ export function GetStats():Promise<main.StatsView>;
 
 export function GetWorkspaceState():Promise<store.WorkspaceState>;
 
+export function ImportImage(arg1:string,arg2:string):Promise<string>;
+
 export function ListFolders():Promise<Array<string>>;
 
 export function MigrateSky():Promise<store.MigrateReport>;

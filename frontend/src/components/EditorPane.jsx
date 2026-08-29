@@ -149,6 +149,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const debounceRef = useRef(null)
   const taRef = useRef(null)
   const previewRef = useRef(null)
+  const fileInputRef = useRef(null)
 
   // --- Animated text (Issue #2): the visible text IS the animated layer ---
   // The textarea text is transparent; a text layer on top renders the real
@@ -453,6 +454,13 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
       return
     }
 
+    // Ctrl+Shift+I insert image
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'i' || e.key === 'I')) {
+      e.preventDefault()
+      fileInputRef.current?.click()
+      return
+    }
+
     // Ctrl+Z undo, Ctrl+Shift+Z / Ctrl+Y redo
     if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && mode === 'edit') {
       e.preventDefault()
@@ -571,6 +579,44 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     const at = ta.selectionStart
     const table = '| Header 1 | Header 2 |\n| --- | --- |\n| Cell | Cell |\n'
     commitEdit(insertText(ta, table, at, at))
+  }
+
+  /** Pick an image file, import it into the vault, insert `![alt](...)
+   *  at the caret. The md stays portable: the src is vault-relative
+   *  (`.glean/assets/...`), never an absolute path or base64 blob. */
+  async function insertImage(file) {
+    const ta = taRef.current
+    if (!ta || !window.go?.main?.App?.ImportImage || !file) return
+    const dataURI = await new Promise(resolve => {
+      const r = new FileReader()
+      r.onload = () => resolve(r.result || '')
+      r.onerror = () => resolve('')
+      r.readAsDataURL(file)
+    })
+    if (!dataURI) return
+    let rel
+    try {
+      rel = await window.go.main.App.ImportImage(file.name, dataURI)
+    } catch (err) {
+      if (window.console) console.error('ImportImage failed:', err)
+      return
+    }
+    const { selectionStart: s, selectionEnd: e, value } = ta
+    const alt = (file.name || 'image').replace(/\.[^.]+$/, '').replace(/["\[\]]/g, '').trim() || 'image'
+    // Relative to this note's folder: src is `.glean/assets/...` when
+    // the note is at vault root, or `../.glean/assets/...` relative to
+    // a note inside a subfolder.
+    const folderDepth = (note.folder || '').split('/').filter(Boolean).length
+    const prefix = folderDepth > 0 ? '../'.repeat(folderDepth) : ''
+    const src = prefix + rel.replace(/^\/\.glean\//, '.glean/')
+    const escaped = src.replace(/[()\s]/g, c => c === ' ' ? '%20' : ('\\' + c))
+    const md = `![${alt}](${escaped})`
+    handleChange(value.slice(0, s) + md + value.slice(e))
+    setDirty(true)
+    setTimeout(() => {
+      ta.selectionStart = ta.selectionEnd = s + md.length
+      ta.focus()
+    }, 0)
   }
 
   function insertCode() {
@@ -724,7 +770,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
           </h2>
         </div>
 
-        {/* Undo / Redo */}
+        {/* Undo / Redo / Insert image */}
         {(mode === 'edit' || mode === 'split') && (
           <div style={{ display: 'flex', border: `1px solid ${colors.border}`, borderRadius: 6,
             overflow: 'hidden', flexShrink: 0 }}>
@@ -736,8 +782,21 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
               style={{ ...toolbarBtn, opacity: historyInfo.canRedo ? 1 : 0.3 }}>
               <Icon name="redo" size={14} />
             </button>
+            <button type="button" onClick={() => fileInputRef.current?.click()} data-tip="Insert image (Ctrl+Shift+I)"
+              style={{ ...toolbarBtn, color: colors.textMuted }}>
+              <Icon name="image" size={14} />
+            </button>
           </div>
         )}
+
+        {/* Hidden image picker for Insert image */}
+        <input ref={fileInputRef} type="file" accept="image/*"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const f = e.target.files && e.target.files[0]
+            if (f) insertImage(f)
+            e.target.value = ''
+          }} />
 
         {/* Mode toggle: edit | split | preview */}
         <div style={{ display: 'flex', border: `1px solid ${colors.border}`, borderRadius: 6,
