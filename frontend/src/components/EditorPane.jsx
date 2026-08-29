@@ -32,10 +32,48 @@ function getCharPosition(ta) {
 
 export function parseHeadings(markdown) {
   const out = []
+  const lines = markdown.split('\n')
   let offset = 0
-  for (const line of markdown.split('\n')) {
-    const m = line.match(/^(#{1,6})\s+(.+)/)
-    if (m) out.push({ level: m[1].length, text: m[2], offset })
+  let inFence = false
+  let fenceChar = ''
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const fenceMatch = line.match(/^\s*(`{3,}|~{3,})\s*(.*)/)
+    if (fenceMatch) {
+      const char = fenceMatch[1].trim()[0]
+      if (!inFence) {
+        inFence = true
+        fenceChar = char
+      } else if (char === fenceChar && fenceMatch[1].trim()[0] === fenceChar) {
+        inFence = false
+      }
+      offset += line.length + 1
+      continue
+    }
+    if (inFence) {
+      offset += line.length + 1
+      continue
+    }
+    // ATX headings: # through ######
+    const atx = line.match(/^(#{1,6})\s+(.+)/)
+    if (atx) {
+      out.push({ level: atx[1].length, text: atx[2].replace(/\s+#+\s*$/, ''), offset })
+      offset += line.length + 1
+      continue
+    }
+    // Setext headings: text followed by === (h1) or --- (h2)
+    if (i + 1 < lines.length) {
+      const next = lines[i + 1]
+      const setextMatch = next.match(/^(=+|-+)\s*$/)
+      if (setextMatch && line.trim().length > 0) {
+        const underline = setextMatch[1][0]
+        if (underline === '=' && line.trim().length > 0) {
+          out.push({ level: 1, text: line.trim(), offset })
+        } else if (underline === '-' && line.trim().length > 0 && !line.match(/^#{1,6}\s/)) {
+          out.push({ level: 2, text: line.trim(), offset })
+        }
+      }
+    }
     offset += line.length + 1
   }
   return out
@@ -147,6 +185,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const typingTimer = useRef(null)
   const [currentHeading, setCurrentHeading] = useState(0)
   const debounceRef = useRef(null)
+  const skipScrollRef = useRef(false)
   const taRef = useRef(null)
   const previewRef = useRef(null)
   const fileInputRef = useRef(null)
@@ -524,12 +563,15 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     const lineIndex = before.split('\n').length - 1
     ta.focus()
     ta.selectionStart = ta.selectionEnd = offset
+    skipScrollRef.current = true
     ta.scrollTop = Math.max(0, lineIndex * LINE_HEIGHT - 40)
     setCurrentHeading(index)
+    setTimeout(() => { skipScrollRef.current = false }, 100)
   }
 
   function onScroll() {
     syncOverlayScroll()
+    if (skipScrollRef.current) return
     const ta = taRef.current
     if (!ta) return
     const lineIndex = Math.floor(ta.scrollTop / LINE_HEIGHT)
@@ -580,6 +622,35 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
       }
     }
 
+    // Enter in table: insert new row with same column count
+    if (e.key === 'Enter' && mode === 'edit' && !linkPopup) {
+      const ta = taRef.current
+      if (ta) {
+        const { selectionStart: pos, value } = ta
+        const ls = value.lastIndexOf('\n', pos - 1) + 1
+        const le = value.indexOf('\n', pos)
+        const line = value.slice(ls, le === -1 ? value.length : le)
+        const isSep = /^\s*\|[\s\-:|]+\|\s*$/.test(line)
+        if (line.includes('|') && !isSep) {
+          const pipes = []
+          for (let i = 0; i < line.length; i++) if (line[i] === '|') pipes.push(i)
+          if (pipes.length >= 2) {
+            e.preventDefault()
+            const cols = pipes.length - 1
+            const insertAt = le === -1 ? value.length : le
+            const newRow = '\n| ' + Array(cols).fill('Cell').join(' | ') + ' |'
+            const nv = value.slice(0, insertAt) + newRow + value.slice(insertAt)
+            const newPos = insertAt + 3
+            pushHistory(nv, newPos)
+            onBodyChange(nv)
+            setDirty(true)
+            setTimeout(() => { ta.selectionStart = ta.selectionEnd = newPos }, 0)
+            return
+          }
+        }
+      }
+    }
+
     // Ctrl+S save
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
       e.preventDefault()
@@ -606,36 +677,115 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
       return
     }
 
-    // Tab indent/outdent
+    // Tab: table cell navigation or indent/outdent
     if (e.key === 'Tab' && mode === 'edit') {
       e.preventDefault()
       const ta = taRef.current
       if (!ta) return
       const { selectionStart: start, selectionEnd: end, value } = ta
 
+      // Try table cell navigation first
+      const lineStart = value.lastIndexOf('\n', start - 1) + 1
+      const lineEnd = value.indexOf('\n', start)
+      const line = value.slice(lineStart, lineEnd === -1 ? value.length : lineEnd)
+      const isSep = /^\s*\|[\s\-:|]+\|\s*$/.test(line)
+
+      if (line.includes('|') && !isSep && start === end) {
+        // Cursor not in a selection: table navigation
+        const pipes = []
+        for (let i = 0; i < line.length; i++) if (line[i] === '|') pipes.push(i)
+        if (pipes.length >= 2) {
+          const cp = start - lineStart
+          if (e.shiftKey) {
+            // Previous cell
+            let pp = -1
+            for (let i = pipes.length - 1; i >= 0; i--) {
+              if (pipes[i] < cp - 1) { pp = pipes[i]; break }
+            }
+            if (pp >= 0) {
+              const after = line.slice(pp + 1)
+              const sp = after.match(/^\s+/)
+              ta.selectionStart = ta.selectionEnd = lineStart + pp + 1 + (sp ? sp[0].length : 0)
+              return
+            }
+            // First cell -> previous row last cell
+            const prevEnd = lineStart - 1
+            const prevStart = value.lastIndexOf('\n', prevEnd - 1) + 1
+            const prev = value.slice(prevStart, prevEnd)
+            if (prev.includes('|') && !/^\s*\|[\s\-:|]+\|\s*$/.test(prev)) {
+              const pp2 = []
+              for (let i = 0; i < prev.length; i++) if (prev[i] === '|') pp2.push(i)
+              if (pp2.length >= 2) {
+                const lk = pp2[pp2.length - 2]
+                const after2 = prev.slice(lk + 1)
+                const sp2 = after2.match(/^\s+/)
+                ta.selectionStart = ta.selectionEnd = prevStart + lk + 1 + (sp2 ? sp2[0].length : 0)
+                return
+              }
+            }
+          } else {
+            // Next cell
+            let np = -1
+            for (let i = 0; i < pipes.length; i++) {
+              if (pipes[i] > cp) { np = pipes[i]; break }
+            }
+            if (np >= 0) {
+              const after = line.slice(np + 1)
+              const sp = after.match(/^\s+/)
+              ta.selectionStart = ta.selectionEnd = lineStart + np + 1 + (sp ? sp[0].length : 0)
+              return
+            }
+            // Last cell -> next row first cell or new row
+            const nxStart = (lineEnd === -1 ? value.length : lineEnd) + 1
+            const nxEnd = value.indexOf('\n', nxStart)
+            const nx = value.slice(nxStart, nxEnd === -1 ? value.length : nxEnd)
+            if (nx.includes('|') && !/^\s*\|[\s\-:|]+\|\s*$/.test(nx)) {
+              const np2 = []
+              for (let i = 0; i < nx.length; i++) if (nx[i] === '|') np2.push(i)
+              if (np2.length >= 2) {
+                const af = nx.slice(np2[0] + 1)
+                const sp2 = af.match(/^\s+/)
+                ta.selectionStart = ta.selectionEnd = nxStart + np2[0] + 1 + (sp2 ? sp2[0].length : 0)
+                return
+              }
+            }
+            // Insert new row with same column count
+            const cols = pipes.length - 1
+            const insertAt = lineEnd === -1 ? value.length : lineEnd
+            const newRow = '\n| ' + Array(cols).fill('Cell').join(' | ') + ' |'
+            const nv = value.slice(0, insertAt) + newRow + value.slice(insertAt)
+            const newPos = insertAt + 3
+            pushHistory(nv, newPos)
+            onBodyChange(nv)
+            setDirty(true)
+            setTimeout(() => { ta.selectionStart = ta.selectionEnd = newPos }, 0)
+            return
+          }
+        }
+      }
+
+      // Not in table (or selection): indent/outdent
       if (e.shiftKey) {
-        // Outdent: remove up to 2 leading spaces from selected lines
         const before = value.slice(0, start)
-        const lineStart = before.lastIndexOf('\n') + 1
-        const selected = value.slice(lineStart, end)
+        const ls = before.lastIndexOf('\n') + 1
+        const selected = value.slice(ls, end)
         const outdented = selected.replace(/^ {1,2}/gm, '')
         const diff = selected.length - outdented.length
-        const newVal = value.slice(0, lineStart) + outdented + value.slice(end)
-        pushHistory(newVal, start - Math.min(2, start - lineStart))
+        const newVal = value.slice(0, ls) + outdented + value.slice(end)
+        pushHistory(newVal, start - Math.min(2, start - ls))
         onBodyChange(newVal)
         setDirty(true)
         setTimeout(() => {
-          ta.selectionStart = start - Math.min(2, start - lineStart)
+          ta.selectionStart = start - Math.min(2, start - ls)
           ta.selectionEnd = end - diff
         }, 0)
       } else {
-        // Indent: add 2 spaces to selected lines
         const before = value.slice(0, start)
-        const lineStart = before.lastIndexOf('\n') + 1
-        const selected = value.slice(lineStart, end)
+        const ls = before.lastIndexOf('\n') + 1
+        const selected = value.slice(ls, end)
         const indented = '  ' + selected.replace(/\n/g, '\n  ')
         const diff = indented.length - selected.length
-        const newVal = value.slice(0, lineStart) + indented + value.slice(end)
+        const newVal = value.slice(0, ls) + indented + value.slice(end)
         pushHistory(newVal, start + 2)
         onBodyChange(newVal)
         setDirty(true)
@@ -1036,10 +1186,14 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
             <div style={{ ...typography.sectionLabel, color: colors.textMuted, marginBottom: 6 }}>Outline</div>
             {headings.map((h, i) => (
               <button key={i} type="button" onClick={() => jumpTo(h.offset, i)}
-                style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none',
+                style={{ display: 'block', width: '100%', textAlign: 'left', background:
+                  i === currentHeading ? 'rgba(180, 140, 80, 0.12)' : 'none',
                   border: 'none', color: i === currentHeading ? colors.accent : colors.textMuted,
-                  fontSize: 12, padding: '3px 6px', cursor: 'pointer',
-                  paddingLeft: 6 + (h.level - 1) * 10 }}>{h.text}</button>
+                  fontSize: h.level === 1 ? 13 : h.level === 2 ? 12 : 11,
+                  fontWeight: h.level === 1 ? 600 : h.level === 2 ? 500 : 400,
+                  padding: '3px 6px', cursor: 'pointer',
+                  paddingLeft: 6 + (h.level - 1) * 10,
+                  textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{h.text}</button>
             ))}
           </div>
         )}
