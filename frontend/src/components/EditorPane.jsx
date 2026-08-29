@@ -581,27 +581,27 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     commitEdit(insertText(ta, table, at, at))
   }
 
-  /** Pick an image file, import it into the vault, insert `![alt](...)
-   *  at the caret. The md stays portable: the src is vault-relative
-   *  (`.glean/assets/...`), never an absolute path or base64 blob. */
-  async function insertImage(file) {
+  /** Shared: import a File into the vault, insert `![alt](...)` at the
+   *  caret (or where the drop landed). The md stays portable: the src
+   *  is vault-relative (`.glean/assets/...`), never an absolute path
+   *  or base64 blob. Returns true when the image landed. */
+  async function insertImageForFile(file, dropPos) {
     const ta = taRef.current
-    if (!ta || !window.go?.main?.App?.ImportImage || !file) return
+    if (!ta || !window.go?.main?.App?.ImportImage || !file) return false
     const dataURI = await new Promise(resolve => {
       const r = new FileReader()
       r.onload = () => resolve(r.result || '')
       r.onerror = () => resolve('')
       r.readAsDataURL(file)
     })
-    if (!dataURI) return
+    if (!dataURI) return false
     let rel
     try {
       rel = await window.go.main.App.ImportImage(file.name, dataURI)
     } catch (err) {
       if (window.console) console.error('ImportImage failed:', err)
-      return
+      return false
     }
-    const { selectionStart: s, selectionEnd: e, value } = ta
     const alt = (file.name || 'image').replace(/\.[^.]+$/, '').replace(/["\[\]]/g, '').trim() || 'image'
     // Relative to this note's folder: src is `.glean/assets/...` when
     // the note is at vault root, or `../.glean/assets/...` relative to
@@ -611,12 +611,58 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     const src = prefix + rel.replace(/^\/\.glean\//, '.glean/')
     const escaped = src.replace(/[()\s]/g, c => c === ' ' ? '%20' : ('\\' + c))
     const md = `![${alt}](${escaped})`
+    const s = dropPos != null ? dropPos : ta.selectionStart
+    const e = dropPos != null ? dropPos : ta.selectionEnd
+    const value = ta.value
     handleChange(value.slice(0, s) + md + value.slice(e))
     setDirty(true)
     setTimeout(() => {
       ta.selectionStart = ta.selectionEnd = s + md.length
       ta.focus()
     }, 0)
+    return true
+  }
+
+  /** Handle a dropped file / pasted blob list: import the first image. */
+  async function insertDroppedFiles(files, dropPos) {
+    const img = Array.from(files || []).find(f => f && f.type && f.type.startsWith('image/'))
+    if (img) await insertImageForFile(img, dropPos)
+  }
+
+  /** Paste handler: if the clipboard holds an image, import it; else
+   *  let the native text paste run. */
+  async function handleTextareaPaste(e) {
+    const items = (e.clipboardData && e.clipboardData.items) || []
+    const img = Array.from(items).find(it => it.kind === 'file' && it.type && it.type.startsWith('image/'))
+    if (img) {
+      e.preventDefault()
+      const file = img.getAsFile()
+      if (file) await insertImageForFile(file)
+      return
+    }
+    // No image: fall through to the browser's default text paste.
+  }
+
+  /** Drop handler: import the first image file at the drop location. */
+  function handleTextareaDrop(e) {
+    const files = e.dataTransfer && e.dataTransfer.files
+    if (!files || files.length === 0) return
+    e.preventDefault()
+    const ta = taRef.current
+    if (!ta) return
+    // Place the caret at the drop point so the image lands there.
+    const rect = ta.getBoundingClientRect()
+    let start = ta.selectionStart
+    try {
+      if (document.caretPositionFromPoint) {
+        const cp = document.caretPositionFromPoint(e.clientX, e.clientY)
+        if (cp && cp.offsetNode === ta) start = cp.offset
+      } else if (document.caretRangeFromPoint) {
+        const range = document.caretRangeFromPoint(e.clientX, e.clientY)
+        if (range) start = range.startOffset
+      }
+    } catch { /* keep caret */ }
+    insertDroppedFiles(files, start)
   }
 
   function insertCode() {
@@ -677,8 +723,12 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     { id: 'sep1', type: 'separator' },
     { id: 'bold', label: 'Bold', icon: 'bold', shortcut: 'Ctrl+B', onSelect: () => applyWrap('**', '**') },
     { id: 'italic', label: 'Italic', icon: 'italic', shortcut: 'Ctrl+I', onSelect: () => applyWrap('*', '*') },
-    { id: 'link', label: 'Insert link', icon: 'link', shortcut: 'Ctrl+K', onSelect: insertLink },
-    { id: 'table', label: 'Insert table', icon: 'table', onSelect: insertTable },
+    { id: 'insert', label: 'Insert', icon: 'plus', submenu: [
+      { id: 'ins-link', label: 'Link', icon: 'link', shortcut: 'Ctrl+K', onSelect: insertLink },
+      { id: 'ins-table', label: 'Table', icon: 'table', onSelect: insertTable },
+      { id: 'ins-image', label: 'Image', icon: 'image', shortcut: 'Ctrl+Shift+I',
+        onSelect: () => fileInputRef.current?.click() },
+    ] },
     { id: 'code', label: 'Code block', icon: 'code', onSelect: insertCode },
     { id: 'quote', label: 'Blockquote', icon: 'quote', onSelect: insertQuote },
     { id: 'sep2', type: 'separator' },
@@ -794,7 +844,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
           style={{ display: 'none' }}
           onChange={(e) => {
             const f = e.target.files && e.target.files[0]
-            if (f) insertImage(f)
+            if (f) insertImageForFile(f)
             e.target.value = ''
           }} />
 
@@ -871,6 +921,8 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                 onClick={updateCursor}
                 onKeyUp={updateCursor}
                 onBlur={() => setSelActive(false)}
+                onPaste={handleTextareaPaste}
+                onDrop={handleTextareaDrop}
                 placeholder="Write, the night holds what you seek."
                 style={{ width: '100%', height: '100%', resize: 'none', outline: 'none',
                   background: 'transparent', border: 'none',
@@ -933,6 +985,8 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                 onClick={updateCursor}
                 onKeyUp={updateCursor}
                 onBlur={() => setSelActive(false)}
+                onPaste={handleTextareaPaste}
+                onDrop={handleTextareaDrop}
                 placeholder="Write, the night holds what you seek."
                 style={{ width: '100%', height: '100%', resize: 'none', outline: 'none',
                   background: 'transparent', border: 'none', padding: 0,
