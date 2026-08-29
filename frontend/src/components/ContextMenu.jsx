@@ -31,7 +31,9 @@ export default function ContextMenu({ items, onSelect, width = 220, triggerStyle
   const [pos, setPos] = useState(null)
   const [shown, setShown] = useState(false)
   const [active, setActive] = useState(-1)
+  const [openSubmenu, setOpenSubmenu] = useState(null) // id of the item whose nested menu is open
   const menuRef = useRef(null)
+  const nestedRef = useRef(null)
   const itemRefs = useRef([])
   const listRef = useRef(items)
   listRef.current = items
@@ -54,6 +56,7 @@ export default function ContextMenu({ items, onSelect, width = 220, triggerStyle
     setPos(null)
     setShown(false)
     setActive(-1)
+    setOpenSubmenu(null)
   }, [])
 
   const openAt = useCallback((x, y) => {
@@ -74,6 +77,12 @@ export default function ContextMenu({ items, onSelect, width = 220, triggerStyle
   const choose = useCallback((index) => {
     const it = listRef.current[index]
     if (!it || it.type === 'separator' || it.disabled) return
+    // A submenu parent opens its nested menu instead of closing the whole
+    // menu (clicking the parent shouldn't dismiss everything).
+    if (it.submenu) {
+      setOpenSubmenu(it.id)
+      return
+    }
     close()
     if (it.onSelect) it.onSelect(it.id)
     if (emitRef.current) emitRef.current(it.id)
@@ -123,7 +132,11 @@ export default function ContextMenu({ items, onSelect, width = 220, triggerStyle
   // Close on outside pointer down, scroll, resize, blur, or Escape.
   useEffect(() => {
     if (!pos) return
-    const inside = (t) => menuRef.current && menuRef.current.contains(t)
+    // The nested submenu renders in its own portal; treat it as part of
+    // the menu so clicking its entries never counts as an outside click.
+    const inside = (t) =>
+      (menuRef.current && menuRef.current.contains(t)) ||
+      (nestedRef.current && nestedRef.current.contains(t))
     const onDown = (e) => { if (!inside(e.target)) close() }
     const onScroll = (e) => { if (!inside(e.target)) close() }
     const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close() } }
@@ -223,6 +236,13 @@ export default function ContextMenu({ items, onSelect, width = 220, triggerStyle
               disabled={it.disabled}
               ref={(n) => { itemRefs.current[index] = n }}
               onPointerMove={() => { if (active !== index && !it.disabled) setActive(index) }}
+              onMouseEnter={() => {
+                if (it.disabled) return
+                // Hovering a submenu parent opens it; hovering any other
+                // item closes the open submenu so it never lingers.
+                if (it.submenu) setOpenSubmenu(it.id)
+                else setOpenSubmenu(null)
+              }}
               onClick={() => choose(index)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 8, width: '100%', height: ITEM_H,
@@ -255,11 +275,126 @@ export default function ContextMenu({ items, onSelect, width = 220, triggerStyle
                   {it.shortcut}
                 </span>
               ) : null}
+              {it.submenu ? (
+                <span style={{ fontSize: 11, color: colors.textDim, flexShrink: 0 }}>›</span>
+              ) : null}
             </button>
           ))}
+          {openSubmenu && (() => {
+            const idx = items.findIndex(it => it.id === openSubmenu)
+            const parent = items[idx]
+            if (!parent || !parent.submenu) return null
+            return (
+              <NestedMenu
+                parent={parent}
+                anchor={itemRefs.current[idx]}
+                onClose={close}
+                innerRef={nestedRef}
+              />
+            )
+          })()}
         </div>,
         document.body
       )}
     </>
+  )
+}
+
+
+/** A small popover listing a parent menu item's submenu entries.
+ *  Renders beside the parent item and closes when the user clicks an
+ *  entry or anywhere outside. */
+function NestedMenu({ parent, anchor, onClose, innerRef }) {
+  const ref = useRef(null)
+  // Expose this popover's root node so the parent menu can treat it as
+  // inside the menu (clicks on nested entries must not close everything).
+  useEffect(() => {
+    if (innerRef) innerRef.current = ref.current
+  }, [innerRef])
+  const [shown, setShown] = useState(false)
+  const [pos, setPos] = useState(null)
+
+  useEffect(() => {
+    if (!anchor) return
+    const r = anchor.getBoundingClientRect()
+    const items = parent.submenu || []
+    const h = Math.min(items.length * ITEM_H + PAD * 2, document.documentElement.clientHeight - 16)
+    let left = r.right + 6
+    if (left + 200 > document.documentElement.clientWidth - 8) left = r.left - 206
+    let top = r.top
+    if (top + h > document.documentElement.clientHeight - 8) top = Math.max(8, document.documentElement.clientHeight - h - 8)
+    setPos({ left, top, width: 200, height: h })
+    // Mount invisible, flip visible next frame so the transition plays.
+    requestAnimationFrame(() => requestAnimationFrame(() => setShown(true)))
+  }, [anchor, parent])
+
+  useEffect(() => {
+    if (!pos) return
+    const onDown = (e) => {
+      if (!ref.current || !ref.current.contains(e.target)) onClose()
+    }
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); onClose() }
+    }
+    document.addEventListener('pointerdown', onDown, true)
+    document.addEventListener('keydown', onKey, true)
+    return () => {
+      document.removeEventListener('pointerdown', onDown, true)
+      document.removeEventListener('keydown', onKey, true)
+    }
+  }, [pos, onClose])
+
+  return createPortal(
+    <div ref={ref} role="menu" tabIndex={-1} style={{
+      position: 'fixed', left: pos?.left, top: pos?.top, width: pos?.width || 200,
+      maxHeight: pos?.height, overflowY: 'auto', zIndex: 1001,
+      background: colors.bgElevated, border: `1px solid ${colors.borderStrong}`,
+      borderRadius: 10, padding: PAD, boxShadow: colors.shadow,
+      opacity: shown ? 1 : 0,
+      transform: shown ? 'scale(1)' : 'scale(0.96)',
+      transition: 'opacity 0.12s ease, transform 0.16s cubic-bezier(0.22, 1, 0.36, 1)',
+      outline: 'none',
+    }}>
+      {(parent.submenu || []).map((it, i) => (
+        <NestedItem key={it.id} it={it} index={i} onClose={onClose} />
+      ))}
+    </div>,
+    document.body
+  )
+}
+
+/** One entry in a nested submenu, with hover highlight like the parent
+ *  menu items so users can see it's reachable. */
+function NestedItem({ it, index, onClose }) {
+  const [hover, setHover] = useState(false)
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      tabIndex={-1}
+      disabled={it.disabled}
+      onPointerEnter={() => { if (!it.disabled) setHover(true) }}
+      onPointerLeave={() => setHover(false)}
+      onClick={() => { if (it.onSelect) it.onSelect(it.id); onClose() }}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 8, width: '100%', height: ITEM_H,
+        padding: '0 10px', borderRadius: 7, border: 'none', cursor: 'default',
+        background: hover ? 'rgba(180, 140, 80, 0.14)' : 'transparent',
+        color: it.disabled ? colors.textDim : colors.text,
+        fontSize: 12.5, textAlign: 'left', fontFamily: 'inherit',
+      }}
+    >
+      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 16, flexShrink: 0, color: it.disabled ? colors.textDim : colors.textMuted }}>
+        {it.icon ? <Icon name={it.icon} size={14} /> : null}
+      </span>
+      <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {it.label}
+      </span>
+      {it.shortcut ? (
+        <span style={{ fontSize: 10.5, color: colors.textDim, fontFamily: 'Consolas, monospace', flexShrink: 0 }}>
+          {it.shortcut}
+        </span>
+      ) : null}
+    </button>
   )
 }
