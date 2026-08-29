@@ -146,7 +146,7 @@ export default function ManageSky({ currentSky, onSwitch, onClose }) {
         }}>
           <StarIcon species="warm" size="lg" />
           <div style={{ fontSize: 20, fontWeight: 600, color: colors.text }}>glean</div>
-          <div style={{ fontSize: 12, color: colors.textMuted }}>v1.4.0</div>
+          <div style={{ fontSize: 12, color: colors.textMuted }}>v1.5.0</div>
 
           <div style={{ width: '100%', maxWidth: 300, display: 'flex', flexDirection: 'column', gap: 8, marginTop: space[2] }}>
             {/* Open existing folder */}
