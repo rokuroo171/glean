@@ -384,7 +384,15 @@ const components = {
       >{children}</a>
     )
   },
-  img: ({ src, alt, ...props }) => <img src={src} alt={alt} style={s.img} {...props} />,
+  img: ({ src, alt, ...props }) => {
+    // Vault images are stored under `.glean/assets` and referenced with
+    // vault-relative paths in the md. Rewrite them to the Wails
+    // AssetServer fallback route so they render in edit/split/preview.
+    const resolved = src && /^\.{0,2}\/?(\.glean\/assets\/)/.test(src)
+      ? '/@assets/' + src.replace(/^\.{0,2}\//, '')
+      : src
+    return <img src={resolved} alt={alt} style={s.img} {...props} />
+  },
 
   // Code
   code: ({ className, children, ...props }) => {
