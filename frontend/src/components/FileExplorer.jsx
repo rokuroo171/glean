@@ -250,11 +250,13 @@ function NoteRow({ note, depth, activeId, onOpenNote, renaming, onRename, onStar
   const moveList = typeof moveItems === 'function' ? (moveItems(note) || []) : []
   if (moveList.length > 0) {
     items.push({ id: 'sep-move', type: 'separator' })
-    items.push(...moveList.map((m, i) => ({
-      ...m,
-      id: `move-${i}`,
-      label: `Move to ${m.label}`,
-    })))
+    items.push({
+      id: 'move', label: 'Move to', icon: 'folder',
+      submenu: moveList.map((m, i) => ({
+        id: `move-${i}`, label: m.label, icon: 'folder',
+        onSelect: m.onSelect,
+      })),
+    })
   }
   items.push({ id: 'sep', type: 'separator' })
   items.push({ id: 'delete', label: 'Delete', icon: 'trash',
