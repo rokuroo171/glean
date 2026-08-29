@@ -151,6 +151,10 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const previewRef = useRef(null)
   const fileInputRef = useRef(null)
 
+  // --- Wikilink autocomplete ---
+  const [linkPopup, setLinkPopup] = useState(null) // { query, index, pos: {top, left} }
+  const linkPopupRef = useRef(null)
+
   // --- Animated text (Issue #2): the visible text IS the animated layer ---
   // The textarea text is transparent; a text layer on top renders the real
   // characters. A freshly typed character animates in place (drop from top).
@@ -452,6 +456,65 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     debounceRef.current = setTimeout(() => {
       flushRef.current()
     }, AUTOSAVE_DELAY)
+    // Wikilink autocomplete: detect [[query near cursor
+    updateLinkPopup(newBody, cursor)
+  }
+
+  /** Detect whether the cursor sits inside a [[ wikilink and show/
+   *  update the autocomplete popup accordingly. */
+  function updateLinkPopup(text, cursor) {
+    if (!noteNames || Object.keys(noteNames).length === 0) {
+      setLinkPopup(null)
+      return
+    }
+    // Walk backwards from cursor to find [[
+    const before = text.slice(0, cursor)
+    const openBracket = before.lastIndexOf('[[')
+    if (openBracket < 0) { setLinkPopup(null); return }
+    // Check there's no ]] between [[ and cursor
+    const afterOpen = before.slice(openBracket + 2)
+    if (afterOpen.includes(']]')) { setLinkPopup(null); return }
+    // Check we're still on the same line (no newline between [[ and cursor)
+    if (afterOpen.includes('\n')) { setLinkPopup(null); return }
+    const query = afterOpen.toLowerCase()
+    const matches = Object.keys(noteNames)
+      .filter(t => t.toLowerCase().includes(query) && t.toLowerCase() !== (body.slice(openBracket + 2, cursor).toLowerCase()))
+      .slice(0, 8)
+    if (matches.length === 0) { setLinkPopup(null); return }
+    // Position: approximate from cursor offset in textarea
+    const ta = taRef.current
+    if (!ta) { setLinkPopup(null); return }
+    // Use a hidden span to measure character position
+    const rect = ta.getBoundingClientRect()
+    const lines = before.split('\n')
+    const lineIdx = lines.length - 1
+    const colIdx = lines[lineIdx].length
+    const lineHeight = parseFloat(getComputedStyle(ta).lineHeight) || LINE_HEIGHT
+    const charWidth = 7.5 // approximate for monospace at editorFontSize
+    const top = rect.top + (lineIdx * lineHeight) - ta.scrollTop + lineHeight + 4
+    const left = rect.left + (colIdx * charWidth) - ta.scrollLeft + 8
+    setLinkPopup({ query, index: 0, pos: { top, left } })
+  }
+
+  /** Insert the selected wikilink at the cursor, closing the popup. */
+  function insertWikilink(title) {
+    const ta = taRef.current
+    if (!ta) return
+    const { selectionStart: cursor, value } = ta
+    const before = value.slice(0, cursor)
+    const openBracket = before.lastIndexOf('[[')
+    if (openBracket < 0) return
+    // Replace from [[ to cursor with [[Title]]
+    const after = value.slice(cursor)
+    const link = `[[${title}]]`
+    const newVal = value.slice(0, openBracket) + link + after
+    const newPos = openBracket + link.length
+    handleChange(newVal)
+    setLinkPopup(null)
+    setTimeout(() => {
+      ta.selectionStart = ta.selectionEnd = newPos
+      ta.focus()
+    }, 0)
   }
 
   function jumpTo(offset, index) {
@@ -492,6 +555,31 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
 
   /** Keyboard shortcuts: Ctrl+B, Ctrl+I, Ctrl+K, Tab. */
   function handleKeyDown(e) {
+    // Wikilink autocomplete keyboard navigation
+    if (linkPopup && mode === 'edit') {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setLinkPopup(prev => prev ? { ...prev, index: Math.min(prev.index + 1, (Object.keys(noteNames).filter(t => t.toLowerCase().includes(prev.query)).slice(0, 8).length - 1)) } : prev)
+        return
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setLinkPopup(prev => prev ? { ...prev, index: Math.max(prev.index - 1, 0) } : prev)
+        return
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        const matches = Object.keys(noteNames).filter(t => t.toLowerCase().includes(linkPopup.query)).slice(0, 8)
+        if (matches[linkPopup.index]) insertWikilink(matches[linkPopup.index])
+        return
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setLinkPopup(null)
+        return
+      }
+    }
+
     // Ctrl+S save
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
       e.preventDefault()
@@ -988,6 +1076,34 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                   transition: 'box-shadow 0.6s ease-out',
                   boxShadow: typing ? `inset 0 0 30px rgba(180, 140, 80, 0.06)` : 'none' }}
               />
+              {linkPopup && (() => {
+                const matches = Object.keys(noteNames)
+                  .filter(t => t.toLowerCase().includes(linkPopup.query))
+                  .slice(0, 8)
+                if (matches.length === 0) return null
+                return (
+                  <div ref={linkPopupRef}
+                    onMouseDown={(e) => e.preventDefault()}
+                    style={{ position: 'fixed', left: linkPopup.pos.left, top: linkPopup.pos.top,
+                      zIndex: 50, minWidth: 180, maxHeight: 200, overflowY: 'auto',
+                      background: colors.bgElevated, border: `1px solid ${colors.borderStrong}`,
+                      borderRadius: 8, boxShadow: colors.shadow, padding: 4 }}>
+                    {matches.map((title, i) => (
+                      <button key={title} type="button"
+                        onClick={() => insertWikilink(title)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%',
+                          padding: '5px 10px', borderRadius: 5, border: 'none', cursor: 'pointer',
+                          background: i === linkPopup.index ? 'rgba(180, 140, 80, 0.14)' : 'transparent',
+                          color: colors.text, fontSize: 12.5, textAlign: 'left', fontFamily: 'inherit' }}>
+                        <StarIcon species={noteNames[title] ? 'neutral' : 'warm'} size="sm" />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {title}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )
+              })()}
               {animatedEnabled && overlayGeo && (
                 <div aria-hidden="true"
                   style={{ position: 'absolute', left: overlayGeo.left, top: overlayGeo.top,
@@ -1051,6 +1167,34 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                   fontFamily: editorFont, fontSize: editorFontSize, lineHeight: editorLineHeight,
                   overflowWrap: 'break-word' }}
               />
+              {linkPopup && (() => {
+                const matches = Object.keys(noteNames)
+                  .filter(t => t.toLowerCase().includes(linkPopup.query))
+                  .slice(0, 8)
+                if (matches.length === 0) return null
+                return (
+                  <div ref={linkPopupRef}
+                    onMouseDown={(e) => e.preventDefault()}
+                    style={{ position: 'fixed', left: linkPopup.pos.left, top: linkPopup.pos.top,
+                      zIndex: 50, minWidth: 180, maxHeight: 200, overflowY: 'auto',
+                      background: colors.bgElevated, border: `1px solid ${colors.borderStrong}`,
+                      borderRadius: 8, boxShadow: colors.shadow, padding: 4 }}>
+                    {matches.map((title, i) => (
+                      <button key={title} type="button"
+                        onClick={() => insertWikilink(title)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%',
+                          padding: '5px 10px', borderRadius: 5, border: 'none', cursor: 'pointer',
+                          background: i === linkPopup.index ? 'rgba(180, 140, 80, 0.14)' : 'transparent',
+                          color: colors.text, fontSize: 12.5, textAlign: 'left', fontFamily: 'inherit' }}>
+                        <StarIcon species={noteNames[title] ? 'neutral' : 'warm'} size="sm" />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {title}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )
+              })()}
               {animatedEnabled && overlayGeo && (
                 <div aria-hidden="true"
                   style={{ position: 'absolute', left: overlayGeo.left, top: overlayGeo.top,
