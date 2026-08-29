@@ -98,14 +98,17 @@ func FileNameFor(skyDir, folder, title string) (string, error) {
 	return "", fmt.Errorf("too many duplicates for title: %s", stem)
 }
 
-// WriteNoteFile writes a note body atomically.
+// WriteNoteFile writes a note body in-place, preserving the existing
+// file handle so the Created timestamp is not reset on Windows (where
+// os.Rename over an existing file creates a new handle).
 func WriteNoteFile(path, body string) error {
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, []byte(body), 0o644); err != nil {
-		return fmt.Errorf("write note file: %w", err)
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0o644)
+	if err != nil {
+		return fmt.Errorf("open note file: %w", err)
 	}
-	if err := os.Rename(tmp, path); err != nil {
-		return fmt.Errorf("rename note file: %w", err)
+	defer f.Close()
+	if _, err := f.WriteString(body); err != nil {
+		return fmt.Errorf("write note file: %w", err)
 	}
 	return nil
 }
