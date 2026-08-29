@@ -93,6 +93,37 @@ export default function Workspace({
     return noteTabs
   }, [openIds, notes, dirty, nightOpen])
 
+  // Global Tab key: switch tabs when no textarea/input is focused
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key !== 'Tab') return
+      const ae = document.activeElement
+      if (ae && (ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT')) return
+      e.preventDefault()
+      const allIds = tabs.map(t => t.id)
+      const idx = allIds.indexOf(activeId)
+      if (idx === -1) return
+      const next = e.shiftKey
+        ? (idx - 1 + allIds.length) % allIds.length
+        : (idx + 1) % allIds.length
+      const nid = allIds[next]
+      setPseudoTab(null)
+      if (nid === '__night__') {
+        if (!nightOpen) setNightOpen(true)
+        setActiveId('__night__')
+      } else {
+        setActiveId(nid)
+        if (!openIds.includes(nid)) {
+          const extended = [...openIds, nid]
+          setOpenIds(extended)
+          onOpenNote(nid)
+        }
+      }
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [tabs, activeId, openIds, nightOpen])
+
   function openNote(id) {
     setPseudoTab(null)
     if (openIds.includes(id)) {
