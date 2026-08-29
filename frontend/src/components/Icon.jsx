@@ -3,7 +3,8 @@ import {
   Folder, FolderOpen, LayoutList, Maximize, Moon, Palette,
   PanelRight, Pencil, Plus, RefreshCw, Search, Settings, Sparkle, Sparkles,
   Trash, X, Zap, FileText, Scissors, Copy, ClipboardPaste,
-  Bold, Italic, Link, Table, Code, Quote, Undo2, Redo2, ImageIcon,
+  Bold, Italic, Strikethrough, Link, Table, Code, Quote, List, ListOrdered,
+  Undo2, Redo2, ImageIcon, Braces,
 } from 'lucide-react'
 
 const iconMap = {
@@ -44,6 +45,10 @@ const iconMap = {
   'undo': Undo2,
   'redo': Redo2,
   'image': ImageIcon,
+  'strikethrough': Strikethrough,
+  'list': List,
+  'list-ordered': ListOrdered,
+  'braces': Braces,
 }
 
 export default function Icon({ name, size = 16, className, style, ...rest }) {

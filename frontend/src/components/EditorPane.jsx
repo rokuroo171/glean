@@ -1132,6 +1132,45 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
           </div>
         )}
 
+        {/* Formatting toolbar */}
+        {(mode === 'edit' || mode === 'split') && (
+          <div style={{ display: 'flex', border: `1px solid ${colors.border}`, borderRadius: 6,
+            overflow: 'hidden', flexShrink: 0 }}>
+            {[
+              { icon: 'bold', tip: 'Bold (Ctrl+B)', wrap: ['**', '**'] },
+              { icon: 'italic', tip: 'Italic (Ctrl+I)', wrap: ['*', '*'] },
+              { icon: 'strikethrough', tip: 'Strikethrough', wrap: ['~~', '~~'] },
+              { icon: 'code', tip: 'Inline code', wrap: ['`', '`'] },
+              { icon: 'quote', tip: 'Blockquote', line: '> ' },
+              { icon: 'list', tip: 'Bullet list', line: '- ' },
+              { icon: 'braces', tip: 'Code fence', fence: true },
+            ].map(btn => (
+              <button key={btn.icon} type="button" data-tip={btn.tip}
+                onClick={() => {
+                  const ta = taRef.current
+                  if (!ta) return
+                  if (btn.fence) {
+                    const pos = ta.selectionStart
+                    const v = ta.value
+                    const before = v.slice(0, pos)
+                    const after = v.slice(pos)
+                    const nv = before + '\n```\n\n```\n' + after
+                    commitEdit({ value: nv, start: pos + 4, end: pos + 4 })
+                  } else if (btn.line) {
+                    const result = wrapSelection(ta, btn.line, '')
+                    commitEdit(result)
+                  } else {
+                    const result = wrapSelection(ta, btn.wrap[0], btn.wrap[1])
+                    commitEdit(result)
+                  }
+                }}
+                style={toolbarBtn}>
+                <Icon name={btn.icon} size={14} />
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Hidden image picker for Insert image */}
         <input ref={fileInputRef} type="file" accept="image/*"
           style={{ display: 'none' }}
