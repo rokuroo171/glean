@@ -91,7 +91,8 @@ function InlineInput({ isFolder, placeholder, initialValue, onSubmit, onCancel }
 function FolderNode({ name, node, depth, activeId, sort, collapsed, toggleFolder,
   onOpenNote, creating, setCreating, onCreateFile, onCreateFolder, parentPath,
   renaming, onRename, onStartRename, onDelete, moveItems,
-  folderRenaming, setFolderRenaming, onRenameFolder, onDeleteFolder, onDropNote }) {
+  folderRenaming, setFolderRenaming, onRenameFolder, onDeleteFolder, onDropNote,
+  onDragOverNote, onDragLeaveNote, dropTarget }) {
   const fullPath = parentPath ? `${parentPath}/${name}` : name
   const [dropHover, setDropHover] = useState(false)
   const isCollapsed = collapsed[fullPath]
@@ -128,8 +129,9 @@ function FolderNode({ name, node, depth, activeId, sort, collapsed, toggleFolder
       ) : (
       <div style={{ display: 'flex', alignItems: 'center', overflow: 'hidden',
         background: dropHover ? 'rgba(180, 140, 80, 0.12)' : 'transparent',
+        border: dropHover ? `1px solid ${colors.accent}` : '1px solid transparent',
         borderRadius: 4, margin: '0 4px',
-        transition: 'background 120ms ease-out' }}
+        transition: 'background 120ms ease-out, border 120ms ease-out' }}
         className="folder-row"
         onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
         onDragEnter={(e) => { e.preventDefault(); setDropHover(true) }}
@@ -137,6 +139,7 @@ function FolderNode({ name, node, depth, activeId, sort, collapsed, toggleFolder
         onDrop={(e) => {
           e.preventDefault()
           setDropHover(false)
+          setDropTarget(null)
           const noteId = e.dataTransfer.getData('text/plain')
           if (noteId && onDropNote) onDropNote(noteId, fullPath)
         }}
@@ -187,7 +190,9 @@ function FolderNode({ name, node, depth, activeId, sort, collapsed, toggleFolder
             <NoteRow key={note.id} note={note} depth={depth + 1} activeId={activeId}
               onOpenNote={onOpenNote} renaming={renaming} onRename={onRename}
               onStartRename={onStartRename} onDelete={onDelete}
-              moveItems={moveItems} onDropNote={onDropNote} />
+              moveItems={moveItems} onDropNote={onDropNote}
+              onDragOverNote={onDragOverNote} onDragLeaveNote={onDragLeaveNote}
+              dropTarget={dropTarget} />
           ))}
 
           {creating && creating.folder === fullPath && creating.type === 'file' && (
@@ -227,11 +232,13 @@ function FolderNode({ name, node, depth, activeId, sort, collapsed, toggleFolder
 
 // --- Note row ---
 
-function NoteRow({ note, depth, activeId, onOpenNote, renaming, onRename, onStartRename, onDelete, moveItems, onDropNote }) {
+function NoteRow({ note, depth, activeId, onOpenNote, renaming, onRename, onStartRename, onDelete, moveItems, onDropNote, onDragOverNote, onDragLeaveNote, dropTarget }) {
   const active = note.id === activeId
   const indent = depth * 12
   const isRenaming = renaming && renaming.id === note.id
   const [dragging, setDragging] = useState(false)
+  const isDropAbove = dropTarget && dropTarget.id === note.id && dropTarget.position === 'above'
+  const isDropBelow = dropTarget && dropTarget.id === note.id && dropTarget.position === 'below'
 
   const items = [
     { id: 'open', label: 'Open', icon: 'file-text', onSelect: () => onOpenNote(note.id) },
@@ -255,32 +262,63 @@ function NoteRow({ note, depth, activeId, onOpenNote, renaming, onRename, onStar
 
   return (
     <ContextMenu items={items} triggerStyle={{ display: 'contents' }}>
-    <button type="button" onClick={() => onOpenNote(note.id)}
-      draggable="true"
-      onDragStart={(e) => {
-        e.dataTransfer.setData('text/plain', note.id)
-        e.dataTransfer.effectAllowed = 'move'
-        setDragging(true)
+    <div
+      onDragOver={(e) => {
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'move'
+        if (onDragOverNote && !dragging) {
+          const rect = e.currentTarget.getBoundingClientRect()
+          const mid = rect.top + rect.height / 2
+          onDragOverNote(note.id, e.clientY < mid ? 'above' : 'below')
+        }
       }}
-      onDragEnd={() => setDragging(false)}
-      style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%',
-        padding: `4px ${8 + indent}px`,
-        background: dragging ? 'rgba(180, 140, 80, 0.12)' : active ? 'rgba(91, 159, 212, 0.08)' : 'transparent',
-        border: 'none',
-        borderLeft: active ? `2px solid ${colors.accent}` : '2px solid transparent',
-        cursor: dragging ? 'grabbing' : 'pointer', textAlign: 'left',
-        opacity: dragging ? 0.5 : 1,
-        transition: 'background 120ms ease-out, opacity 120ms ease-out' }}
-      onMouseEnter={(e) => { if (!active && !dragging) e.currentTarget.style.background = 'rgba(180, 140, 80, 0.06)' }}
-      onMouseLeave={(e) => { if (!active && !dragging) e.currentTarget.style.background = 'transparent' }}
-    >
-      <StarIcon species={note.species} size="sm" />
-      <span style={{ color: active ? colors.text : colors.textMuted, fontSize: 13,
-        flex: 1, minWidth: 40, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        fontWeight: active ? 500 : 400 }}>
-        {note.title}
-      </span>
-    </button>
+      onDragLeave={() => { if (onDragLeaveNote) onDragLeaveNote() }}
+      onDrop={(e) => {
+        e.preventDefault()
+        if (onDragLeaveNote) onDragLeaveNote()
+        const noteId = e.dataTransfer.getData('text/plain')
+        if (!noteId || noteId === note.id) return
+        const rect = e.currentTarget.getBoundingClientRect()
+        const mid = rect.top + rect.height / 2
+        const pos = e.clientY < mid ? 'above' : 'below'
+        if (onDropNote) onDropNote(noteId, note.folder || '', pos, note.id)
+      }}
+      style={{ position: 'relative' }}>
+      {isDropAbove && (
+        <div style={{ position: 'absolute', top: 0, left: 8 + indent, right: 8,
+          height: 2, background: colors.accent, borderRadius: 1, zIndex: 1 }} />
+      )}
+      <button type="button" onClick={() => onOpenNote(note.id)}
+        draggable="true"
+        onDragStart={(e) => {
+          e.dataTransfer.setData('text/plain', note.id)
+          e.dataTransfer.effectAllowed = 'move'
+          setDragging(true)
+        }}
+        onDragEnd={() => setDragging(false)}
+        style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%',
+          padding: `4px ${8 + indent}px`,
+          background: dragging ? 'rgba(180, 140, 80, 0.12)' : active ? 'rgba(91, 159, 212, 0.08)' : 'transparent',
+          border: 'none',
+          borderLeft: active ? `2px solid ${colors.accent}` : '2px solid transparent',
+          cursor: dragging ? 'grabbing' : 'pointer', textAlign: 'left',
+          opacity: dragging ? 0.5 : 1,
+          transition: 'background 120ms ease-out, opacity 120ms ease-out' }}
+        onMouseEnter={(e) => { if (!active && !dragging) e.currentTarget.style.background = 'rgba(180, 140, 80, 0.06)' }}
+        onMouseLeave={(e) => { if (!active && !dragging) e.currentTarget.style.background = 'transparent' }}
+      >
+        <StarIcon species={note.species} size="sm" />
+        <span style={{ color: active ? colors.text : colors.textMuted, fontSize: 13,
+          flex: 1, minWidth: 40, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          fontWeight: active ? 500 : 400 }}>
+          {note.title}
+        </span>
+      </button>
+      {isDropBelow && (
+        <div style={{ position: 'absolute', bottom: 0, left: 8 + indent, right: 8,
+          height: 2, background: colors.accent, borderRadius: 1, zIndex: 1 }} />
+      )}
+    </div>
     </ContextMenu>
   )
 } 
@@ -298,6 +336,7 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
   const [localFolders, setLocalFolders] = useState([])
   const [refreshing, setRefreshing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null) // folder path awaiting delete confirmation
+  const [dropTarget, setDropTarget] = useState(null) // { id, position } for insertion line
   // Prefer the folder list passed from the parent; fall back to our own scan.
   const folderList = folders || localFolders
 
@@ -382,9 +421,19 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
   /** Drag-drop: move a note into the target folder. */
   function handleDropNote(noteId, targetFolder) {
     if (!wails) return
+    setDropTarget(null)
     wails.App.MoveNote(noteId, targetFolder)
       .then(() => { if (onRefresh) onRefresh() })
       .catch(err => { if (window.alert) window.alert(String(err)) })
+  }
+
+  /** Note-level drag-over: show insertion line between notes. */
+  function handleDragOverNote(noteId, position) {
+    setDropTarget({ id: noteId, position })
+  }
+
+  function handleDragLeaveNote() {
+    setDropTarget(null)
   }
 
   function handleRename(newTitle) {
@@ -534,12 +583,21 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
             {q ? 'No matching files.' : 'No notes yet.'}
           </div>
         ) : (
-          <>
+          <div
+            onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
+            onDrop={(e) => {
+              e.preventDefault()
+              const noteId = e.dataTransfer.getData('text/plain')
+              if (noteId && handleDropNote) handleDropNote(noteId, '')
+            }}
+            style={{ minHeight: '100%' }}>
             {sortNotes(tree.notes, sort).map(note => (
               <NoteRow key={note.id} note={note} depth={0} activeId={activeId}
                 onOpenNote={onOpenNote} renaming={renaming} onRename={handleRename}
                 onStartRename={(n) => setRenaming({ id: n.id, title: n.title, folder: n.folder })}
-                onDelete={onDelete} moveItems={moveItemsFor} onDropNote={handleDropNote} />
+                onDelete={onDelete} moveItems={moveItemsFor} onDropNote={handleDropNote}
+                onDragOverNote={handleDragOverNote} onDragLeaveNote={handleDragLeaveNote}
+                dropTarget={dropTarget} />
             ))}
 
             {sortFolders(tree.folders, sort).map(name => (
@@ -554,9 +612,11 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
                 onDelete={onDelete}
                 folderRenaming={folderRenaming} setFolderRenaming={setFolderRenaming}
                 onRenameFolder={handleRenameFolder} onDeleteFolder={handleDeleteFolder}
-                moveItems={moveItemsFor} onDropNote={handleDropNote} />
+                moveItems={moveItemsFor} onDropNote={handleDropNote}
+                onDragOverNote={handleDragOverNote} onDragLeaveNote={handleDragLeaveNote}
+                dropTarget={dropTarget} />
             ))}
-          </>
+          </div>
         )}
       </div>
       </ContextMenu>
