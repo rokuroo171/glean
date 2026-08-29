@@ -290,27 +290,22 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   }
 
   // --- Undo / Redo history ---
-  const historyRef = useRef([])
+  const historyRef = useRef([]) // [{body, cursor}]
   const historyIndexRef = useRef(-1)
   const isUndoRedoRef = useRef(false)
   const [historyInfo, setHistoryInfo] = useState({ canUndo: false, canRedo: false })
 
-  // Initialise history when note changes
-  useEffect(() => {
-    historyRef.current = [body]
-    historyIndexRef.current = 0
-    isUndoRedoRef.current = false
-    setHistoryInfo({ canUndo: false, canRedo: false })
-  }, [note?.id])
+  // Debounced history: rapid typing coalesces into one entry instead
+  // of filling 200 entries in seconds.
+  const historyTimerRef = useRef(null)
+  const pendingRef = useRef({ body: '', cursor: 0 })
 
-  /** Push a new state onto the undo stack (call only for user-initiated edits). */
-  const pushHistory = useCallback((newBody) => {
-    if (isUndoRedoRef.current) return          // skip undo/redo restores
+  /** Push a snapshot onto the undo stack immediately. */
+  function pushImmediate(newBody, cursor) {
     const idx = historyIndexRef.current
     const stack = historyRef.current
-    // Truncate any redo states ahead of the cursor
     const next = stack.slice(0, idx + 1)
-    next.push(newBody)
+    next.push({ body: newBody, cursor: cursor || 0 })
     if (next.length > MAX_HISTORY) next.shift()
     historyRef.current = next
     historyIndexRef.current = next.length - 1
@@ -318,45 +313,92 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
       canUndo: next.length > 1,
       canRedo: false,
     })
+  }
+
+  /** Debounced push: waits 300ms after the last keystroke before
+   *  committing, so rapid typing produces one entry not many. */
+  const pushHistory = useCallback((newBody, cursor) => {
+    if (isUndoRedoRef.current) return
+    pendingRef.current = { body: newBody, cursor: cursor || 0 }
+    if (historyTimerRef.current) return // already waiting
+    historyTimerRef.current = setTimeout(() => {
+      historyTimerRef.current = null
+      if (isUndoRedoRef.current) return
+      pushImmediate(pendingRef.current.body, pendingRef.current.cursor)
+    }, 300)
   }, [])
 
+  /** Force-flush any pending debounced entry (called on blur/save). */
+  const flushHistory = useCallback(() => {
+    if (historyTimerRef.current) {
+      clearTimeout(historyTimerRef.current)
+      historyTimerRef.current = null
+      if (!isUndoRedoRef.current) {
+        pushImmediate(pendingRef.current.body, pendingRef.current.cursor)
+      }
+    }
+  }, [])
+
+  // Initialise history when note changes. Re-runs when body updates
+  // too, because the first body value may be stale (component mounts
+  // before the body is fetched from disk). The guard ensures we only
+  // re-init for the current note and only when no user edits exist yet.
+  const initNoteRef = useRef(null)
+  useEffect(() => {
+    if (note?.id !== initNoteRef.current) {
+      // New note: always initialize
+      initNoteRef.current = note?.id
+      historyRef.current = [{ body, cursor: 0 }]
+      historyIndexRef.current = 0
+      isUndoRedoRef.current = false
+      setHistoryInfo({ canUndo: false, canRedo: false })
+    } else if (historyRef.current.length <= 1 && historyRef.current[0]?.body !== body) {
+      // Same note, body arrived but user hasn't typed yet: re-init
+      historyRef.current = [{ body, cursor: 0 }]
+      historyIndexRef.current = 0
+      isUndoRedoRef.current = false
+      setHistoryInfo({ canUndo: false, canRedo: false })
+    }
+  }, [note?.id, body])
+
   const undo = useCallback(() => {
+    flushHistory() // commit any pending entry first
     const idx = historyIndexRef.current
     if (idx <= 0) return
     isUndoRedoRef.current = true
     const prev = historyRef.current[idx - 1]
     historyIndexRef.current = idx - 1
-    onBodyChange(prev)
+    onBodyChange(prev.body)
     setHistoryInfo({
       canUndo: idx - 1 > 0,
       canRedo: true,
     })
-    // Restore cursor to end of restored text
     setTimeout(() => {
       const ta = taRef.current
-      if (ta) { ta.selectionStart = ta.selectionEnd = prev.length; ta.focus() }
+      if (ta) { ta.selectionStart = ta.selectionEnd = prev.cursor; ta.focus() }
       isUndoRedoRef.current = false
     }, 0)
-  }, [onBodyChange])
+  }, [onBodyChange, flushHistory])
 
   const redo = useCallback(() => {
+    flushHistory()
     const idx = historyIndexRef.current
     const stack = historyRef.current
     if (idx >= stack.length - 1) return
     isUndoRedoRef.current = true
     const next = stack[idx + 1]
     historyIndexRef.current = idx + 1
-    onBodyChange(next)
+    onBodyChange(next.body)
     setHistoryInfo({
       canUndo: true,
       canRedo: idx + 1 < stack.length - 1,
     })
     setTimeout(() => {
       const ta = taRef.current
-      if (ta) { ta.selectionStart = ta.selectionEnd = next.length; ta.focus() }
+      if (ta) { ta.selectionStart = ta.selectionEnd = next.cursor; ta.focus() }
       isUndoRedoRef.current = false
     }, 0)
-  }, [onBodyChange])
+  }, [onBodyChange, flushHistory])
 
   // Sync mode with parent
   useEffect(() => { setMode(editorMode || 'preview') }, [editorMode])
@@ -371,6 +413,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const flushRef = useRef(null)
   flushRef.current = () => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
+    flushHistory()
     setDirty(false)
     onSaveNow()
   }
@@ -383,7 +426,9 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   }
 
   function handleChange(newBody) {
-    pushHistory(newBody)
+    const ta = taRef.current
+    const cursor = ta ? ta.selectionStart : 0
+    pushHistory(newBody, cursor)
     onBodyChange(newBody)
     setDirty(true)
     setTyping(true)
@@ -488,7 +533,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
         const outdented = selected.replace(/^ {1,2}/gm, '')
         const diff = selected.length - outdented.length
         const newVal = value.slice(0, lineStart) + outdented + value.slice(end)
-        pushHistory(newVal)
+        pushHistory(newVal, start - Math.min(2, start - lineStart))
         onBodyChange(newVal)
         setDirty(true)
         setTimeout(() => {
@@ -503,7 +548,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
         const indented = '  ' + selected.replace(/\n/g, '\n  ')
         const diff = indented.length - selected.length
         const newVal = value.slice(0, lineStart) + indented + value.slice(end)
-        pushHistory(newVal)
+        pushHistory(newVal, start + 2)
         onBodyChange(newVal)
         setDirty(true)
         setTimeout(() => {
@@ -529,7 +574,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
         result = wrapSelection(ta, '[', '](url)')
       }
       if (result) {
-        pushHistory(result.value)
+        pushHistory(result.value, result.start)
         onBodyChange(result.value)
         setDirty(true)
         setTimeout(() => {
