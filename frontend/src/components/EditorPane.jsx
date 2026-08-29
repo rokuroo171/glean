@@ -796,6 +796,16 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     pv.scrollTop = ratio * (pv.scrollHeight - pv.clientHeight)
   }
 
+  /** Reverse sync: scrolling the preview proportionally scrolls the
+   *  editor so both panes stay aligned. */
+  function handlePreviewScroll() {
+    const ta = taRef.current
+    const pv = previewRef.current
+    if (!ta || !pv) return
+    const ratio = pv.scrollTop / (pv.scrollHeight - pv.clientHeight || 1)
+    ta.scrollTop = ratio * (ta.scrollHeight - ta.clientHeight)
+  }
+
   useEffect(() => {
     const onBlur = () => flushRef.current()
     window.addEventListener('blur', onBlur)
@@ -998,7 +1008,8 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
               </ContextMenu>
             </div>
             <div style={{ width: 1, background: colors.border, flexShrink: 0 }} />
-            <div ref={previewRef} style={{ flex: 1, minWidth: 0, overflow: 'auto',
+            <div ref={previewRef} onScroll={handlePreviewScroll}
+              style={{ flex: 1, minWidth: 0, overflow: 'auto',
               overflowWrap: 'anywhere',
               padding: space[3], color: colors.text, lineHeight: prefs.editor.line_height || 1.6 }}>
               {renderMarkdown(body, { onToggle: handleToggleTask, noteNames, onNoteLink: handleNoteLink })}
