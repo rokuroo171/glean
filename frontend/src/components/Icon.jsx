@@ -4,7 +4,7 @@ import {
   PanelRight, Pencil, Plus, RefreshCw, Search, Settings, Sparkle, Sparkles,
   Trash, X, Zap, FileText, Scissors, Copy, ClipboardPaste,
   Bold, Italic, Strikethrough, Link, Table, Code, Quote, List, ListOrdered,
-  Undo2, Redo2, ImageIcon, Braces,
+  Undo2, Redo2, ImageIcon, Braces, ExternalLink,
 } from 'lucide-react'
 
 const iconMap = {
@@ -36,6 +36,7 @@ const iconMap = {
   'bold': Bold,
   'italic': Italic,
   'link': Link,
+  'external-link': ExternalLink,
   'table': Table,
   'code': Code,
   'quote': Quote,

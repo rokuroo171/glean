@@ -22,6 +22,14 @@ export function DeleteNote(arg1) {
   return window['go']['main']['App']['DeleteNote'](arg1);
 }
 
+export function DeleteSky() {
+  return window['go']['main']['App']['DeleteSky']();
+}
+
+export function ExportSky() {
+  return window['go']['main']['App']['ExportSky']();
+}
+
 export function GetKnownSkies() {
   return window['go']['main']['App']['GetKnownSkies']();
 }
@@ -58,12 +66,20 @@ export function GetStats() {
   return window['go']['main']['App']['GetStats']();
 }
 
+export function GetSystemInfo() {
+  return window['go']['main']['App']['GetSystemInfo']();
+}
+
 export function GetWorkspaceState() {
   return window['go']['main']['App']['GetWorkspaceState']();
 }
 
 export function ImportImage(arg1, arg2) {
   return window['go']['main']['App']['ImportImage'](arg1, arg2);
+}
+
+export function ImportNotes(arg1) {
+  return window['go']['main']['App']['ImportNotes'](arg1);
 }
 
 export function ListFolders() {
@@ -84,6 +100,14 @@ export function OpenNote(arg1) {
 
 export function OpenSky(arg1) {
   return window['go']['main']['App']['OpenSky'](arg1);
+}
+
+export function OpenURL(arg1) {
+  return window['go']['main']['App']['OpenURL'](arg1);
+}
+
+export function OpenVaultFolder() {
+  return window['go']['main']['App']['OpenVaultFolder']();
 }
 
 export function PickFolder() {

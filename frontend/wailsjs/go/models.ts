@@ -15,6 +15,10 @@ export namespace main {
 	    cursor_trail_start_threshold: number;
 	    animated_text_enabled: boolean;
 	    animated_text_style: string;
+	    tab_width: number;
+	    autosave_interval: number;
+	    word_wrap: boolean;
+	    line_numbers: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new EditorPrefsView(source);
@@ -36,6 +40,10 @@ export namespace main {
 	        this.cursor_trail_start_threshold = source["cursor_trail_start_threshold"];
 	        this.animated_text_enabled = source["animated_text_enabled"];
 	        this.animated_text_style = source["animated_text_style"];
+	        this.tab_width = source["tab_width"];
+	        this.autosave_interval = source["autosave_interval"];
+	        this.word_wrap = source["word_wrap"];
+	        this.line_numbers = source["line_numbers"];
 	    }
 	}
 	export class KnownSkyView {
@@ -319,6 +327,20 @@ export namespace main {
 		    }
 		    return a;
 		}
+	}
+	export class SystemInfo {
+	    os: string;
+	    arch: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SystemInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.os = source["os"];
+	        this.arch = source["arch"];
+	    }
 	}
 	
 	export class TrailView {

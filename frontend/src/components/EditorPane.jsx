@@ -8,7 +8,6 @@ import CursorTrail from './CursorTrail'
 import ContextMenu from './ContextMenu'
 import { caretPosition, overlayCaretDelta } from '../lib/caret-position'
 
-const AUTOSAVE_DELAY = 1500
 const LINE_HEIGHT = 22
 let _animId = 0
 /** Get the (x, y) pixel position of a caret inside the textarea container.
@@ -494,7 +493,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       flushRef.current()
-    }, AUTOSAVE_DELAY)
+    }, (prefs.editor.autosave_interval || 3) * 1000)
     // Wikilink autocomplete: detect [[query near cursor
     updateLinkPopup(newBody, cursor)
   }
@@ -765,32 +764,35 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
       }
 
       // Not in table (or selection): indent/outdent
+      const tw = prefs.editor.tab_width || 2
+      const indent = ' '.repeat(tw)
       if (e.shiftKey) {
         const before = value.slice(0, start)
         const ls = before.lastIndexOf('\n') + 1
         const selected = value.slice(ls, end)
-        const outdented = selected.replace(/^ {1,2}/gm, '')
+        const re = new RegExp('^ {' + tw + '}', 'gm')
+        const outdented = selected.replace(re, '')
         const diff = selected.length - outdented.length
         const newVal = value.slice(0, ls) + outdented + value.slice(end)
-        pushHistory(newVal, start - Math.min(2, start - ls))
+        pushHistory(newVal, start - Math.min(tw, start - ls))
         onBodyChange(newVal)
         setDirty(true)
         setTimeout(() => {
-          ta.selectionStart = start - Math.min(2, start - ls)
+          ta.selectionStart = start - Math.min(tw, start - ls)
           ta.selectionEnd = end - diff
         }, 0)
       } else {
         const before = value.slice(0, start)
         const ls = before.lastIndexOf('\n') + 1
         const selected = value.slice(ls, end)
-        const indented = '  ' + selected.replace(/\n/g, '\n  ')
+        const indented = indent + selected.replace(/\n/g, '\n' + indent)
         const diff = indented.length - selected.length
         const newVal = value.slice(0, ls) + indented + value.slice(end)
-        pushHistory(newVal, start + 2)
+        pushHistory(newVal, start + tw)
         onBodyChange(newVal)
         setDirty(true)
         setTimeout(() => {
-          ta.selectionStart = start + 2
+          ta.selectionStart = start + tw
           ta.selectionEnd = end + diff
         }, 0)
       }
@@ -1266,6 +1268,9 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                   caretColor: colors.text,
                   fontFamily: editorFont, fontSize: editorFontSize, lineHeight: editorLineHeight, padding: space[3],
                   overflowWrap: 'break-word',
+                  whiteSpace: prefs.editor.word_wrap === false ? 'pre' : 'pre-wrap',
+                  overflowX: prefs.editor.word_wrap === false ? 'auto' : 'hidden',
+                  tabSize: prefs.editor.tab_width || 2,
                   transition: 'box-shadow 0.6s ease-out',
                   boxShadow: typing ? `inset 0 0 30px rgba(180, 140, 80, 0.06)` : 'none' }}
               />
@@ -1358,7 +1363,10 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                   color: animatedEnabled && !selActive && body.length > 0 ? 'transparent' : colors.text,
                   caretColor: colors.text,
                   fontFamily: editorFont, fontSize: editorFontSize, lineHeight: editorLineHeight,
-                  overflowWrap: 'break-word' }}
+                  overflowWrap: 'break-word',
+                  whiteSpace: prefs.editor.word_wrap === false ? 'pre' : 'pre-wrap',
+                  overflowX: prefs.editor.word_wrap === false ? 'auto' : 'hidden',
+                  tabSize: prefs.editor.tab_width || 2 }}
               />
               {linkPopup && (() => {
                 const matches = Object.keys(noteNames)
