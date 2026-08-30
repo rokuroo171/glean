@@ -21,6 +21,10 @@ const defaultPrefs = {
     cursor_trail_start_threshold: 4,
     animated_text_enabled: false,
     animated_text_style: 'drop',
+    tab_width: 2,
+    autosave_interval: 3,
+    word_wrap: true,
+    line_numbers: false,
   },
   sky: {
     density: 'normal',

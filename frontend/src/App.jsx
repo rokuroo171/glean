@@ -94,6 +94,7 @@ export default function App() {
   const [showNewPrompt, setShowNewPrompt] = useState(false)
   const [newNoteTitle, setNewNoteTitle] = useState('')
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [systemInfo, setSystemInfo] = useState(null)
 
   // The pointer gate: setup for a new user, recovery for a missing sky,
   // workspace for everyone else.
@@ -104,8 +105,11 @@ export default function App() {
       if (!st.configured) setSetup('setup')
       else if (st.sky_missing) setSetup('recovery')
       else setSetup('workspace')
-      // Dev flag to force the tour in mock mode: #tour=1
       if (window.location.hash.includes('tour=1')) setShowOnboarding(true)
+      try {
+        const info = wails ? await wails.App.GetSystemInfo() : { os: 'web', arch: '-' }
+        setSystemInfo(info)
+      } catch (_) {}
     })()
   }, [])
 
@@ -274,6 +278,7 @@ export default function App() {
         skyName={skyName}
         skyPath={skyPath}
         version="v1.5.0"
+        systemInfo={systemInfo}
         onOpenNote={handleOpenNote}
         onNewNote={handleNewNote}
         onOpenStats={handleOpenStats}

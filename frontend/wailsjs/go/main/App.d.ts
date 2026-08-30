@@ -13,6 +13,10 @@ export function DeleteFolder(arg1:string):Promise<void>;
 
 export function DeleteNote(arg1:string):Promise<void>;
 
+export function DeleteSky():Promise<void>;
+
+export function ExportSky():Promise<string>;
+
 export function GetKnownSkies():Promise<Array<main.KnownSkyView>>;
 
 export function GetLinks():Promise<Array<main.TrailView>>;
@@ -31,9 +35,13 @@ export function GetSkyPath():Promise<string>;
 
 export function GetStats():Promise<main.StatsView>;
 
+export function GetSystemInfo():Promise<main.SystemInfo>;
+
 export function GetWorkspaceState():Promise<store.WorkspaceState>;
 
 export function ImportImage(arg1:string,arg2:string):Promise<string>;
+
+export function ImportNotes(arg1:string):Promise<void>;
 
 export function ListFolders():Promise<Array<string>>;
 
@@ -44,6 +52,10 @@ export function MoveNote(arg1:string,arg2:string):Promise<void>;
 export function OpenNote(arg1:string):Promise<main.NoteView>;
 
 export function OpenSky(arg1:string):Promise<main.SkyStateView>;
+
+export function OpenURL(arg1:string):Promise<void>;
+
+export function OpenVaultFolder():Promise<void>;
 
 export function PickFolder():Promise<string>;
 
