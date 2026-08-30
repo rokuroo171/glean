@@ -2,12 +2,16 @@ package main
 
 import (
 	"context"
+	"archive/zip"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"hash/fnv"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -20,7 +24,7 @@ import (
 	"github.com/glean/glean/internal/store"
 	"github.com/glean/glean/internal/wikilink"
 	"github.com/glean/glean/internal/world"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	wailsrt "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App is the Wails application struct. Bound methods are exposed to the React frontend.
@@ -38,7 +42,7 @@ type App struct {
 // SetWindowTitle updates the window title bar and taskbar preview text.
 // Call from the frontend as notes are opened or closed.
 func (a *App) SetWindowTitle(title string) {
-	runtime.WindowSetTitle(a.ctx, title)
+	wailsrt.WindowSetTitle(a.ctx, title)
 }
 
 // NewApp wires the sky-based stores when a sky is configured. Without a
@@ -605,6 +609,31 @@ func (a *App) GetSkyPath() string {
 	return a.skyDir
 }
 
+// SystemInfo holds basic runtime information.
+type SystemInfo struct {
+	OS   string `json:"os"`
+	Arch string `json:"arch"`
+}
+
+// GetSystemInfo returns the host OS and architecture.
+func (a *App) GetSystemInfo() SystemInfo {
+	return SystemInfo{OS: runtime.GOOS, Arch: runtime.GOARCH}
+}
+
+// OpenURL opens a URL in the system default browser.
+func (a *App) OpenURL(url string) error {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	case "darwin":
+		cmd = exec.Command("open", url)
+	default:
+		cmd = exec.Command("xdg-open", url)
+	}
+	return cmd.Start()
+}
+
 // GetPalette returns the ambient color palette based on current time-of-day and season.
 func (a *App) GetPalette() PaletteView {
 	// The user can pin a season in Customization to preview any sky;
@@ -666,7 +695,7 @@ func (a *App) PickFolder() string {
 	if a.ctx == nil {
 		return ""
 	}
-	dir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+	dir, err := wailsrt.OpenDirectoryDialog(a.ctx, wailsrt.OpenDialogOptions{
 		Title: "Choose your Sky folder",
 	})
 	if err != nil {
@@ -897,8 +926,8 @@ func (a *App) SetWindowSize(width, height int) {
 	if a.ctx == nil {
 		return
 	}
-	runtime.WindowSetSize(a.ctx, width, height)
-	runtime.WindowCenter(a.ctx)
+	wailsrt.WindowSetSize(a.ctx, width, height)
+	wailsrt.WindowCenter(a.ctx)
 }
 
 // KnownSkyView is the JSON-safe known sky entry for the frontend.
@@ -983,6 +1012,10 @@ type EditorPrefsView struct {
 	CursorTrailStartThreshold int     `json:"cursor_trail_start_threshold"`
 	AnimatedTextEnabled       bool    `json:"animated_text_enabled"`
 	AnimatedTextStyle         string  `json:"animated_text_style"`
+	TabWidth                  int     `json:"tab_width"`
+	AutosaveInterval          int     `json:"autosave_interval"`
+	WordWrap                  bool    `json:"word_wrap"`
+	LineNumbers               bool    `json:"line_numbers"`
 }
 
 type SkyPrefsView struct {
@@ -1029,6 +1062,10 @@ func (a *App) GetPreferences() PreferencesView {
 			CursorTrailStartThreshold: p.Editor.CursorTrailStartThreshold,
 			AnimatedTextEnabled:       p.Editor.AnimatedTextEnabled != nil && *p.Editor.AnimatedTextEnabled,
 			AnimatedTextStyle:         p.Editor.AnimatedTextStyle,
+			TabWidth:                  p.Editor.TabWidth,
+			AutosaveInterval:          p.Editor.AutosaveInterval,
+			WordWrap:                  p.Editor.WordWrap == nil || *p.Editor.WordWrap,
+			LineNumbers:               p.Editor.LineNumbers != nil && *p.Editor.LineNumbers,
 		},
 		Sky: SkyPrefsView{
 			Density:        p.Sky.Density,
@@ -1147,6 +1184,10 @@ func (a *App) SavePreferences(p PreferencesView) error {
 			CursorTrailStartThreshold: p.Editor.CursorTrailStartThreshold,
 			AnimatedTextEnabled:       &animated,
 			AnimatedTextStyle:         p.Editor.AnimatedTextStyle,
+			TabWidth:                  p.Editor.TabWidth,
+			AutosaveInterval:          p.Editor.AutosaveInterval,
+			WordWrap:                  &p.Editor.WordWrap,
+			LineNumbers:               &p.Editor.LineNumbers,
 		},
 		Sky: store.SkyPrefs{
 			Density:        p.Sky.Density,
@@ -1174,4 +1215,105 @@ func isValidHex(s string) bool {
 		}
 	}
 	return true
+}
+
+// OpenVaultFolder opens the vault directory in the system file manager.
+func (a *App) OpenVaultFolder() error {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("explorer", a.skyDir)
+	case "darwin":
+		cmd = exec.Command("open", a.skyDir)
+	default:
+		cmd = exec.Command("xdg-open", a.skyDir)
+	}
+	return cmd.Start()
+}
+
+// ExportSky zips the vault folder and returns the zip data as base64.
+func (a *App) ExportSky() (string, error) {
+	zipPath := filepath.Join(os.TempDir(), "glean-export.zip")
+	f, err := os.Create(zipPath)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	zw := zip.NewWriter(f)
+	defer zw.Close()
+
+	err = filepath.Walk(a.skyDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(a.skyDir, path)
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			_, err = zw.Create(rel + "/")
+			return err
+		}
+		wf, err := zw.Create(rel)
+		if err != nil {
+			return err
+		}
+		src, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer src.Close()
+		_, err = io.Copy(wf, src)
+		return err
+	})
+	if err != nil {
+		return "", err
+	}
+	zw.Close()
+	f.Close()
+
+	data, err := os.ReadFile(zipPath)
+	if err != nil {
+		return "", err
+	}
+	os.Remove(zipPath)
+	return base64.StdEncoding.EncodeToString(data), nil
+}
+
+// ImportNotes extracts a base64-encoded zip into the vault folder.
+func (a *App) ImportNotes(data string) error {
+	raw, err := base64.StdEncoding.DecodeString(data)
+	if err != nil {
+		return err
+	}
+	r, err := zip.NewReader(strings.NewReader(string(raw)), int64(len(raw)))
+	if err != nil {
+		return err
+	}
+	for _, f := range r.File {
+		fp := filepath.Join(a.skyDir, f.Name)
+		if f.FileInfo().IsDir() {
+			os.MkdirAll(fp, 0o755)
+			continue
+		}
+		os.MkdirAll(filepath.Dir(fp), 0o755)
+		out, err := os.Create(fp)
+		if err != nil {
+			return err
+		}
+		in, err := f.Open()
+		if err != nil {
+			out.Close()
+			return err
+		}
+		io.Copy(out, in)
+		in.Close()
+		out.Close()
+	}
+	return nil
+}
+
+// DeleteSky removes the vault folder and all its contents.
+func (a *App) DeleteSky() error {
+	return os.RemoveAll(a.skyDir)
 }

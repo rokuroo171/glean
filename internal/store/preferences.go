@@ -57,6 +57,10 @@ type EditorPrefs struct {
 	CursorTrailStartThreshold int     `json:"cursor_trail_start_threshold"` // px, movement needed to trigger
 	AnimatedTextEnabled       *bool   `json:"animated_text_enabled"`        // nil = false (default)
 	AnimatedTextStyle         string  `json:"animated_text_style"`          // "drop" (default), "fade", "pop"
+	TabWidth                  int     `json:"tab_width"`                    // spaces per indent, default 2
+	AutosaveInterval          int     `json:"autosave_interval"`            // seconds, default 3
+	WordWrap                  *bool   `json:"word_wrap"`                    // nil = true (default)
+	LineNumbers               *bool   `json:"line_numbers"`                 // nil = false (default)
 }
 
 // DefaultPreferences returns the built-in defaults.
@@ -64,6 +68,8 @@ func DefaultPreferences() Preferences {
 	showStatus := true
 	spell := true
 	nebula := true
+	wrap := true
+	lineNums := false
 	return Preferences{
 		Theme: ThemePrefs{
 			Preset:    "midnight",
@@ -98,6 +104,10 @@ func DefaultPreferences() Preferences {
 			CursorTrailLength:         12,
 			CursorTrailStartThreshold: 4,
 			AnimatedTextStyle:         "drop",
+			TabWidth:                  2,
+			AutosaveInterval:          3,
+			WordWrap:                  &wrap,
+			LineNumbers:               &lineNums,
 		},
 	}
 }

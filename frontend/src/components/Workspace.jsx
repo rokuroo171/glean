@@ -18,14 +18,14 @@ import ManageSky from './ManageSky'
 const wails = window.go?.main
 
 export default function Workspace({
-  notes, links, stats, skyName, skyPath, version,
+  notes, links, stats, skyName, skyPath, version, systemInfo,
   onOpenNote, onNewNote, onOpenStats, onCreateNote,
   fetchWorkspaceState, saveWorkspaceState,
   noteBodies, // map id -> body, filled by App via OpenNote
   onBodyChange, onSaveNow, onRefreshNote, onRescan,
   onWish, onDelete, onReplayTour,
 }) {
-  const { prefs } = usePreferences()
+  const { prefs, updatePrefs } = usePreferences()
   const [pseudoTab, setPseudoTab] = useState(null) // null | 'stats' | 'settings' | 'customization'
   const [nightOpen, setNightOpen] = useState(true)
   const [commandOpen, setCommandOpen] = useState(false)
@@ -380,7 +380,7 @@ export default function Workspace({
             </div>
           ) : pseudoTab === 'settings' ? (
             <div style={{ flex: 1, overflow: 'auto' }}>
-              <SettingsPane skyName={skyName} skyPath={skyPath} version={version} />
+              <SettingsPane skyName={skyName} skyPath={skyPath} version={version} systemInfo={systemInfo} prefs={prefs} onUpdatePrefs={updatePrefs} />
             </div>
           ) : pseudoTab === 'customization' ? (
             <div style={{ flex: 1, overflow: 'auto' }}>
