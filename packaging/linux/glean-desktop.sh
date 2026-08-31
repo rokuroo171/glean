@@ -34,17 +34,42 @@ trap - INT TERM EXIT
 WK_LIB="libwebkit2gtk-4.1.so"
 if ! ldconfig -p 2>/dev/null | grep -q "$WK_LIB"; then
   echo ""
-  echo "glean needs webkit2gtk to run. Install it:"
+  echo "glean needs webkit2gtk 4.1 (not 4.0) to run."
+  echo "Your system is missing libwebkit2gtk-4.1.so."
   echo ""
-  if command -v dnf >/dev/null 2>&1; then
-    echo "  sudo dnf install webkit2gtk4.1"
+  echo "Install it for your distro:"
+  echo ""
+  if command -v pacman >/dev/null 2>&1; then
+    echo "  Arch / CachyOS / Manjaro:"
+    echo "    sudo pacman -S webkit2gtk-4.1"
+  elif command -v dnf >/dev/null 2>&1; then
+    echo "  Fedora 40+:"
+    echo "    sudo dnf install webkit2gtk4.1"
   elif command -v apt >/dev/null 2>&1; then
-    echo "  sudo apt install libwebkit2gtk-4.1-dev"
-  elif command -v pacman >/dev/null 2>&1; then
-    echo "  sudo pacman -S webkit2gtk"
+    echo "  Ubuntu 22.04+ / Debian 12+:"
+    echo "    sudo apt install libwebkit2gtk-4.1-dev"
+  elif command -v zypper >/dev/null 2>&1; then
+    echo "  openSUSE:"
+    echo "    sudo zypper install libwebkit2gtk-4_1-0-devel"
+  elif command -v xbps-install >/dev/null 2>&1; then
+    echo "  Void Linux:"
+    echo "    sudo xbps-install -S webkit2gtk-4.1"
+  elif command -v apk >/dev/null 2>&1; then
+    echo "  Alpine:"
+    echo "    sudo apk add webkit2gtk-4.1"
+  elif command -v nix-shell >/dev/null 2>&1; then
+    echo "  NixOS / Nix:"
+    echo "    Add webkitgtk_4_1 to environment.systemPackages"
+  elif command -v emerge >/dev/null 2>&1; then
+    echo "  Gentoo:"
+    echo "    sudo emerge net-libs/webkit-gtk:4.1"
   else
-    echo "  Install webkit2gtk for your distribution"
+    echo "  Install webkit2gtk 4.1 for your distribution."
+    echo "  The old webkit2gtk 4.0 package does NOT work."
   fi
+  echo ""
+  echo "Note: Ubuntu 20.04 and Fedora 39 or older do NOT have"
+  echo "webkit2gtk 4.1. You need a newer distro release."
   echo ""
   exit 1
 fi
