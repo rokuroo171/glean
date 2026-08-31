@@ -52,6 +52,16 @@ Prebuilt installers are attached to every GitHub release:
   into the first-run setup screen, "Welcome to your Night Sky")
 - macOS: `.app`/`.dmg`
 
+**Arch Linux (AUR):**
+
+```bash
+# yay
+yay -S glean-bin
+
+# paru
+paru -S glean-bin
+```
+
 Build from source:
 
 ```bash
