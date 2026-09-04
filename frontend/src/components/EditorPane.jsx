@@ -427,7 +427,6 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     onBodyChange(prev.body)
     setHistoryInfo({ canUndo: idx - 1 > 0, canRedo: true })
     if (ta) ta.focus()
-    setTimeout(() => { isUndoRedoRef.current = false }, 0)
   }, [onBodyChange, flushHistory])
 
   const redo = useCallback(() => {
@@ -446,8 +445,12 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     onBodyChange(next.body)
     setHistoryInfo({ canUndo: true, canRedo: idx + 1 < stack.length - 1 })
     if (ta) ta.focus()
-    setTimeout(() => { isUndoRedoRef.current = false }, 0)
   }, [onBodyChange, flushHistory])
+
+  // Clear isUndoRedo after React has synced the textarea value.
+  // This prevents the textarea's onChange from pushing a duplicate
+  // history entry during the same render cycle as undo/redo.
+  useEffect(() => { isUndoRedoRef.current = false }, [body])
 
   // Sync mode with parent
   useEffect(() => { setMode(editorMode || 'preview') }, [editorMode])
