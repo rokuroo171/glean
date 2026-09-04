@@ -411,22 +411,23 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   }, [note?.id, body])
 
   const undo = useCallback(() => {
-    flushHistory() // commit any pending entry first
+    flushHistory()
     const idx = historyIndexRef.current
     if (idx <= 0) return
     isUndoRedoRef.current = true
     const prev = historyRef.current[idx - 1]
     historyIndexRef.current = idx - 1
+    // Set textarea value directly so the browser's undo buffer
+    // stays in sync and does not fight our custom stack.
+    const ta = taRef.current
+    if (ta) {
+      ta.value = prev.body
+      ta.selectionStart = ta.selectionEnd = prev.cursor
+    }
     onBodyChange(prev.body)
-    setHistoryInfo({
-      canUndo: idx - 1 > 0,
-      canRedo: true,
-    })
-    setTimeout(() => {
-      const ta = taRef.current
-      if (ta) { ta.selectionStart = ta.selectionEnd = prev.cursor; ta.focus() }
-      isUndoRedoRef.current = false
-    }, 0)
+    setHistoryInfo({ canUndo: idx - 1 > 0, canRedo: true })
+    if (ta) ta.focus()
+    setTimeout(() => { isUndoRedoRef.current = false }, 0)
   }, [onBodyChange, flushHistory])
 
   const redo = useCallback(() => {
@@ -437,16 +438,15 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     isUndoRedoRef.current = true
     const next = stack[idx + 1]
     historyIndexRef.current = idx + 1
+    const ta = taRef.current
+    if (ta) {
+      ta.value = next.body
+      ta.selectionStart = ta.selectionEnd = next.cursor
+    }
     onBodyChange(next.body)
-    setHistoryInfo({
-      canUndo: true,
-      canRedo: idx + 1 < stack.length - 1,
-    })
-    setTimeout(() => {
-      const ta = taRef.current
-      if (ta) { ta.selectionStart = ta.selectionEnd = next.cursor; ta.focus() }
-      isUndoRedoRef.current = false
-    }, 0)
+    setHistoryInfo({ canUndo: true, canRedo: idx + 1 < stack.length - 1 })
+    if (ta) ta.focus()
+    setTimeout(() => { isUndoRedoRef.current = false }, 0)
   }, [onBodyChange, flushHistory])
 
   // Sync mode with parent
@@ -482,7 +482,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     setDirty(true)
     setTyping(true)
     // Animated text: mark inserted chars so they animate in place.
-    if (animatedEnabled) {
+    if (animatedEnabled && !isUndoRedoRef.current) {
       const diff = newBody.length - lastBodyLenRef.current
       const ta = taRef.current
       if (diff > 0) {
@@ -681,6 +681,27 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
       e.preventDefault()
       redo()
       return
+    }
+
+    // Smart backspace: remove a full tab-width of spaces at once
+    if (e.key === 'Backspace' && (mode === 'edit' || mode === 'split')) {
+      const ta = taRef.current
+      if (ta && ta.selectionStart === ta.selectionEnd && ta.selectionStart > 0) {
+        const tw = prefs.editor.tab_width || 2
+        const before = ta.value.slice(0, ta.selectionStart)
+        const trail = before.length - before.trimEnd().length
+        if (trail > 0 && trail <= tw && before.endsWith(' '.repeat(trail))) {
+          e.preventDefault()
+          const cutTo = before.length - trail
+          const newVal = ta.value.slice(0, cutTo) + ta.value.slice(ta.selectionStart)
+          pushHistory(newVal, cutTo)
+          onBodyChange(newVal)
+          setDirty(true)
+          if (animatedEnabled) triggerSparkles()
+          setTimeout(() => { ta.selectionStart = ta.selectionEnd = cutTo }, 0)
+          return
+        }
+      }
     }
 
     // Tab: table cell navigation or indent/outdent
