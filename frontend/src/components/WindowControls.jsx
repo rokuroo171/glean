@@ -5,9 +5,9 @@ const runtime = window.runtime
 function Control({ label, onClick, danger }) {
   return (
     <button type="button" aria-label={label} data-tip={label} onClick={onClick}
-      style={{ '--wails-draggable': 'no-drag', background: 'none', border: 'none', width: 42, height: '100%',
+      style={{ '--wails-draggable': 'no-drag', background: 'none', border: 'none', width: label === 'close' ? 48 : 42, height: '100%',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: colors.textMuted, cursor: 'pointer', padding: 0 }}
+        color: colors.textMuted, cursor: 'pointer', padding: 0, marginRight: label === 'close' ? -8 : 0 }}
       onMouseEnter={(e) => {
         e.currentTarget.style.background = danger ? '#c04040' : 'rgba(90,106,122,0.2)'
         e.currentTarget.style.color = danger ? '#fff' : colors.text
@@ -33,7 +33,7 @@ function Control({ label, onClick, danger }) {
 export default function WindowControls() {
   if (!runtime) return null
   return (
-    <div style={{ display: 'flex', alignItems: 'center', height: '100%', flexShrink: 0 }}>
+    <div style={{ display: 'flex', alignItems: 'stretch', height: '100%', flexShrink: 0 }}>
       <Control label="minimize" onClick={() => runtime.WindowMinimise()} />
       <Control label="maximize" onClick={() => runtime.WindowToggleMaximise()} />
       <Control label="close" onClick={() => runtime.Quit()} danger />
