@@ -4,6 +4,7 @@ import { colors, space, typography } from '../lib/theme'
 import { usePreferences } from '../lib/preferences-context'
 import { getPresets, getPreset } from '../lib/apply-theme'
 import Icon from './Icon'
+import Select from './Select'
 
 const accentSwatches = [
   { label: 'Blue', hex: '#5b9fd4' },
@@ -333,29 +334,19 @@ export default function CustomizationPane() {
         <div style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 4 }}>Size</div>
-            <select value={String(prefs.editor.font_size)}
-              onChange={(e) => updatePrefs({ editor: { ...prefs.editor, font_size: Number(e.target.value) } })}
-              style={{ width: '100%', padding: '6px 8px', borderRadius: 6, fontSize: 12,
-                background: colors.bg, border: '1px solid ' + colors.border,
-                color: colors.text, cursor: 'pointer', outline: 'none',
-                appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='${encodeURIComponent(colors.textMuted)}' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center', paddingRight: 28 }}>
-              {[12, 13, 14, 15, 16, 18, 20].map(s => <option key={s} value={s} style={{ background: colors.bg, color: colors.text }}>{s}px</option>)}>
-            </select>
+            <Select
+              value={prefs.editor.font_size}
+              options={[12, 13, 14, 15, 16, 18, 20].map(s => ({ value: s, label: s + 'px' }))}
+              onChange={(v) => updatePrefs({ editor: { ...prefs.editor, font_size: v } })}
+            />
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 4 }}>Line height</div>
-            <select value={String(prefs.editor.line_height)}
-              onChange={(e) => updatePrefs({ editor: { ...prefs.editor, line_height: Number(e.target.value) } })}
-              style={{ width: '100%', padding: '6px 8px', borderRadius: 6, fontSize: 12,
-                background: colors.bg, border: '1px solid ' + colors.border,
-                color: colors.text, cursor: 'pointer', outline: 'none',
-                appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='${encodeURIComponent(colors.textMuted)}' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center', paddingRight: 28 }}>
-              {['1.2', '1.4', '1.6', '1.8', '2.0'].map(v => <option key={v} value={v} style={{ background: colors.bg, color: colors.text }}>{v}</option>)}>
-            </select>
+            <Select
+              value={prefs.editor.line_height}
+              options={['1.2', '1.4', '1.6', '1.8', '2.0'].map(v => ({ value: Number(v), label: v }))}
+              onChange={(v) => updatePrefs({ editor: { ...prefs.editor, line_height: v } })}
+            />
           </div>
         </div>
 
