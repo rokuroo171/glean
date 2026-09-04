@@ -665,19 +665,19 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     }
 
     // Ctrl+Z undo, Ctrl+Shift+Z / Ctrl+Y redo
-    if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && mode === 'edit') {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && (mode === 'edit' || mode === 'split')) {
       e.preventDefault()
       if (e.shiftKey) { redo() } else { undo() }
       return
     }
-    if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y') && mode === 'edit') {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y') && (mode === 'edit' || mode === 'split')) {
       e.preventDefault()
       redo()
       return
     }
 
     // Tab: table cell navigation or indent/outdent
-    if (e.key === 'Tab' && mode === 'edit') {
+    if (e.key === 'Tab' && (mode === 'edit' || mode === 'split')) {
       e.preventDefault()
       const ta = taRef.current
       if (!ta) return
