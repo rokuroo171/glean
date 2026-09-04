@@ -690,9 +690,9 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
         const tw = prefs.editor.tab_width || 2
         const before = ta.value.slice(0, ta.selectionStart)
         const trail = before.length - before.trimEnd().length
-        if (trail > 0 && trail <= tw && before.endsWith(' '.repeat(trail))) {
+        if (trail > 0 && trail % tw === 0) {
           e.preventDefault()
-          const cutTo = before.length - trail
+          const cutTo = before.length - tw
           const newVal = ta.value.slice(0, cutTo) + ta.value.slice(ta.selectionStart)
           pushHistory(newVal, cutTo)
           onBodyChange(newVal)
