@@ -62,7 +62,9 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
       style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 10px', height: 40,
         borderBottom: `1px solid ${colors.border}`, background: colors.bgElevated,
         flexShrink: 0, WebkitUserSelect: 'none', ...drag }}>
-      <div style={{ flexShrink: 0, ...noDrag }} />
+      <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center', ...noDrag }}>
+        <StarIcon species="warm" size="sm" />
+      </span>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
         <div ref={tabsWrapRef} style={{ display: 'flex', alignItems: 'center', gap: GAP, flex: 1, minWidth: 0, overflow: 'hidden' }}>
@@ -123,13 +125,6 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
             color: colors.textMuted, borderRadius: 6, width: 26, height: 26, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', ...noDrag }}><Icon name="moon" size={14} /></button>
       </div>
-
-      {/* Logo */}
-      <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: colors.text,
-        fontSize: 13, fontWeight: 600, flexShrink: 0, ...noDrag }}>
-        <StarIcon species="warm" size="sm" />
-        glean
-      </span>
 
       <div style={{ flex: 1, minWidth: 0 }} />
 
