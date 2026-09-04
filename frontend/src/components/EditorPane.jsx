@@ -122,14 +122,15 @@ function pushFreshRange(prev, start, len) {
 
 /** Adjust fresh ranges after a deletion of `len` chars at `at`. */
 function cutFreshRanges(prev, at, len) {
-  const delStart = at
-  const delEnd = at - len
+  const absLen = Math.abs(len)
+  const delStart = at - absLen
+  const delEnd = at
   const now = Date.now()
   return prev
     .filter(r => now - r.ts < ANIM_FADE_MS)
     .map(r => {
       if (r.end <= delStart) return r
-      if (r.start >= delEnd) return { ...r, start: r.start + len, end: r.end + len }
+      if (r.start >= delEnd) return { ...r, start: r.start - absLen, end: r.end - absLen }
       return { ...r, end: delStart }
     })
     .filter(r => r.end > r.start)
