@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { colors, space } from '../lib/theme'
 import Icon from './Icon'
+import Select from './Select'
 
 const wails = window.go?.main
 const REPO_URL = 'https://github.com/rokuroo171/glean'
@@ -207,26 +208,28 @@ export default function SettingsPane({ skyName, skyPath, version, systemInfo, pr
 
       <Section title="Editor">
         <Row label="Tab width">
-          <select
+          <Select
             value={prefs?.editor?.tab_width || 2}
-            onChange={e => onUpdatePrefs({ editor: { ...prefs.editor, tab_width: Number(e.target.value) } })}
-            style={{ background: colors.bg, color: colors.text, border: '1px solid ' + colors.border, borderRadius: 4, padding: '4px 8px', fontSize: 12 }}
-          >
-            <option value={2}>2 spaces</option>
-            <option value={4}>4 spaces</option>
-          </select>
+            options={[
+              { value: 2, label: '2 spaces' },
+              { value: 4, label: '4 spaces' },
+            ]}
+            onChange={(v) => onUpdatePrefs({ editor: { ...prefs.editor, tab_width: v } })}
+            style={{ width: 120 }}
+          />
         </Row>
         <Row label="Autosave (seconds)">
-          <select
+          <Select
             value={prefs?.editor?.autosave_interval || 3}
-            onChange={e => onUpdatePrefs({ editor: { ...prefs.editor, autosave_interval: Number(e.target.value) } })}
-            style={{ background: colors.bg, color: colors.text, border: '1px solid ' + colors.border, borderRadius: 4, padding: '4px 8px', fontSize: 12 }}
-          >
-            <option value={1}>1s</option>
-            <option value={3}>3s</option>
-            <option value={5}>5s</option>
-            <option value={10}>10s</option>
-          </select>
+            options={[
+              { value: 1, label: '1s' },
+              { value: 3, label: '3s' },
+              { value: 5, label: '5s' },
+              { value: 10, label: '10s' },
+            ]}
+            onChange={(v) => onUpdatePrefs({ editor: { ...prefs.editor, autosave_interval: v } })}
+            style={{ width: 120 }}
+          />
         </Row>
         <Row label="Word wrap">
           <button
