@@ -350,6 +350,8 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   function pushImmediate(newBody, cursor) {
     const idx = historyIndexRef.current
     const stack = historyRef.current
+    // Skip if body is identical to the current entry (avoids dupes on flush).
+    if (stack[idx] && stack[idx].body === newBody) return
     const next = stack.slice(0, idx + 1)
     next.push({ body: newBody, cursor: cursor || 0 })
     if (next.length > MAX_HISTORY) next.shift()
@@ -365,8 +367,9 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
    *  committing, so rapid typing produces one entry not many. */
   const pushHistory = useCallback((newBody, cursor) => {
     if (isUndoRedoRef.current) return
-    pendingRef.current = { body: newBody, cursor: cursor || 0 }
-    if (historyTimerRef.current) return // already waiting
+    pendingRef.current.body = newBody
+    pendingRef.current.cursor = cursor || 0
+    if (historyTimerRef.current) return
     historyTimerRef.current = setTimeout(() => {
       historyTimerRef.current = null
       if (isUndoRedoRef.current) return
