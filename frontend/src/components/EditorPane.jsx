@@ -208,6 +208,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const animTimerRef = useRef(null)
   const lastBodyLenRef = useRef(body.length)
   const overlayInnerRef = useRef(null)
+  const lastSparkleRef = useRef(0)
 
   const editorFont = prefs.editor.font_family || 'monospace'
   const editorFontSize = prefs.editor.font_size || 14
@@ -234,18 +235,20 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   /** Sparkle burst where a character was removed (backspace). */
   const triggerSparkles = useCallback(() => {
     if (!animatedEnabled) return
+    const now = Date.now()
+    if (now - lastSparkleRef.current < 80) return
+    lastSparkleRef.current = now
     const ta = taRef.current
     if (!ta) return
     const pos = getCharPosition(ta)
     const id = ++_animId
-    const ts = Date.now()
-    const sparkles = Array.from({ length: 6 }, (_, i) => ({
+    const sparkles = Array.from({ length: 4 }, (_, i) => ({
       id: id * 100 + i,
       type: 'sparkle',
       x: pos.x, y: pos.y,
       dx: (Math.random() - 0.5) * 30,
       dy: (Math.random() - 0.5) * 20 - 8,
-      ts
+      ts: now
     }))
     setAnimItems(prev => [...prev, ...sparkles])
     if (!animTimerRef.current) animTimerRef.current = setInterval(sweepAnims, 60)
