@@ -120,10 +120,6 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
             </div>
           )}
         </div>
-        <button type="button" onClick={onNew} aria-label="open night" data-tip="Night"
-          style={{ flexShrink: 0, background: 'none', border: `1px solid ${colors.border}`,
-            color: colors.textMuted, borderRadius: 6, width: 26, height: 26, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', ...noDrag }}><Icon name="moon" size={14} /></button>
       </div>
 
       <div style={{ flex: 1, minWidth: 0 }} />
