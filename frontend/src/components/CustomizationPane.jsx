@@ -440,6 +440,36 @@ export default function CustomizationPane() {
             </div>
           </>
         )}
+
+        <div style={{ marginTop: 14 }}>
+          <div style={{ ...typography.sectionLabel, color: colors.textMuted, marginBottom: 8 }}>
+            Editing
+          </div>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 4 }}>Tab width</div>
+              <Select
+                value={prefs.editor.tab_width || 2}
+                options={[{ value: 2, label: '2 spaces' }, { value: 4, label: '4 spaces' }]}
+                onChange={(v) => updatePrefs({ editor: { ...prefs.editor, tab_width: v } })}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 4 }}>Autosave</div>
+              <Select
+                value={prefs.editor.autosave_interval || 3}
+                options={[{ value: 1, label: '1s' }, { value: 3, label: '3s' }, { value: 5, label: '5s' }, { value: 10, label: '10s' }]}
+                onChange={(v) => updatePrefs({ editor: { ...prefs.editor, autosave_interval: v } })}
+              />
+            </div>
+          </div>
+          <Toggle label="Word wrap"
+            checked={prefs.editor.word_wrap !== false}
+            onChange={(v) => updatePrefs({ editor: { ...prefs.editor, word_wrap: v } })} />
+          <Toggle label="Line numbers"
+            checked={prefs.editor.line_numbers === true}
+            onChange={(v) => updatePrefs({ editor: { ...prefs.editor, line_numbers: v } })} />
+        </div>
       </Section>
 
       {/* Constellation section: starfield appearance knobs */}

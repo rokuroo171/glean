@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { colors, space } from '../lib/theme'
 import Icon from './Icon'
-import Select from './Select'
 
 const wails = window.go?.main
 const REPO_URL = 'https://github.com/rokuroo171/glean'
@@ -203,57 +202,6 @@ export default function SettingsPane({ skyName, skyPath, version, systemInfo, pr
               onClick={handleDelete}
             />
           </div>
-        </Row>
-      </Section>
-
-      <Section title="Editor">
-        <Row label="Tab width">
-          <Select
-            value={prefs?.editor?.tab_width || 2}
-            options={[
-              { value: 2, label: '2 spaces' },
-              { value: 4, label: '4 spaces' },
-            ]}
-            onChange={(v) => onUpdatePrefs({ editor: { ...prefs.editor, tab_width: v } })}
-            style={{ width: 120 }}
-          />
-        </Row>
-        <Row label="Autosave (seconds)">
-          <Select
-            value={prefs?.editor?.autosave_interval || 3}
-            options={[
-              { value: 1, label: '1s' },
-              { value: 3, label: '3s' },
-              { value: 5, label: '5s' },
-              { value: 10, label: '10s' },
-            ]}
-            onChange={(v) => onUpdatePrefs({ editor: { ...prefs.editor, autosave_interval: v } })}
-            style={{ width: 120 }}
-          />
-        </Row>
-        <Row label="Word wrap">
-          <button
-            type="button"
-            onClick={() => onUpdatePrefs({ editor: { ...prefs.editor, word_wrap: !prefs.editor.word_wrap } })}
-            style={{
-              background: prefs?.editor?.word_wrap ? colors.accent : 'transparent',
-              border: '1px solid ' + (prefs?.editor?.word_wrap ? colors.accent : colors.border),
-              borderRadius: 4, padding: '4px 12px', fontSize: 12,
-              color: prefs?.editor?.word_wrap ? '#fff' : colors.text, cursor: 'pointer',
-            }}
-          >{prefs?.editor?.word_wrap ? 'On' : 'Off'}</button>
-        </Row>
-        <Row label="Line numbers" last>
-          <button
-            type="button"
-            onClick={() => onUpdatePrefs({ editor: { ...prefs.editor, line_numbers: !prefs.editor.line_numbers } })}
-            style={{
-              background: prefs?.editor?.line_numbers ? colors.accent : 'transparent',
-              border: '1px solid ' + (prefs?.editor?.line_numbers ? colors.accent : colors.border),
-              borderRadius: 4, padding: '4px 12px', fontSize: 12,
-              color: prefs?.editor?.line_numbers ? '#fff' : colors.text, cursor: 'pointer',
-            }}
-          >{prefs?.editor?.line_numbers ? 'On' : 'Off'}</button>
         </Row>
       </Section>
 
