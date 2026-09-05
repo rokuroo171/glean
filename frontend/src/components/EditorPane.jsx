@@ -437,7 +437,10 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   }, [note?.id, body])
 
   const undo = useCallback(() => {
-    flushHistory()
+    if (historyTimerRef.current) {
+      clearTimeout(historyTimerRef.current)
+      historyTimerRef.current = null
+    }
     const idx = historyIndexRef.current
     if (idx <= 0) return
     isUndoRedoRef.current = true
@@ -456,7 +459,10 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   }, [onBodyChange, flushHistory])
 
   const redo = useCallback(() => {
-    flushHistory()
+    if (historyTimerRef.current) {
+      clearTimeout(historyTimerRef.current)
+      historyTimerRef.current = null
+    }
     const idx = historyIndexRef.current
     const stack = historyRef.current
     if (idx >= stack.length - 1) return
