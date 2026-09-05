@@ -8,6 +8,26 @@ import CursorTrail from './CursorTrail'
 import ContextMenu from './ContextMenu'
 import { caretPosition, overlayCaretDelta } from '../lib/caret-position'
 
+const GUTTER_W = 48
+
+function LineNumbers({ body, gutterRef, font, fontSize, lineHeight, color }) {
+  const lines = body.split('\n')
+  return (
+    <div ref={gutterRef}
+      style={{ width: GUTTER_W, flexShrink: 0, overflow: 'hidden',
+        paddingTop: space[3], paddingBottom: space[3],
+        fontFamily: font, fontSize, lineHeight,
+        color, textAlign: 'right', userSelect: 'none',
+        borderRight: '1px solid ' + colors.border }}>
+      {lines.map((_, i) => (
+        <div key={i} style={{ paddingRight: 10, height: fontSize * lineHeight }}>
+          {i + 1}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 const LINE_HEIGHT = 22
 let _animId = 0
 /** Get the (x, y) pixel position of a caret inside the textarea container.
@@ -189,6 +209,8 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const taRef = useRef(null)
   const previewRef = useRef(null)
   const fileInputRef = useRef(null)
+  const gutterSplitRef = useRef(null)
+  const gutterEditRef = useRef(null)
 
   // --- Wikilink autocomplete ---
   const [linkPopup, setLinkPopup] = useState(null) // { query, index, pos: {top, left} }
@@ -290,8 +312,9 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     if (!ta || !container) { setOverlayGeo(null); return }
     const update = () => {
       const cs = getComputedStyle(ta)
+      const gutterOff = prefs.editor.line_numbers ? GUTTER_W : 0
       setOverlayGeo({
-        left: ta.offsetLeft, top: ta.offsetTop,
+        left: ta.offsetLeft + gutterOff, top: ta.offsetTop,
         width: ta.clientWidth, height: ta.clientHeight,
         padT: cs.paddingTop, padR: cs.paddingRight,
         padB: cs.paddingBottom, padL: cs.paddingLeft,
@@ -578,8 +601,16 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     setTimeout(() => { skipScrollRef.current = false }, 100)
   }
 
+  function syncGutterScroll() {
+    const ta = taRef.current
+    if (!ta) return
+    const g = mode === 'split' ? gutterSplitRef.current : gutterEditRef.current
+    if (g) g.scrollTop = ta.scrollTop
+  }
+
   function onScroll() {
     syncOverlayScroll()
+    syncGutterScroll()
     if (skipScrollRef.current) return
     const ta = taRef.current
     if (!ta) return
@@ -1059,6 +1090,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   function handleTextareaScroll() {
     onScroll()
     syncOverlayScroll()
+    syncGutterScroll()
     // Sync preview scroll proportionally
     const ta = taRef.current
     const pv = previewRef.current
@@ -1279,6 +1311,11 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                 <CursorTrail key={note?.path} textareaRef={taRef} containerRef={editorContainerRef} />
               )}
               <ContextMenu items={editorMenuItems} triggerStyle={{ display: 'contents' }}>
+              <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+              {prefs.editor.line_numbers && (
+                <LineNumbers body={body} gutterRef={gutterSplitRef} font={editorFont}
+                  fontSize={editorFontSize} lineHeight={editorLineHeight} color={colors.textDim} />
+              )}
               <textarea
                 ref={taRef}
                 value={body}
@@ -1293,11 +1330,12 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                 onPaste={handleTextareaPaste}
                 onDrop={handleTextareaDrop}
                 placeholder="Write, the night holds what you seek."
-                style={{ width: '100%', height: '100%', resize: 'none', outline: 'none',
+                style={{ flex: 1, height: '100%', resize: 'none', outline: 'none',
                   background: 'transparent', border: 'none',
                   color: animatedEnabled && !selActive && body.length > 0 ? 'transparent' : colors.text,
                   caretColor: colors.text,
-                  fontFamily: editorFont, fontSize: editorFontSize, lineHeight: editorLineHeight, padding: space[3],
+                  fontFamily: editorFont, fontSize: editorFontSize, lineHeight: editorLineHeight,
+                  padding: prefs.editor.line_numbers ? `12px 12px 12px 6px` : `12px 12px 12px 12px`,
                   overflowWrap: 'break-word',
                   whiteSpace: prefs.editor.word_wrap === false ? 'pre' : 'pre-wrap',
                   overflowX: prefs.editor.word_wrap === false ? 'auto' : 'hidden',
@@ -1305,6 +1343,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                   transition: 'box-shadow 0.6s ease-out',
                   boxShadow: typing ? `inset 0 0 30px rgba(180, 140, 80, 0.06)` : 'none' }}
               />
+              </div>
               {linkPopup && (() => {
                 const matches = Object.keys(noteNames)
                   .filter(t => t.toLowerCase().includes(linkPopup.query))
@@ -1375,6 +1414,11 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                 <CursorTrail key={note?.path} textareaRef={taRef} containerRef={editorContainerRef} />
               )}
               <ContextMenu items={editorMenuItems} triggerStyle={{ display: 'contents' }}>
+              <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+              {prefs.editor.line_numbers && (
+                <LineNumbers body={body} gutterRef={gutterEditRef} font={editorFont}
+                  fontSize={editorFontSize} lineHeight={editorLineHeight} color={colors.textDim} />
+              )}
               <textarea
                 ref={taRef}
                 value={body}
@@ -1389,11 +1433,12 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                 onPaste={handleTextareaPaste}
                 onDrop={handleTextareaDrop}
                 placeholder="Write, the night holds what you seek."
-                style={{ width: '100%', height: '100%', resize: 'none', outline: 'none',
-                  background: 'transparent', border: 'none', padding: 0,
+                style={{ flex: 1, height: '100%', resize: 'none', outline: 'none',
+                  background: 'transparent', border: 'none',
                   color: animatedEnabled && !selActive && body.length > 0 ? 'transparent' : colors.text,
                   caretColor: colors.text,
                   fontFamily: editorFont, fontSize: editorFontSize, lineHeight: editorLineHeight,
+                  padding: prefs.editor.line_numbers ? `0 12px 0 6px` : 0,
                   overflowWrap: 'break-word',
                   whiteSpace: prefs.editor.word_wrap === false ? 'pre' : 'pre-wrap',
                   overflowX: prefs.editor.word_wrap === false ? 'auto' : 'hidden',
@@ -1444,6 +1489,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
               {animatedEnabled && animItems.map(a => (
                 <AnimItem key={a.id} a={a} accent={colors.accent} />
               ))}
+              </div>
               </ContextMenu>
               </>
             )}
