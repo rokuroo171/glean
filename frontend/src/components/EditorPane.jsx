@@ -6,6 +6,7 @@ import StarIcon from './StarIcon'
 import Icon from './Icon'
 import CursorTrail from './CursorTrail'
 import ContextMenu from './ContextMenu'
+import FindReplace from './FindReplace'
 import { caretPosition, overlayCaretDelta } from '../lib/caret-position'
 
 const GUTTER_W = 48
@@ -211,6 +212,8 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const fileInputRef = useRef(null)
   const gutterSplitRef = useRef(null)
   const gutterEditRef = useRef(null)
+  const [showFind, setShowFind] = useState(false)
+  const [showReplace, setShowReplace] = useState(false)
 
   // --- Wikilink autocomplete ---
   const [linkPopup, setLinkPopup] = useState(null) // { query, index, pos: {top, left} }
@@ -698,6 +701,20 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
       return
     }
 
+    // Ctrl+F find, Ctrl+H find & replace
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
+      e.preventDefault()
+      setShowFind(true)
+      setShowReplace(false)
+      return
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'h' || e.key === 'H')) {
+      e.preventDefault()
+      setShowFind(true)
+      setShowReplace(true)
+      return
+    }
+
     // Ctrl+Shift+I insert image
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'i' || e.key === 'I')) {
       e.preventDefault()
@@ -1079,6 +1096,8 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     { id: 'code', label: 'Code block', icon: 'code', onSelect: insertCode },
     { id: 'quote', label: 'Blockquote', icon: 'quote', onSelect: insertQuote },
     { id: 'sep2', type: 'separator' },
+    { id: 'find', label: 'Find & Replace', icon: 'search', shortcut: 'Ctrl+F',
+      onSelect: () => { setShowFind(true); setShowReplace(true) } },
     { id: 'select-all', label: 'Select all', shortcut: 'Ctrl+A',
       onSelect: () => { const ta = taRef.current; if (!ta) return; ta.focus(); ta.select() } },
     { id: 'sep3', type: 'separator' },
@@ -1275,6 +1294,12 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
             </button>
           ))}
         </div>
+      )}
+
+      {/* Find & replace bar */}
+      {showFind && (mode === 'edit' || mode === 'split') && (
+        <FindReplace body={body} taRef={taRef} showReplace={showReplace}
+          onClose={() => { setShowFind(false); setShowReplace(false) }} />
       )}
 
       {/* Editor area. minWidth: 0 is critical: without it a flex row
