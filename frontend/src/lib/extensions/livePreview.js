@@ -16,6 +16,10 @@ import { syntaxTree } from '@codemirror/language'
 // Hidden ranges follow the folding pattern: when the cursor touches a
 // hidden marker, the marker is shown so the user can edit it, and it
 // hides again once the cursor leaves.
+//
+// Ranges are collected and sorted by (from, startSide) before they go
+// into the RangeSetBuilder, since it requires sorted input and a plain
+// tree walk mixes block ranges with the inline ranges inside them.
 
 class TaskCheckbox extends WidgetType {
   constructor(checked) { super(); this.checked = checked }
@@ -54,7 +58,7 @@ function taskCheckbox(checked) {
 
 // Headings. ATXHeading nodes cover the whole line including the `#`
 // markers. Style the text, hide the marker run plus one space.
-function headingDecorations(builder, state, node, cursorHead, level) {
+function headingDecorations(add, state, node, cursorHead, level) {
   const line = state.doc.lineAt(node.from)
   const rel = node.from - line.from
   const text = line.text.slice(rel)
@@ -66,13 +70,13 @@ function headingDecorations(builder, state, node, cursorHead, level) {
   const textTo = Math.min(node.to, line.to)
   if (textFrom >= textTo) return
   if (!(cursorHead >= markerFrom && cursorHead <= markerTo)) {
-    builder.add(markerFrom, markerTo, hideMark)
+    add(markerFrom, markerTo, hideMark)
   }
-  builder.add(textFrom, textTo, headingMark(level))
+  add(textFrom, textTo, headingMark(level))
 }
 
 // Inline emphasis: hide the delimiter pairs, style the content.
-function emphasisDecorations(builder, state, node, cursorHead, contentMark, delimiterLen) {
+function emphasisDecorations(add, state, node, cursorHead, contentMark, delimiterLen) {
   const open = state.doc.sliceString(node.from, node.from + delimiterLen)
   const close = state.doc.sliceString(node.to - delimiterLen, node.to)
   const openIsDelim = /^(\*\*|__|\*|_|~~)$/.test(open)
@@ -80,107 +84,107 @@ function emphasisDecorations(builder, state, node, cursorHead, contentMark, deli
   const innerFrom = node.from + (openIsDelim ? delimiterLen : 0)
   const innerTo = node.to - (closeIsDelim ? delimiterLen : 0)
   if (innerFrom >= innerTo) return
-  // Ranges must be added in ascending `from` order.
   if (openIsDelim && !(cursorHead >= node.from && cursorHead <= node.from + delimiterLen)) {
-    builder.add(node.from, node.from + delimiterLen, hideMark)
+    add(node.from, node.from + delimiterLen, hideMark)
   }
-  builder.add(innerFrom, innerTo, contentMark)
+  add(innerFrom, innerTo, contentMark)
   if (closeIsDelim && !(cursorHead >= node.to - delimiterLen && cursorHead <= node.to)) {
-    builder.add(node.to - delimiterLen, node.to, hideMark)
+    add(node.to - delimiterLen, node.to, hideMark)
   }
 }
 
 // Inline code: hide the backtick pairs, style the content.
-function inlineCodeDecorations(builder, state, node, cursorHead) {
+function inlineCodeDecorations(add, state, node, cursorHead) {
   const text = state.doc.sliceString(node.from, node.to)
   const fence = (text.match(/^(`+)/) || ['', '`'])[1].length
   if (node.to - node.from <= fence * 2) return
   const innerFrom = node.from + fence
   const innerTo = node.to - fence
   if (!(cursorHead >= node.from && cursorHead <= node.from + fence)) {
-    builder.add(node.from, innerFrom, hideMark)
+    add(node.from, innerFrom, hideMark)
   }
-  builder.add(innerFrom, innerTo, inlineCodeMark)
+  add(innerFrom, innerTo, inlineCodeMark)
   if (!(cursorHead >= node.to - fence && cursorHead <= node.to)) {
-    builder.add(innerTo, node.to, hideMark)
+    add(innerTo, node.to, hideMark)
   }
 }
 
 // Links: hide the brackets and the `](url)` tail, style the label.
-function linkDecorations(builder, state, node, cursorHead) {
+function linkDecorations(add, state, node, cursorHead) {
   const text = state.doc.sliceString(node.from, node.to)
   const close = text.lastIndexOf(']')
   if (close <= 0) return
   const labelFrom = node.from + 1
   const labelTo = node.from + close
   if (!(cursorHead >= node.from && cursorHead <= node.from + 1)) {
-    builder.add(node.from, labelFrom, hideMark)
+    add(node.from, labelFrom, hideMark)
   }
-  builder.add(labelFrom, labelTo, linkMark)
+  add(labelFrom, labelTo, linkMark)
   if (!(cursorHead >= node.from + close && cursorHead <= node.to)) {
-    builder.add(node.from + close, node.to, hideMark)
+    add(node.from + close, node.to, hideMark)
   }
 }
 
 // Code fences: block background over every line, fence lines hidden.
-function fencedCodeDecorations(builder, state, node, cursorHead) {
+function fencedCodeDecorations(add, state, node, cursorHead) {
   const firstLine = state.doc.lineAt(node.from)
   const lastLine = state.doc.lineAt(node.to)
   if (firstLine.number !== lastLine.number) {
     const openFenceTo = firstLine.to
     const closeFenceFrom = lastLine.from
     if (!(cursorHead >= node.from && cursorHead <= openFenceTo)) {
-      builder.add(node.from, openFenceTo, hideMark)
+      add(node.from, openFenceTo, hideMark)
     }
     if (!(cursorHead >= closeFenceFrom && cursorHead <= node.to)) {
-      builder.add(closeFenceFrom, node.to, hideMark)
+      add(closeFenceFrom, node.to, hideMark)
     }
   }
   for (let ln = firstLine.number; ln <= lastLine.number; ln++) {
     const l = state.doc.line(ln)
-    builder.add(l.from, l.from, codeBlockLine)
+    add(l.from, l.from, codeBlockLine)
   }
 }
 
 // Blockquote: hide `>` markers, give the lines a left border.
-function blockquoteDecorations(builder, state, node) {
+function blockquoteDecorations(add, state, node) {
   const firstLine = state.doc.lineAt(node.from)
   const lastLine = state.doc.lineAt(node.to)
   for (let ln = firstLine.number; ln <= lastLine.number; ln++) {
     const l = state.doc.line(ln)
-    builder.add(l.from, l.from, quoteLine)
+    add(l.from, l.from, quoteLine)
     const m = l.text.match(/^>\s?/)
-    if (m) builder.add(l.from, l.from + m[0].length, hideMark)
+    if (m) add(l.from, l.from + m[0].length, hideMark)
   }
 }
 
 // Tables: dim the delimiter row (the `---` separator). Cells keep as-is.
-function tableDecorations(builder, state, node) {
+function tableDecorations(add, state, node) {
   const firstLine = state.doc.lineAt(node.from)
   const lastLine = state.doc.lineAt(node.to)
   for (let ln = firstLine.number; ln <= lastLine.number; ln++) {
     const l = state.doc.line(ln)
-    const cells = l.text.trim().split('|').map(c => c.trim())
-    if (cells.length >= 2 && cells.every(c => /^:?-{1,}:?$/.test(c))) {
-      builder.add(l.from, l.from, tableDelimiterLine)
+    const body = l.text.trim().replace(/^\|/, '').replace(/\|$/, '')
+    const cells = body.split('|').map(c => c.trim())
+    if (cells.length >= 1 && cells.every(c => /^:?-{1,}:?$/.test(c))) {
+      add(l.from, l.from, tableDelimiterLine)
     }
   }
 }
 
 // Images: style the whole syntax as a dimmed placeholder.
-function imageDecorations(builder, state, node) {
-  builder.add(node.from, node.to, imagePlaceholder)
+function imageDecorations(add, state, node) {
+  add(node.from, node.to, imagePlaceholder)
 }
 
 // Task markers: replace `[ ]`/`[x]` with a clickable checkbox.
-function taskDecorations(builder, state, node, cursorHead) {
+function taskDecorations(add, state, node, cursorHead) {
   const text = state.doc.sliceString(node.from, node.to)
   const m = text.match(/^\[([ x])\]/)
   if (!m) return
   if (cursorHead >= node.from && cursorHead <= node.to) {
-    builder.add(node.from, node.to, taskTextMark)
+    add(node.from, node.to, taskTextMark)
   } else {
-    builder.add(node.from, node.to, taskCheckbox(m[1] !== ' '))
+    add(node.from, node.to, taskCheckbox(m[1] !== ' '))
   }
 }
 
@@ -188,29 +192,31 @@ function taskDecorations(builder, state, node, cursorHead) {
 export function buildLivePreview(state) {
   const tree = syntaxTree(state)
   const head = state.selection.main.head
-  const builder = new RangeSetBuilder()
+  const ranges = []
+  const add = (from, to, deco) => ranges.push({ from, to, deco })
   tree.iterate({
     enter(node) {
       const name = node.name
       if (name.startsWith('ATXHeading')) {
-        headingDecorations(builder, state, node, head, Number(name.slice(-1)))
+        headingDecorations(add, state, node, head, Number(name.slice(-1)))
         return
       }
-      if (name === 'FencedCode') { fencedCodeDecorations(builder, state, node, head); return false }
-      if (name === 'Blockquote') { blockquoteDecorations(builder, state, node); return }
-      if (name === 'Table') { tableDecorations(builder, state, node); return }
-      if (name === 'Image') { imageDecorations(builder, state, node); return false }
-      if (name === 'TaskMarker') { taskDecorations(builder, state, node, head); return }
-      // Nested emphasis would add child ranges out of document order,
-      // so handle these as leaves.
-      if (name === 'StrongEmphasis') { emphasisDecorations(builder, state, node, head, boldMark, 2); return false }
-      if (name === 'Emphasis') { emphasisDecorations(builder, state, node, head, italicMark, 1); return false }
-      if (name === 'Strikethrough') { emphasisDecorations(builder, state, node, head, strikeMark, 2); return false }
-      if (name === 'InlineCode') { inlineCodeDecorations(builder, state, node, head); return false }
-      if (name === 'Link') { linkDecorations(builder, state, node, head); return false }
+      if (name === 'FencedCode') { fencedCodeDecorations(add, state, node, head); return false }
+      if (name === 'Blockquote') { blockquoteDecorations(add, state, node); return }
+      if (name === 'Table') { tableDecorations(add, state, node); return }
+      if (name === 'Image') { imageDecorations(add, state, node); return false }
+      if (name === 'TaskMarker') { taskDecorations(add, state, node, head); return false }
+      if (name === 'StrongEmphasis') { emphasisDecorations(add, state, node, head, boldMark, 2); return false }
+      if (name === 'Emphasis') { emphasisDecorations(add, state, node, head, italicMark, 1); return false }
+      if (name === 'Strikethrough') { emphasisDecorations(add, state, node, head, strikeMark, 2); return false }
+      if (name === 'InlineCode') { inlineCodeDecorations(add, state, node, head); return false }
+      if (name === 'Link') { linkDecorations(add, state, node, head); return false }
       return undefined
     },
   })
+  ranges.sort((a, b) => a.from - b.from || a.deco.startSide - b.deco.startSide || a.to - b.to)
+  const builder = new RangeSetBuilder()
+  for (const r of ranges) builder.add(r.from, r.to, r.deco)
   return builder.finish()
 }
 
