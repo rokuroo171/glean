@@ -84,6 +84,18 @@ function headingDecorations(add, state, node, cursorHead, level) {
   add(textFrom, textTo, headingMark(level))
 }
 
+// Setext headings: style the text lines as a heading, hide the
+// underline of `=` or `-` marks.
+function setextDecorations(add, state, node, cursorHead, level) {
+  const underlineLine = state.doc.lineAt(node.to)
+  const textTo = underlineLine.number > 1 ? state.doc.line(underlineLine.number - 1).to : node.from
+  if (textTo <= node.from) return
+  add(node.from, textTo, headingMark(level))
+  if (!(cursorHead >= underlineLine.from && cursorHead <= node.to)) {
+    add(underlineLine.from, underlineLine.to, hideMark)
+  }
+}
+
 // Inline emphasis: hide the delimiter pairs, style the content.
 function emphasisDecorations(add, state, node, cursorHead, contentMark, delimiterLen) {
   const open = state.doc.sliceString(node.from, node.from + delimiterLen)
@@ -210,6 +222,8 @@ export function buildLivePreview(state) {
         headingDecorations(add, state, node, head, Number(name.slice(-1)))
         return
       }
+      if (name === 'SetextHeading1') { setextDecorations(add, state, node, head, 1); return }
+      if (name === 'SetextHeading2') { setextDecorations(add, state, node, head, 2); return }
       if (name === 'FencedCode') { fencedCodeDecorations(add, state, node, head); return false }
       if (name === 'Blockquote') { blockquoteDecorations(add, state, node); return }
       if (name === 'Table') { tableDecorations(add, state, node); return }
