@@ -72,6 +72,15 @@ function headingDecorations(add, state, node, cursorHead, level) {
   if (!(cursorHead >= markerFrom && cursorHead <= markerTo)) {
     add(markerFrom, markerTo, hideMark)
   }
+  // Closing hashes: `# Heading #` hides the trailing run too.
+  const content = state.doc.sliceString(textFrom, textTo)
+  const cm = content.match(/(\s+#+)(\s*)$/)
+  if (cm && content.length > cm[0].length) {
+    const closeFrom = textTo - cm[0].length
+    if (!(cursorHead >= closeFrom && cursorHead <= textTo)) {
+      add(closeFrom, textTo, hideMark)
+    }
+  }
   add(textFrom, textTo, headingMark(level))
 }
 
