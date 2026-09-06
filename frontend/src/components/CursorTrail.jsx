@@ -15,7 +15,6 @@
 
 import { useEffect, useRef } from 'react'
 import { usePreferences } from '../lib/preferences-context'
-import { caretPosition } from '../lib/caret-position'
 
 const ACCENT_FALLBACK = '#5b9fd4'
 const INTENSITY = { subtle: 0.6, normal: 1, vivid: 1.6 }
@@ -31,7 +30,7 @@ function normalizeMode(m) {
   return m || 'beam'
 }
 
-export default function CursorTrail({ textareaRef, containerRef }) {
+export default function CursorTrail({ view, containerRef }) {
   const canvasRef = useRef(null)
   const animRef = useRef(null)
   const posRef = useRef(null) // drawn caret position (eases toward target)
@@ -85,15 +84,10 @@ export default function CursorTrail({ textareaRef, containerRef }) {
   // native caret at all - an invisible custom caret is worse than the
   // native one, so pass through completely.
   useEffect(() => {
-    const ta = textareaRef?.current
-    if (!ta) return
+    if (!view) return
     if (!enabled) return
 
-    // Coalesce every measure trigger into ONE mirror layout per frame.
-    // Without this, a single keystroke fires input + selectionchange +
-    // keyup, each scheduling its own full-document mirror measurement -
-    // on long notes that is several expensive synchronous layouts per
-    // keystroke and typing stutters.
+    // Coalesce measure triggers into one layout read per frame.
     let measurePending = false
     const scheduleMeasure = (fromScroll) => {
       if (measurePending) return
@@ -103,18 +97,10 @@ export default function CursorTrail({ textareaRef, containerRef }) {
         measure(fromScroll)
       })
     }
-    // Measure right after the browser has settled the selection.
-    const onKeyUp = () => scheduleMeasure(false)
-    const onInput = () => scheduleMeasure(false)
-    const onClick = () => scheduleMeasure(false)
     const onFocus = () => { focusRef.current = true; scheduleMeasure(false) }
     const onBlur = () => { focusRef.current = false }
-    // The native caret stays the caret: the browser draws it pixel-exact
-    // at any depth. We only tint it to match the trail color; alignment
-    // is the browser's job, not ours. Never hide it.
-    ta.style.caretColor = colorRef.current || ACCENT_FALLBACK
-    ta.addEventListener('focus', onFocus)
-    ta.addEventListener('blur', onBlur)
+    view.dom.addEventListener('focus', onFocus)
+    view.dom.addEventListener('blur', onBlur)
 
     const spawnSparkles = (from, dist, mul) => {
       const count = Math.round((4 + Math.min(dist / 40, 6)) * mul)
@@ -141,7 +127,7 @@ export default function CursorTrail({ textareaRef, containerRef }) {
     }
 
     const measure = (fromScroll) => {
-      const pos = getCursorPixelPos(ta, containerRef?.current)
+      const pos = getCursorPixelPos(view, containerRef?.current)
       if (!pos) return
       const e = prefsRef.current || {}
       const threshold = e.cursor_trail_start_threshold ?? 4
@@ -186,11 +172,9 @@ export default function CursorTrail({ textareaRef, containerRef }) {
       }
     }
 
-    // When the WRAPPER scrolls (single-edit mode), the absolutely
-    // positioned canvas would scroll away with the content. Jump it back
-    // by the scroll offset so it always covers the visible scrollport:
-    // content y = scrollTop appears at viewport y = 0. In split mode the
-    // wrapper never scrolls, so this stays at 0 and the canvas never moves.
+    // When the WRAPPER scrolls, the absolutely positioned canvas would
+    // scroll away with the content. Jump it back by the scroll offset so
+    // it always covers the visible scrollport.
     const pin = () => {
       const c = canvasRef.current
       const sc = containerRef?.current
@@ -201,52 +185,29 @@ export default function CursorTrail({ textareaRef, containerRef }) {
 
     const onScroll = () => { pin(); scheduleMeasure(true) }
 
-    const onKeyDown = (e) => {
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'].includes(e.key)) {
-        scheduleMeasure(false)
-      }
+    view.dom.addEventListener('scroll', onScroll, true)
+    const containerNode = containerRef?.current
+    if (containerNode) containerNode.addEventListener('scroll', onScroll, true)
+
+    // coordsAtPos is a cheap layout read (unlike the old full-document
+    // mirror), so poll it every frame. That catches every caret move -
+    // typing, arrows, clicks, IME, undo/redo - without a separate event
+    // stream. measure() no-ops when the position is unchanged.
+    const pollInterval = setInterval(() => measure(false), 50)
+
+    // Measure once on mount so the drawn caret appears immediately,
+    // even before the user touches the keyboard.
+    pin()
+    measure(false)
+
+    return () => {
+      clearInterval(pollInterval)
+      view.dom.removeEventListener('focus', onFocus)
+      view.dom.removeEventListener('blur', onBlur)
+      view.dom.removeEventListener('scroll', onScroll, true)
+      if (containerNode) containerNode.removeEventListener('scroll', onScroll, true)
     }
-
-    // Fires on EVERY caret move (drags, IME, programmatic selection) -
-    // the one event the key/click wiring can miss. Guarded to this
-    // textarea so unrelated selections elsewhere are ignored. Coalesced
-    // so it can never stall the input path with a sync layout.
-    const onSelectionChange = () => {
-      if (document.activeElement === ta) scheduleMeasure(false)
-    }
-
-      ta.addEventListener('keydown', onKeyDown)
-      ta.addEventListener('keyup', onKeyUp)
-      ta.addEventListener('input', onInput)
-      ta.addEventListener('click', onClick)
-      ta.addEventListener('focus', onFocus)
-      ta.addEventListener('scroll', onScroll)
-      document.addEventListener('selectionchange', onSelectionChange)
-      // In single-edit mode the WRAPPER is the scrollable (the textarea is
-      // height:100% and never scrolls), so listen for its scroll in the
-      // capture phase too - scroll events don't bubble.
-      const containerNode = containerRef?.current
-      if (containerNode) containerNode.addEventListener('scroll', onScroll, true)
-
-      // Measure once on mount so the drawn caret appears immediately,
-      // even before the user touches the keyboard.
-      pin()
-      measure(false)
-
-      return () => {
-        measurePending = false
-        ta.style.caretColor = ''
-        ta.removeEventListener('focus', onFocus)
-        ta.removeEventListener('blur', onBlur)
-        ta.removeEventListener('keydown', onKeyDown)
-        ta.removeEventListener('keyup', onKeyUp)
-        ta.removeEventListener('input', onInput)
-        ta.removeEventListener('click', onClick)
-        ta.removeEventListener('scroll', onScroll)
-        document.removeEventListener('selectionchange', onSelectionChange)
-        if (containerNode) containerNode.removeEventListener('scroll', onScroll, true)
-      }
-  }, [textareaRef, enabled])
+  }, [view, enabled])
 
   // Animation loop. Always runs (custom caret is always visible).
   // Trail effects are gated on `enabled` inside the frame.
@@ -597,30 +558,21 @@ function drawInk(ctx, now, p, inkPointsRef) {
 
 // --- utilities ---
 
-// Real caret geometry: mirror the textarea's text into a hidden div with
-// identical styles and read the caret marker's actual layout position.
-// This is exact under line wrapping, fonts, word-break, tabs, etc. -
-// no character-width estimation that drifts on wrapped paragraphs.
-// Find the nearest scrollable ANCESTOR of the textarea (skip the
-// textarea itself - a mirror can't live inside one). The mirror must
-// LIVE inside the scroller so its marker moves with the text.
-function findScroller(el) {
-  let n = el.parentElement
-  while (n && n !== document.body) {
-    const cs = getComputedStyle(n)
-    if (/(auto|scroll)/.test(cs.overflowY) && n.scrollHeight > n.clientHeight) {
-      return n
-    }
-    n = n.parentElement
+// Caret geometry straight from the CodeMirror 6 view: coordsAtPos is the
+// browser's own layout position for the caret, pixel-exact under line
+// wrapping, fonts, tabs and scroll - no mirror or char-width estimation.
+function getCursorPixelPos(view, container) {
+  if (!view || !container) return null
+  const head = view.state.selection.main.head
+  const coords = view.coordsAtPos(head)
+  if (!coords) return null
+  const rect = container.getBoundingClientRect()
+  return {
+    x: coords.left - rect.left,
+    y: coords.top - rect.top,
+    h: coords.bottom - coords.top,
+    w: 1,
   }
-  return el.parentElement || el
-}
-
-function getCursorPixelPos(ta, container) {
-  if (!ta || !container) return null
-  const p = caretPosition(ta, container)
-  if (!p) return null
-  return { x: p.x, y: p.y, h: p.h, w: p.w }
 }
 
 function parseHex(hex) {
