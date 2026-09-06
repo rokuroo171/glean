@@ -1,13 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { EditorSelection } from '@codemirror/state'
+import { EditorView } from '@codemirror/view'
 import { colors } from '../lib/theme'
 import Icon from './Icon'
 
-export default function FindReplace({ body, taRef, showReplace, onClose }) {
+export default function FindReplace({ viewRef, showReplace, onClose }) {
   const [query, setQuery] = useState('')
   const [replaceWith, setReplaceWith] = useState('')
   const [matchIdx, setMatchIdx] = useState(-1)
   const [matches, setMatches] = useState([])
   const inputRef = useRef(null)
+
+  const view = () => viewRef?.current
+  const body = () => view()?.state.doc.toString() || ''
 
   // Find all matches
   useEffect(() => {
@@ -15,29 +20,29 @@ export default function FindReplace({ body, taRef, showReplace, onClose }) {
     const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const regex = new RegExp(escaped, 'gi')
     const found = []
+    const text = body()
     let m
-    while ((m = regex.exec(body)) !== null) {
+    while ((m = regex.exec(text)) !== null) {
       found.push({ start: m.index, end: m.index + m[0].length, text: m[0] })
       if (found.length > 5000) break
     }
     setMatches(found)
     setMatchIdx(found.length > 0 ? 0 : -1)
-  }, [query, body])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, viewRef?.current?.state?.doc])
 
   // Select and scroll to current match
   useEffect(() => {
     if (matchIdx < 0 || matchIdx >= matches.length) return
-    const ta = taRef?.current
-    if (!ta) return
+    const v = view()
+    if (!v) return
     const m = matches[matchIdx]
-    ta.focus()
-    ta.setSelectionRange(m.start, m.end)
-    // Scroll match into view
-    const linesBefore = body.slice(0, m.start).split('\n').length - 1
-    const lineHeight = parseFloat(getComputedStyle(ta).lineHeight) || 22
-    const targetTop = linesBefore * lineHeight - ta.clientHeight / 3
-    ta.scrollTop = Math.max(0, targetTop)
-  }, [matchIdx, matches, body, taRef])
+    v.dispatch({
+      selection: EditorSelection.single(m.start, m.end),
+      effects: EditorView.scrollIntoView(m.start, { y: 'center' }),
+    })
+    v.focus()
+  }, [matchIdx, matches, viewRef])
 
   const next = useCallback(() => {
     if (matches.length === 0) return
@@ -51,33 +56,26 @@ export default function FindReplace({ body, taRef, showReplace, onClose }) {
 
   const replaceOne = useCallback(() => {
     if (matchIdx < 0 || matchIdx >= matches.length) return
-    const ta = taRef?.current
-    if (!ta) return
+    const v = view()
+    if (!v) return
     const m = matches[matchIdx]
-    const before = body.slice(0, m.start)
-    const after = body.slice(m.end)
-    const newBody = before + replaceWith + after
-    // Trigger onChange
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-      window.HTMLTextAreaElement.prototype, 'value'
-    ).set
-    nativeInputValueSetter.call(ta, newBody)
-    ta.dispatchEvent(new Event('input', { bubbles: true }))
-  }, [matchIdx, matches, body, replaceWith, taRef])
+    v.dispatch({
+      changes: { from: m.start, to: m.end, insert: replaceWith },
+      selection: EditorSelection.cursor(m.start + replaceWith.length),
+    })
+    v.focus()
+  }, [matchIdx, matches, replaceWith, viewRef])
 
   const replaceAll = useCallback(() => {
     if (matches.length === 0 || !query) return
-    const ta = taRef?.current
-    if (!ta) return
-    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const regex = new RegExp(escaped, 'gi')
-    const newBody = body.replace(regex, replaceWith)
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-      window.HTMLTextAreaElement.prototype, 'value'
-    ).set
-    nativeInputValueSetter.call(ta, newBody)
-    ta.dispatchEvent(new Event('input', { bubbles: true }))
-  }, [query, replaceWith, body, matches.length, taRef])
+    const v = view()
+    if (!v) return
+    const changes = matches
+      .map(m => ({ from: m.start, to: m.end, insert: replaceWith }))
+      .reverse()
+    v.dispatch({ changes })
+    v.focus()
+  }, [query, replaceWith, matches, viewRef])
 
   // Focus input on mount
   useEffect(() => { inputRef.current?.focus() }, [])
