@@ -152,7 +152,7 @@ function blockquoteDecorations(add, state, node) {
   for (let ln = firstLine.number; ln <= lastLine.number; ln++) {
     const l = state.doc.line(ln)
     add(l.from, l.from, quoteLine)
-    const m = l.text.match(/^>\s?/)
+    const m = l.text.match(/^(?:\s*>\s?)+/)
     if (m) add(l.from, l.from + m[0].length, hideMark)
   }
 }
