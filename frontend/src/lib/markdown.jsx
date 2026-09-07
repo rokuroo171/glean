@@ -98,9 +98,9 @@ function getS() {
   ul: { margin: '6px 0', paddingLeft: 24, listStyleType: 'none' },
   ol: { margin: '6px 0', paddingLeft: 24, listStyleType: 'none', counterReset: 'glean-counter' },
   li: { margin: '3px 0', lineHeight: 1.7, color: colors.text, overflowWrap: 'anywhere', position: 'relative', paddingLeft: 16 },
-  table: { borderCollapse: 'collapse', margin: '12px 0', width: '100%', fontSize: 13 },
-  th: { border: `1px solid ${colors.border}`, padding: '8px 12px', fontWeight: 600, color: colors.text, background: 'rgba(90,106,122,0.08)', textAlign: 'left', overflowWrap: 'anywhere' },
-  td: { border: `1px solid ${colors.border}`, padding: '8px 12px', color: colors.text, overflowWrap: 'anywhere' },
+  table: { borderCollapse: 'collapse', margin: '12px 0', width: '100%', fontSize: 13, border: `1px solid ${colors.border}`, borderRadius: 6, overflow: 'hidden' },
+  th: { border: `1px solid ${colors.border}`, padding: '10px 14px', fontWeight: 600, color: colors.text, background: 'rgba(90,106,122,0.12)', textAlign: 'left', overflowWrap: 'anywhere' },
+  td: { border: `1px solid ${colors.border}`, padding: '10px 14px', color: colors.text, overflowWrap: 'anywhere' },
   code: {
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
     fontSize: 13,
@@ -224,6 +224,24 @@ const listStyles = `
     border: 1px solid ${colors.border};
     border-radius: 3px;
     box-shadow: 0 1px 0 ${colors.border};
+  }
+  .glean-markdown table tbody tr:hover {
+    background: rgba(180, 140, 80, 0.05);
+  }
+  .glean-markdown table th {
+    position: sticky;
+    top: 0;
+    background: rgba(90, 106, 122, 0.15);
+  }
+  .glean-markdown pre {
+    position: relative;
+  }
+  .glean-markdown pre:hover .copy-btn {
+    opacity: 1;
+  }
+  .glean-markdown .copy-btn {
+    opacity: 0;
+    transition: opacity 0.15s ease;
   }
 `
 
@@ -364,31 +382,44 @@ function CodeBlock({ children, className }) {
 
   return (
     <div className="code-block" style={s.pre}>
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: 8,
-      }}>
-          <span style={{
-            fontSize: 10, color: colors.textDim, textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-          }}>
-            {lang}
-          </span>
-          <button
-            type="button"
-            onClick={copy}
-            title="Copy code"
-            style={{
-              background: 'none', border: 'none', color: colors.textMuted,
-              cursor: 'pointer', padding: 2, fontSize: 11,
-            }}
-          >
-            copy
-          </button>
+      <button
+        className="copy-btn"
+        type="button"
+        onClick={copy}
+        title="Copy code"
+        style={{
+          position: 'absolute',
+          top: 8,
+          right: 8,
+          background: 'rgba(90, 106, 122, 0.2)',
+          border: `1px solid ${colors.border}`,
+          color: colors.textMuted,
+          cursor: 'pointer',
+          padding: '4px 8px',
+          fontSize: 11,
+          borderRadius: 4,
+        }}
+      >
+        Copy
+      </button>
+      {lang && (
+        <span style={{
+          position: 'absolute',
+          top: 8,
+          left: 12,
+          fontSize: 10,
+          color: colors.textDim,
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+        }}>
+          {lang}
+        </span>
+      )}
+      <div style={{ marginTop: lang ? 20 : 0 }}>
+        {highlighted
+          ? <code className={`language-${lang}`} dangerouslySetInnerHTML={{ __html: highlighted }} />
+          : <code>{code}</code>}
       </div>
-      {highlighted
-        ? <code className={`language-${lang}`} dangerouslySetInnerHTML={{ __html: highlighted }} />
-        : <code>{code}</code>}
     </div>
   )
 }
