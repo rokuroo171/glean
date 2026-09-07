@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glean Live Preview Test</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0B0F19; color: #e8eaed; font-family: monospace; }
+  #editor { height: 100vh; }
+  .glean-hide { font-size: 0; pointer-events: none; }
+  .glean-h1 { font-size: 1.7em; font-weight: 700; display: inline-block; }
+  .glean-h2 { font-size: 1.45em; font-weight: 700; display: inline-block; }
+  .glean-h3 { font-size: 1.25em; font-weight: 600; display: inline-block; }
+  .glean-h4 { font-size: 1.1em; font-weight: 600; display: inline-block; }
+  .glean-h5 { font-size: 1em; font-weight: 600; display: inline-block; }
+  .glean-h6 { font-size: 0.92em; font-weight: 600; color: #6a7a8a; display: inline-block; }
+  .glean-bold { font-weight: 700; }
+  .glean-italic { font-style: italic; }
+  .glean-strike { text-decoration: line-through; opacity: 0.75; }
+  .glean-icode { font-family: monospace; font-size: 0.9em; background: rgba(90,106,122,0.18); border-radius: 4px; padding: 0.5px 4px; }
+  .glean-link { color: #5b9fd4; cursor: pointer; }
+  .glean-codeblock { background: rgba(90,106,122,0.1); font-family: monospace; font-size: 0.92em; }
+  .glean-quote { border-left: 3px solid rgba(180,140,80,0.25); color: #6a7a8a; }
+  .glean-tabledelim { opacity: 0.35; }
+  .glean-tasktext { opacity: 0.45; }
+  .glean-taskbox { display: inline-flex; align-items: center; margin: 0 3px; }
+  .glean-taskbox input { width: 14px; height: 14px; accent-color: #5b9fd4; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="editor"></div>
+<script type="module">
+import {EditorState} from '/home/rokuroo/Projects/glean/frontend/node_modules/@codemirror/state/dist/index.js'
+import {EditorView, keymap, drawSelection, highlightActiveLine} from '/home/rokuroo/Projects/glean/frontend/node_modules/@codemirror/view/dist/index.js'
+import {defaultKeymap, history, historyKeymap, indentWithTab} from '/home/rokuroo/Projects/glean/frontend/node_modules/@codemirror/commands/dist/index.js'
+import {markdown, markdownLanguage, markdownKeymap} from '/home/rokuroo/Projects/glean/frontend/node_modules/@codemirror/lang-markdown/dist/index.js'
+import {indentUnit} from '/home/rokuroo/Projects/glean/frontend/node_modules/@codemirror/language/dist/index.js'
+import {highlightSelectionMatches} from '/home/rokuroo/Projects/glean/frontend/node_modules/@codemirror/search/dist/index.js'
+
+// Load the live preview from our source
+import {livePreviewField, taskClickPlugin} from '/home/rokuroo/Projects/glean/frontend/src/lib/extensions/livePreview.js'
+
+const testDoc = `# Markdown Renderer Test Suite
+
+Use this file to visually diff every component against a reference renderer.
+
+---
+
+## 1. Headings
+
+# H1 heading
+## H2 heading
+### H3 heading
+#### H4 heading
+##### H5 heading
+###### H6 heading
+
+Setext H1
+=========
+
+Setext H2
+---------
+
+---
+
+## 2. Emphasis
+
+*italic asterisk* and _italic underscore_
+
+**bold asterisk** and __bold underscore__
+
+***bold italic asterisk*** and ___bold italic underscore___
+
+~~strikethrough~~ (GFM)
+
+Combined: **bold _nested italic_ text** and *italic **nested bold** text*
+
+Mid-word emphasis: fo*o*bar
+
+---
+
+## 3. Paragraphs & Line Breaks
+
+This is paragraph one.
+This is still paragraph one (soft line break).
+
+This is paragraph two, after a blank line.
+
+---
+
+## 4. Blockquotes
+
+> Single-level blockquote.
+
+> Multi-line blockquote
+> spanning several lines
+> of the same quote.
+
+> Level 1
+> > Level 2 nested
+> > > Level 3 nested
+
+> Blockquote containing **bold**, *italic*, and \`inline code\`.
+
+> ### Heading inside a blockquote
+> - list item inside blockquote
+
+---
+
+## 5. Lists
+
+### 5.1 Unordered
+
+- Item one
+- Item two
+* Item using asterisk marker
++ Item using plus marker
+- Item with **bold** and \`code\`
+
+### 5.2 Nested unordered
+
+- Level 1
+  - Level 2
+    - Level 3
+      - Level 4
+
+### 5.3 Ordered
+
+1. First item
+2. Second item
+3. Third item
+
+### 5.6 Task list (GFM)
+
+- [x] Completed task
+- [ ] Incomplete task
+- [ ] Incomplete task with **bold**
+  - [x] Nested completed subtask
+
+---
+
+## 6. Code
+
+### 6.1 Inline code
+
+Use the \`useState()\` hook. Backtick containing a literal backtick: \\\`\\\`\\\` \`backtick\` \\\`\\\`\\\`.
+
+### 6.3 Fenced code block, no language
+
+\`\`\`
+plain fenced block
+no syntax highlighting expected
+\`\`\`
+
+### 6.4 Fenced code block, with language
+
+\`\`\`js
+function greet(name) {
+  const msg = \`Hello, \${name}!\`;
+  console.log(msg);
+  return msg;
+}
+\`\`\`
+
+\`\`\`go
+func Greet(name string) string {
+\treturn fmt.Sprintf("Hello, %s!", name)
+}
+\`\`\`
+
+\`\`\`bash
+#!/usr/bin/env bash
+for f in *.md; do
+  echo "Processing $f"
+done
+\`\`\`
+
+\`\`\`json
+{
+  "name": "glean",
+  "version": "0.1.0"
+}
+\`\`\`
+
+### 6.5 Fenced with tildes
+
+~~~
+tilde-fenced code block
+~~~
+
+---
+
+## 7. Horizontal Rules
+
+---
+
+***
+
+___
+
+* * *
+
+---
+
+## 8. Links
+
+Inline link: [OpenAI's competitor](https://www.anthropic.com)
+
+Inline link with title: [Anthropic](https://www.anthropic.com "Anthropic homepage")
+
+Autolink: <https://www.anthropic.com>
+
+Bare autolink (GFM): https://www.anthropic.com
+
+---
+
+## 10. Tables (GFM)
+
+| Left aligned | Center aligned | Right aligned |
+| :----------- | :------------: | ------------: |
+| a            | b              | c             |
+| longer cell  | x              | 123           |
+
+Table with inline formatting:
+
+| Feature | Supported | Notes |
+|---------|:---------:|-------|
+| **Bold** | yes | works inline |
+| \`code\` | yes | inline code in cell |
+| ~~strike~~ | maybe | depends on renderer |
+
+---
+
+## 21. GitHub-style Alerts
+
+> [!NOTE]
+> Useful information that users should know.
+
+> [!TIP]
+> Helpful advice for doing things better.
+
+> [!WARNING]
+> Urgent info that needs immediate user attention.
+
+---
+
+## 25. Round 2
+
+### 25.1 ATX headings with closing hashes
+
+# Closing hash heading #
+## Closing hash heading ##
+
+### 25.6 Numeric character references
+
+Decimal: &#65;&#66;&#67; (should render "ABC")
+`
+
+const theme = EditorView.theme({
+  '&': { color: '#e8eaed', backgroundColor: 'transparent', height: '100%', fontSize: '14px' },
+  '.cm-content': { fontFamily: 'inherit', lineHeight: '1.6', padding: '12px 16px', caretColor: '#e8eaed' },
+  '.cm-scroller': { fontFamily: 'inherit', overflow: 'auto' },
+  '&.cm-focused': { outline: 'none' },
+  '.cm-cursor': { borderLeftColor: '#e8eaed' },
+  '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': { background: 'rgba(91,159,212,0.28)' },
+  '.cm-activeLine': { background: 'rgba(180,140,80,0.05)' },
+  '.glean-hide': { fontSize: 0, pointerEvents: 'none' },
+  '.glean-h1': { fontSize: '1.7em', fontWeight: 700, display: 'inline-block' },
+  '.glean-h2': { fontSize: '1.45em', fontWeight: 700, display: 'inline-block' },
+  '.glean-h3': { fontSize: '1.25em', fontWeight: 600, display: 'inline-block' },
+  '.glean-h4': { fontSize: '1.1em', fontWeight: 600, display: 'inline-block' },
+  '.glean-h5': { fontSize: '1em', fontWeight: 600, display: 'inline-block' },
+  '.glean-h6': { fontSize: '0.92em', fontWeight: 600, color: '#6a7a8a', display: 'inline-block' },
+  '.glean-bold': { fontWeight: 700 },
+  '.glean-italic': { fontStyle: 'italic' },
+  '.glean-strike': { textDecoration: 'line-through', opacity: 0.75 },
+  '.glean-icode': { fontFamily: 'monospace', fontSize: '0.9em', background: 'rgba(90,106,122,0.18)', borderRadius: 4, padding: '0.5px 4px' },
+  '.glean-link': { color: '#5b9fd4', textDecoration: 'none', cursor: 'pointer' },
+  '.glean-codeblock': { background: 'rgba(90,106,122,0.1)', fontFamily: 'monospace', fontSize: '0.92em' },
+  '.glean-quote': { borderLeft: '3px solid rgba(180,140,80,0.25)', color: '#6a7a8a' },
+  '.glean-table-widget': { borderCollapse: 'collapse', width: '100%', margin: '4px 0', fontSize: '0.95em' },
+  '.glean-table-widget th, .glean-table-widget td': { border: '1px solid rgba(180,140,80,0.12)', padding: '6px 10px', textAlign: 'left' },
+  '.glean-table-widget th': { background: 'rgba(91,159,212,0.12)', fontWeight: 600 },
+  '.glean-tabledelim': { opacity: 0.35 },
+  '.glean-tasktext': { opacity: 0.45 },
+  '.glean-taskbox': { display: 'inline-flex', alignItems: 'center', margin: '0 3px' },
+  '.glean-taskbox input': { width: 14, height: 14, accentColor: '#5b9fd4', cursor: 'pointer' },
+  '.glean-callout-title': { display: 'inline-flex', alignItems: 'center', fontWeight: 700, fontSize: '0.95em', paddingTop: '6px' },
+  '.glean-callout-icon': { marginRight: '6px', fontSize: '1.1em' },
+  '.glean-callout': { background: 'rgba(55,130,200,0.10)', borderLeft: '3px solid #3388cc', paddingLeft: '10px', marginLeft: 0, paddingBottom: '2px' },
+  '.glean-callout-note': { background: 'rgba(55,130,200,0.10)', borderLeftColor: '#3388cc' },
+  '.glean-callout-tip': { background: 'rgba(80,180,80,0.10)', borderLeftColor: '#44aa44' },
+  '.glean-callout-warning': { background: 'rgba(200,160,50,0.10)', borderLeftColor: '#ccaa33' },
+}, { dark: true })
+
+const state = EditorState.create({
+  doc: testDoc,
+  extensions: [
+    markdown({ base: markdownLanguage }),
+    history(),
+    drawSelection(),
+    highlightActiveLine(),
+    highlightSelectionMatches(),
+    indentUnit.of('  '),
+    EditorState.tabSize.of(2),
+    theme,
+    livePreviewField,
+    taskClickPlugin,
+    keymap.of([...defaultKeymap, ...historyKeymap, ...markdownKeymap, indentWithTab]),
+  ],
+})
+
+new EditorView({ state, parent: document.getElementById('editor') })
+</script>
+</body>
+</html>

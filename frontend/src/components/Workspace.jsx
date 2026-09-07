@@ -39,7 +39,6 @@ export default function Workspace({
   const [externalBody, setExternalBody] = useState(null)
   const [showManageSky, setShowManageSky] = useState(false)
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 })
-  const [editorMode, setEditorMode] = useState('preview')
   const [sidebarWidth, setSidebarWidth] = useState(264)
   const draggingRef = useRef(false)
 
@@ -412,8 +411,6 @@ export default function Workspace({
                 onNewNote={onNewNote}
                 skyName={skyName}
                 onCursorChange={setCursorPos}
-                editorMode={editorMode}
-                onEditorModeChange={setEditorMode}
               />
             </div>
           )}
@@ -424,7 +421,7 @@ export default function Workspace({
               line={cursorPos.line}
               col={cursorPos.col}
               backlinks={backlinks}
-              showCursor={editorMode === 'edit' || editorMode === 'split'}
+              showCursor={!!activeNote}
               saveState={dirty[activeNote?.id] ? 'unsaved' : 'saved'}
               skyName={skyName} version={version} />
           )}

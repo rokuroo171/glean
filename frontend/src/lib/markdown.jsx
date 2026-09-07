@@ -1,9 +1,12 @@
 import React, { useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
 import { visit, SKIP } from 'unist-util-visit'
 import { colors } from './theme'
 import { highlightCode } from './prism-setup'
+import 'katex/dist/katex.min.css'
 
 /**
  * remark plugin: GFM alerts (> [!NOTE] etc).
@@ -439,7 +442,8 @@ export function renderMarkdown(text, opts = {}) {
   }
   return (
     <ReactMarkdown
-      remarkPlugins={[remarkGfm, remarkAlert]}
+      remarkPlugins={[remarkGfm, remarkMath, remarkAlert]}
+      rehypePlugins={[rehypeKatex]}
       components={components}
     >
       {body}
