@@ -420,9 +420,7 @@ export function buildLivePreview(state) {
 export const livePreviewField = StateField.define({
   create(state) { return buildLivePreview(state) },
   update(deco, tr) {
-    if (!tr.docChanged && !tr.selectionSet && syntaxTree(tr.startState) === syntaxTree(tr.state)) {
-      return deco
-    }
+    // Rebuild on every transaction so cursor moves trigger marker reveal/hide
     return buildLivePreview(tr.state)
   },
   provide: f => EditorView.decorations.from(f),
