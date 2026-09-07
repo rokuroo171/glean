@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
@@ -165,6 +165,79 @@ export function rewriteWikiLinks(body, noteNames) {
       return `[${text || t}](wails:wiki:${encodeURIComponent(t)})`
     })
   return { body: out, resolved }
+}
+
+/* -- Mermaid Diagram Component -- */
+
+let mermaidCounter = 0
+let mermaidInitialized = false
+
+async function initMermaid() {
+  if (mermaidInitialized) return
+  const mermaid = (await import('mermaid')).default
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'dark',
+    themeVariables: {
+      primaryColor: colors.accent,
+      primaryTextColor: colors.text,
+      primaryBorderColor: colors.border,
+      lineColor: colors.borderStrong,
+      secondaryColor: colors.bgElevated,
+      tertiaryColor: 'rgba(90, 106, 122, 0.1)',
+      fontFamily: 'inherit',
+    },
+  })
+  mermaidInitialized = true
+}
+
+function MermaidDiagram({ code }) {
+  const ref = useRef(null)
+  const [svg, setSvg] = useState('')
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function render() {
+      try {
+        await initMermaid()
+        const mermaid = (await import('mermaid')).default
+        const id = `mermaid-${++mermaidCounter}`
+        const { svg } = await mermaid.render(id, code)
+        if (!cancelled) setSvg(svg)
+      } catch (e) {
+        if (!cancelled) setError(e.message || 'Failed to render diagram')
+      }
+    }
+    render()
+    return () => { cancelled = true }
+  }, [code])
+
+  if (error) {
+    return (
+      <div style={{
+        padding: '10px 14px',
+        margin: '8px 0',
+        border: `1px solid ${colors.border}`,
+        borderRadius: 6,
+        background: 'rgba(219, 76, 64, 0.1)',
+        color: colors.textMuted,
+        fontSize: 12,
+        fontFamily: 'monospace',
+      }}>
+        Diagram error: {error}
+      </div>
+    )
+  }
+
+  return (
+    <div
+      ref={ref}
+      className="mermaid-diagram"
+      style={{ margin: '10px 0', textAlign: 'center' }}
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  )
 }
 
 /* -- Interactive Components -- */
@@ -354,9 +427,13 @@ const components = {
 
   code: ({ className, children, ...props }) => {
     const isBlock = className?.startsWith('language-')
-    return isBlock
-      ? <CodeBlock className={className} {...props}>{children}</CodeBlock>
-      : <InlineCode {...props}>{children}</InlineCode>
+    if (!isBlock) return <InlineCode {...props}>{children}</InlineCode>
+    const lang = className?.replace('language-', '') || ''
+    const code = String(children).replace(/\n$/, '')
+    if (lang === 'mermaid') {
+      return <MermaidDiagram code={code} />
+    }
+    return <CodeBlock className={className} {...props}>{children}</CodeBlock>
   },
   pre: ({ children }) => <>{children}</>,
 
