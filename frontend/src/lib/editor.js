@@ -27,10 +27,13 @@ const gleanTheme = EditorView.theme({
     lineHeight: '1.6',
     padding: '12px 16px',
     caretColor: colors.text,
+    width: '100%',
+    minWidth: '100%',
   },
   '.cm-scroller': {
     fontFamily: 'inherit',
     overflow: 'auto',
+    width: '100%',
   },
   '&.cm-focused': {
     outline: 'none',
