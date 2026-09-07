@@ -41,8 +41,6 @@ function remarkAlert() {
       if (!m) return
 
       const tagLen = m[0].length
-      // Consume the tag length across the leading inline runs so the
-      // marker disappears from whichever nodes hold it.
       let remaining = tagLen
       const out = []
       for (const child of first.children) {
@@ -51,10 +49,8 @@ function remarkAlert() {
         const tlen = txt.length
         if (tlen <= remaining) {
           remaining -= tlen
-          // Fully consumed: this node only held tag text; drop it.
           continue
         }
-        // Partially consumed: keep the remainder, preserve the wrapper.
         const keep = txt.slice(remaining)
         remaining = 0
         if (child.type === 'text') out.push({ ...child, value: keep })
@@ -63,7 +59,6 @@ function remarkAlert() {
       }
       first.children = out
 
-      // Re-tag the blockquote so the renderer picks it up as an alertbox.
       bq.data = bq.data || {}
       bq.data.hName = 'alertbox'
       bq.data.hProperties = { kind: m[1].toLowerCase() }
@@ -71,19 +66,7 @@ function remarkAlert() {
   }
 }
 
-/**
- * Markdown renderer built on react-markdown + remark-gfm.
- * Supports: GFM (tables, task lists, strikethrough, autolinks),
- * footnotes, nested blockquotes, Setext headings, hard breaks,
- * character references, and all CommonMark core features.
- *
- * Custom interactive components:
- * - Checkboxes: styled task-list checkboxes (visual only)
- * - Copy button on code blocks
- * - Collapsible details/summary
- */
-
-/* ── Styles ── */
+/* -- Styles -- */
 
 function getS() {
   return {
@@ -156,25 +139,13 @@ function getS() {
 
 let s = {}
 
-// Per-render task-list state: which checkbox index is next, the source body,
-// and the toggle callback. Reset at the start of every renderMarkdown call.
 let ctx = { body: '', next: 0, onToggle: null, noteNames: null }
 
-/* ── Note-link helpers ── */
+/* -- Note-link helpers -- */
 
-// Wiki-link / markdown-.md-link regex: [[Title]], [[Title|alias]], [text](file.md)
 const WIKI_RE = /\[\[([^\[\]|]+)(?:\|([^\[\]]*))?\]\]/g
 const MD_LINK_RE = /\[([^\]]*)\]\(([^) ]+\.md)\)/g
 
-/**
- * Pre-scan note bodies and rewrite note-to-note links to wails:wiki:<title>
- * hrefs so react-markdown's <a> handler can route them. Returns the rewritten
- * body and a map of title -> resolved note id ('' for unresolved).
- *
- * noteNames: null means no note list was provided (e.g. NoteOverlay) - links
- * keep their resolved form only if a title matches the active note; otherwise
- * they render muted and unclickable.
- */
 export function rewriteWikiLinks(body, noteNames) {
   if (!body) return { body: '', resolved: {} }
   const resolved = {}
@@ -193,12 +164,8 @@ export function rewriteWikiLinks(body, noteNames) {
   return { body: out, resolved }
 }
 
-/* ── Interactive Components ── */
+/* -- Interactive Components -- */
 
-/** Task-list checkbox box, Obsidian-style: clean square, no bullet.
- *  Intercepts the <input type="checkbox"> that react-markdown emits for
- *  GFM task items (v10 does not pass `checked` to the `li` component).
- *  The `li` component groups this box with the sibling label text. */
 function Checkbox({ checked, index }) {
   const handleClick = (e) => {
     e.preventDefault()
@@ -243,7 +210,6 @@ function Checkbox({ checked, index }) {
   )
 }
 
-/** Code block with copy button and syntax highlighting */
 function CodeBlock({ children, className }) {
   const code = String(children).replace(/\n$/, '')
   const lang = className?.replace('language-', '') || ''
@@ -255,7 +221,6 @@ function CodeBlock({ children, className }) {
 
   return (
     <div className="code-block" style={s.pre}>
-      {/* Header row so the language label and copy button never overlap */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         marginBottom: 8,
@@ -285,12 +250,10 @@ function CodeBlock({ children, className }) {
   )
 }
 
-/** Inline code */
 function InlineCode({ children }) {
   return <code style={s.code}>{children}</code>
 }
 
-/** Collapsible details/summary for <details> blocks */
 function Details({ children, ...props }) {
   return <details style={s.details} {...props}>{children}</details>
 }
@@ -299,9 +262,8 @@ function Summary({ children, ...props }) {
   return <summary style={s.summary} {...props}>{children}</summary>
 }
 
-/* ── GFM Alerts ── */
+/* -- GFM Alerts -- */
 
-// Alert kinds and their accent colors, per the GitHub alert palette.
 const ALERT_KINDS = {
   note: { label: 'Note', color: '#5b9fd4' },
   tip: { label: 'Tip', color: '#56b87a' },
@@ -310,7 +272,6 @@ const ALERT_KINDS = {
   caution: { label: 'Caution', color: '#db4c40' },
 }
 
-/** GFM alert box: > [!TYPE] yields a tinted panel with a label row. */
 function AlertBlock({ kind, children }) {
   const t = ALERT_KINDS[kind] || ALERT_KINDS.note
   return (
@@ -337,10 +298,9 @@ function AlertBlock({ kind, children }) {
   )
 }
 
-/* ── Custom Components Map ── */
+/* -- Custom Components Map -- */
 
 const components = {
-  // Headings
   h1: ({ children, ...props }) => <h1 style={s.h1} {...props}>{children}</h1>,
   h2: ({ children, ...props }) => <h2 style={s.h2} {...props}>{children}</h2>,
   h3: ({ children, ...props }) => <h3 style={s.h3} {...props}>{children}</h3>,
@@ -348,13 +308,11 @@ const components = {
   h5: ({ children, ...props }) => <h5 style={s.h5} {...props}>{children}</h5>,
   h6: ({ children, ...props }) => <h6 style={s.h6} {...props}>{children}</h6>,
 
-  // Text
   p: ({ children, ...props }) => <p style={s.p} {...props}>{children}</p>,
   strong: ({ children, ...props }) => <strong style={s.strong} {...props}>{children}</strong>,
   em: ({ children, ...props }) => <em style={s.em} {...props}>{children}</em>,
   del: ({ children, ...props }) => <del style={s.del} {...props}>{children}</del>,
 
-  // Links and images
   a: ({ children, href, ...props }) => {
     const isWiki = typeof href === 'string' && href.startsWith('wails:wiki:')
     const title = isWiki ? decodeURIComponent(href.slice('wails:wiki:'.length)) : ''
@@ -385,16 +343,12 @@ const components = {
     )
   },
   img: ({ src, alt, ...props }) => {
-    // Vault images are stored under `.glean/assets` and referenced with
-    // vault-relative paths in the md. Rewrite them to the Wails
-    // AssetServer fallback route so they render in edit/split/preview.
     const resolved = src && /^\.{0,2}\/?(\.glean\/assets\/)/.test(src)
       ? '/@assets/' + src.replace(/^\.{0,2}\//, '')
       : src
     return <img src={resolved} alt={alt} style={s.img} {...props} />
   },
 
-  // Code
   code: ({ className, children, ...props }) => {
     const isBlock = className?.startsWith('language-')
     return isBlock
@@ -403,14 +357,10 @@ const components = {
   },
   pre: ({ children }) => <>{children}</>,
 
-  // Lists
   ul: ({ children, ...props }) => <ul style={s.ul} {...props}>{children}</ul>,
   ol: ({ children, ...props }) => <ol style={s.ol} {...props}>{children}</ol>,
   li: ({ children, className, ...props }) => {
     if (className?.includes('task-list-item')) {
-      // react-markdown renders the checkbox input and the label text as
-      // siblings: [<input/>, " Text"]. Group them in a flex row so the box
-      // and text sit on one line, and strike through the text when checked.
       const kids = React.Children.toArray(children)
       const box = kids[0]
       const checked = box?.props?.checked
@@ -428,8 +378,6 @@ const components = {
     return <li style={s.li} {...props}>{children}</li>
   },
 
-  // GFM task lists render as <input type="checkbox">; replace it with our
-  // custom clickable checkbox box (the li groups it with the label text).
   input: ({ type, checked, ...props }) => {
     if (type === 'checkbox') {
       const index = ctx.next++
@@ -438,17 +386,10 @@ const components = {
     return <input type={type} checked={checked} {...props} />
   },
 
-  // Blockquote: the remark plugin re-tags alert blockquotes as
-  // <alertbox kind> before rendering, so this renders only plain
-  // blockquotes. Alerts are handled by the `alertbox` component below.
   blockquote: ({ children, ...props }) => <blockquote style={s.blockquote} {...props}>{children}</blockquote>,
 
-  // GFM alert: tinted panel with a colored label row. The remark plugin
-  // re-tags alert blockquotes as <alertbox kind> via data.hName (the one
-  // mechanism react-markdown actually routes custom elements for).
   alertbox: ({ kind, children }) => <AlertBlock kind={kind}>{children}</AlertBlock>,
 
-  // Table
   table: ({ children, ...props }) => <table style={s.table} {...props}>{children}</table>,
   th: ({ children, ...props }) => <th style={s.th} {...props}>{children}</th>,
   td: ({ children, ...props }) => <td style={s.td} {...props}>{children}</td>,
@@ -456,27 +397,19 @@ const components = {
   tbody: ({ children, ...props }) => <tbody {...props}>{children}</tbody>,
   tr: ({ children, ...props }) => <tr {...props}>{children}</tr>,
 
-  // Horizontal rule
   hr: (props) => <hr style={s.hr} {...props} />,
 
-  // Details/summary (GFM collapsible)
   details: Details,
   summary: Summary,
 
-  // Footnote support
   sup: ({ children, ...props }) => <sup style={{ fontSize: '0.75em', color: colors.accent }} {...props}>{children}</sup>,
   footnoteDefinition: ({ children, ...props }) => (
     <div style={{ fontSize: 12, color: colors.textMuted, margin: '4px 0', paddingLeft: 16, borderLeft: `2px solid ${colors.border}` }} {...props}>{children}</div>
   ),
 }
 
-/* ── Main Renderer ── */
+/* -- Main Renderer -- */
 
-/**
- * Flip the nth task checkbox ([ ] <-> [x]) in a markdown source string.
- * Only matches checkboxes at the start of a list item (GFM task list syntax),
- * so literal `[ ]` text in paragraphs is never touched.
- */
 export function flipTask(body, index) {
   const re = /^(\s*(?:[-*+]|\d+\.)\s+)\[[ xX]\]/gm
   let i = 0

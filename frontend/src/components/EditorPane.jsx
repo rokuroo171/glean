@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { colors, space, typography } from '../lib/theme'
+import { renderMarkdown } from '../lib/markdown'
 import { usePreferences } from '../lib/preferences-context'
 import { createGleanView } from '../lib/editor'
 import { EditorView } from '@codemirror/view'
@@ -94,6 +95,8 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const [showReplace, setShowReplace] = useState(false)
   const [hist, setHist] = useState({ canUndo: false, canRedo: false })
   const [viewState, setViewState] = useState(null)
+  const [editorMode, setEditorMode] = useState('preview') // 'preview' | 'edit'
+  const previewRef = useRef(null)
 
   // --- Animated text: sparkle particles on backspace. The insert
   // animation itself is handled by the CM6 animField decorations.
@@ -254,6 +257,18 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note?.id])
+
+  // ESC key returns from edit mode to preview mode
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape' && editorMode === 'edit') {
+        e.preventDefault()
+        setEditorMode('preview')
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [editorMode])
 
   // External body change (reload from disk): sync the doc when it differs
   // from what the editor holds.
@@ -578,16 +593,38 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
           </div>
         )}
 
-        {/* The live preview editor. CM6 mounts into the inner ref div;
-            it scrolls itself, and the ContextMenu wraps it so right-click
-            opens the editor menu. */}
+        {/* Hybrid preview/edit editor. CM6 is always mounted for editing;
+            react-markdown renders the preview on top. Click the preview to
+            enter edit mode; press Esc or click outside content to return. */}
         <div ref={editorContainerRef}
           style={{ flex: 1, minWidth: 0, minHeight: 0, position: 'relative', display: 'flex', flexDirection: 'column' }}>
           {viewState && prefs.editor.cursor_trail_enabled !== false && prefs.editor.cursor_trail_mode !== 'off' && (
             <CursorTrail key={note?.id} view={viewState} containerRef={editorContainerRef} />
           )}
+          {/* Preview layer: rendered markdown on top of CM6 */}
+          {editorMode === 'preview' && (
+            <div
+              ref={previewRef}
+              onClick={() => setEditorMode('edit')}
+              style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '12px 16px',
+                cursor: 'text', position: 'absolute', inset: 0, zIndex: 10,
+                background: 'transparent' }}>
+              <div style={{ color: colors.text, lineHeight: 1.6, overflowWrap: 'anywhere' }}>
+                {renderMarkdown(body, {
+                  onToggle: (newBody) => onBodyChange(newBody),
+                  noteNames,
+                  onNoteLink: handleNoteLink,
+                })}
+              </div>
+            </div>
+          )}
+          {/* CM6 editor layer: always mounted, visible only in edit mode */}
           <ContextMenu items={editorMenuItems} triggerStyle={{ display: 'contents' }}>
-            <div ref={editorMountRef} style={{ flex: 1, minHeight: 0 }} />
+            <div ref={editorMountRef} style={{
+              flex: 1, minHeight: 0,
+              pointerEvents: editorMode === 'edit' ? 'auto' : 'none',
+              visibility: editorMode === 'edit' ? 'visible' : 'hidden',
+            }} />
           </ContextMenu>
           {linkPopup && (() => {
             const matches = Object.keys(noteNames)
