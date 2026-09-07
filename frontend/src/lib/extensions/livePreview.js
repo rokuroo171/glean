@@ -36,6 +36,87 @@ class TaskCheckbox extends WidgetType {
   ignoreEvent() { return false }
 }
 
+// Extract cells from a TableHeader or TableRow subtree node.
+// Uses firstChild/nextSibling to walk the children directly.
+function extractCells(state, rowNode) {
+  const cells = []
+  let c = rowNode.firstChild
+  while (c) {
+    if (c.name === 'TableCell') {
+      cells.push({ text: state.doc.sliceString(c.from, c.to).trim(), from: c.from, to: c.to })
+    }
+    c = c.nextSibling
+  }
+  return cells
+}
+
+class TableWidget extends WidgetType {
+  constructor(headerCells, bodyRows, pos) {
+    super()
+    this.headerCells = headerCells
+    this.bodyRows = bodyRows
+    this.pos = pos
+  }
+  eq(o) {
+    return o.pos === this.pos &&
+      o.headerCells.length === this.headerCells.length &&
+      o.bodyRows.length === this.bodyRows.length &&
+      o.headerCells.every((c, i) => c.text === this.headerCells[i].text)
+  }
+  toDOM(view) {
+    const table = document.createElement('table')
+    table.className = 'glean-table-widget'
+    table.setAttribute('aria-hidden', 'true')
+    // Header
+    const thead = document.createElement('thead')
+    const htr = document.createElement('tr')
+    for (const cell of this.headerCells) {
+      const th = document.createElement('th')
+      th.textContent = cell.text
+      htr.appendChild(th)
+    }
+    thead.appendChild(htr)
+    table.appendChild(thead)
+    // Body
+    if (this.bodyRows.length > 0) {
+      const tbody = document.createElement('tbody')
+      for (const row of this.bodyRows) {
+        const tr = document.createElement('tr')
+        for (const cell of row) {
+          const td = document.createElement('td')
+          td.textContent = cell.text
+          tr.appendChild(td)
+        }
+        tbody.appendChild(tr)
+      }
+      table.appendChild(tbody)
+    }
+    // Click a cell to jump cursor into the source
+    table.addEventListener('click', (e) => {
+      const td = e.target.closest('td, th')
+      if (!td) return
+      const tableEl = td.closest('table')
+      const row = td.parentElement
+      const ri = Array.from(tableEl.children).reduce((acc, sec) => {
+        if (sec.tagName === 'THEAD') return acc
+        const rows = Array.from(sec.children)
+        const idx = rows.indexOf(row)
+        return idx >= 0 ? acc + idx : acc
+      }, 0)
+      const ci = Array.from(row.children).indexOf(td)
+      // Map row/col back to source position
+      const allRows = [this.headerCells, ...this.bodyRows]
+      if (ri < allRows.length && ci < allRows[ri].length) {
+        const cellFrom = allRows[ri][ci].from
+        view.dispatch({ selection: { anchor: cellFrom } })
+        view.focus()
+      }
+    })
+    return table
+  }
+  ignoreEvent() { return false }
+}
+
 const hideMark = Decoration.mark({ class: 'glean-hide' })
 const inlineCodeMark = Decoration.mark({ class: 'glean-icode' })
 const linkMark = Decoration.mark({ class: 'glean-link' })
@@ -234,18 +315,33 @@ function blockquoteDecorations(add, state, node, head) {
   }
 }
 
-// Tables: dim the delimiter row (the `---` separator). Cells keep as-is.
+// Tables: render as a styled HTML grid widget, hiding the source.
+// The cursor-reveal pattern lets the user edit by clicking a cell.
 function tableDecorations(add, state, node) {
-  const firstLine = state.doc.lineAt(node.from)
-  const lastLine = state.doc.lineAt(node.to)
-  for (let ln = firstLine.number; ln <= lastLine.number; ln++) {
-    const l = state.doc.line(ln)
-    const body = l.text.trim().replace(/^\|/, '').replace(/\|$/, '')
-    const cells = body.split('|').map(c => c.trim())
-    if (cells.length >= 1 && cells.every(c => /^:?-{1,}:?$/.test(c))) {
-      add(l.from, l.from, tableDelimiterLine)
-    }
+  if (node.to <= node.from) return
+  // Walk the document-level children to find the Table subtree at this position
+  const docNode = syntaxTree(state).topNode
+  let child = docNode.firstChild
+  while (child && !(child.name === 'Table' && child.from === node.from)) {
+    child = child.nextSibling
   }
+  if (!child || child.name !== 'Table') return
+  let headerCells = []
+  let bodyRows = []
+  let rowChild = child.firstChild
+  while (rowChild) {
+    if (rowChild.name === 'TableHeader') {
+      headerCells = extractCells(state, rowChild)
+    } else if (rowChild.name === 'TableRow') {
+      bodyRows.push(extractCells(state, rowChild))
+    }
+    rowChild = rowChild.nextSibling
+  }
+  if (headerCells.length === 0) return
+  add(node.from, node.to, Decoration.replace({
+    widget: new TableWidget(headerCells, bodyRows, node.from),
+    block: true,
+  }))
 }
 
 // Images: style the whole syntax as a dimmed placeholder.

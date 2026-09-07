@@ -92,6 +92,24 @@ const gleanTheme = EditorView.theme({
     borderLeft: `3px solid ${colors.borderStrong}`,
     color: colors.textMuted,
   },
+  '.glean-table-widget': {
+    borderCollapse: 'collapse',
+    width: '100%',
+    margin: '4px 0',
+    fontSize: '0.95em',
+  },
+  '.glean-table-widget th, .glean-table-widget td': {
+    border: `1px solid ${colors.border}`,
+    padding: '6px 10px',
+    textAlign: 'left',
+  },
+  '.glean-table-widget th': {
+    backgroundColor: 'rgba(91, 159, 212, 0.12)',
+    fontWeight: 600,
+  },
+  '.glean-table-widget tbody tr:hover': {
+    backgroundColor: 'rgba(180, 140, 80, 0.05)',
+  },
   '.glean-tabledelim': { opacity: 0.35 },
   '.glean-tasktext': { opacity: 0.45 },
   '.glean-taskbox': { display: 'inline-flex', alignItems: 'center', margin: '0 3px' },

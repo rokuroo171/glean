@@ -183,13 +183,17 @@ describe('live preview decorations', () => {
     expect(doc.slice(h1.from, h1.to)).toBe('line one\nsetext style')
   })
 
-  it('dims the table delimiter row', () => {
+  it('renders a table widget that replaces the source', () => {
     const doc = '| a | b |\n|---|---|\n| 1 | 2 |'
     const state = makeState(doc)
-    const decos = decoClasses(state, doc)
-    const delim = decos.find(d => d.cls === 'glean-tabledelim')
-    expect(delim).toBeTruthy()
-    expect(delim.from).toBe(10)
+    const set = buildLivePreview(state)
+    let found = false
+    set.between(0, doc.length, (from, to, deco) => {
+      if (deco.spec?.widget && deco.spec.widget instanceof Object && from === 0 && to === doc.length) {
+        found = true
+      }
+    })
+    expect(found).toBe(true)
   })
 
   it('builds decorations for a mixed document without crashing', () => {
