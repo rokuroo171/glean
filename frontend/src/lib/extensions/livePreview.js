@@ -36,6 +36,13 @@ class TaskCheckbox extends WidgetType {
   ignoreEvent() { return false }
 }
 
+// Empty widget that replaces hidden markers in the DOM.
+class EmptyWidget extends WidgetType {
+  toDOM() { const s = document.createElement('span'); s.textContent = ' '; return s }
+  ignoreEvent() { return true }
+}
+const hideMark = Decoration.replace({ widget: new EmptyWidget(), block: false })
+
 // Extract cells from a TableHeader or TableRow subtree node.
 // Uses firstChild/nextSibling to walk the children directly.
 function extractCells(state, rowNode) {
@@ -117,7 +124,6 @@ class TableWidget extends WidgetType {
   ignoreEvent() { return false }
 }
 
-const hideMark = Decoration.mark({ class: 'glean-hide' })
 const inlineCodeMark = Decoration.mark({ class: 'glean-icode' })
 const linkMark = Decoration.mark({ class: 'glean-link' })
 const imagePlaceholder = Decoration.mark({ class: 'glean-image' })
