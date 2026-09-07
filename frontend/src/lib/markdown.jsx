@@ -94,9 +94,9 @@ function getS() {
     borderRadius: '0 4px 4px 0',
   },
   hr: { border: 'none', borderTop: `1px solid ${colors.border}`, margin: '20px 0' },
-  ul: { margin: '6px 0', paddingLeft: 24 },
-  ol: { margin: '6px 0', paddingLeft: 24 },
-  li: { margin: '3px 0', lineHeight: 1.7, color: colors.text, overflowWrap: 'anywhere' },
+  ul: { margin: '6px 0', paddingLeft: 24, listStyleType: 'none' },
+  ol: { margin: '6px 0', paddingLeft: 24, listStyleType: 'none', counterReset: 'glean-counter' },
+  li: { margin: '3px 0', lineHeight: 1.7, color: colors.text, overflowWrap: 'anywhere', position: 'relative', paddingLeft: 16 },
   table: { borderCollapse: 'collapse', margin: '12px 0', width: '100%', fontSize: 13 },
   th: { border: `1px solid ${colors.border}`, padding: '8px 12px', fontWeight: 600, color: colors.text, background: 'rgba(90,106,122,0.08)', textAlign: 'left', overflowWrap: 'anywhere' },
   td: { border: `1px solid ${colors.border}`, padding: '8px 12px', color: colors.text, overflowWrap: 'anywhere' },
@@ -166,6 +166,41 @@ export function rewriteWikiLinks(body, noteNames) {
     })
   return { body: out, resolved }
 }
+
+/* -- List marker styles -- */
+const listStyles = `
+  .glean-markdown ul > li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.7em;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: ${colors.textMuted};
+  }
+  .glean-markdown ul ul > li::before {
+    background: ${colors.borderStrong};
+  }
+  .glean-markdown ul ul ul > li::before {
+    background: ${colors.border};
+  }
+  .glean-markdown ol > li::before {
+    content: counter(glean-counter) '.';
+    position: absolute;
+    left: -20px;
+    color: ${colors.textDim};
+    font-size: 12px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  .glean-markdown ol {
+    counter-reset: glean-counter;
+  }
+  .glean-markdown ol > li {
+    counter-increment: glean-counter;
+  }
+`
 
 /* -- Mermaid Diagram Component -- */
 
@@ -265,21 +300,28 @@ function Checkbox({ checked, index }) {
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: 14,
-        height: 14,
-        borderRadius: 3.5,
-        border: `1px solid ${checked ? colors.accent : colors.borderStrong}`,
+        width: 16,
+        height: 16,
+        borderRadius: 4,
+        border: `2px solid ${checked ? colors.accent : colors.borderStrong}`,
         background: checked ? colors.accent : 'transparent',
         flexShrink: 0,
-        marginTop: 5,
+        marginTop: 4,
         cursor: 'pointer',
         outline: 'none',
-        transition: 'background 120ms ease, border-color 120ms ease',
+        transition: 'all 150ms ease',
+        boxShadow: checked ? `0 0 0 1px ${colors.accent}40` : 'none',
       }}
     >
       {checked && (
-        <svg width="10" height="10" viewBox="0 0 14 14" fill="none" style={{ display: 'block' }}>
-          <path d="M3.5 7.5l2.5 2.5 4.5-5.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" style={{ display: 'block' }}>
+          <path
+            d="M2.5 6.5l2.5 2.5 4.5-5.5"
+            stroke="#fff"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       )}
     </span>
@@ -438,14 +480,17 @@ const components = {
   pre: ({ children }) => <>{children}</>,
 
   ul: ({ children, ...props }) => <ul style={s.ul} {...props}>{children}</ul>,
-  ol: ({ children, ...props }) => <ol style={s.ol} {...props}>{children}</ol>,
+  ol: ({ children, ...props }) => {
+    const count = React.Children.count(children)
+    return <ol style={{ ...s.ol, counterReset: `glean-counter ${count}` }} {...props}>{children}</ol>
+  },
   li: ({ children, className, ...props }) => {
     if (className?.includes('task-list-item')) {
       const kids = React.Children.toArray(children)
       const box = kids[0]
       const checked = box?.props?.checked
       return (
-        <li style={{ ...s.li, listStyle: 'none', paddingLeft: 0 }} {...props}>
+        <li style={{ ...s.li, paddingLeft: 0 }} {...props}>
           <span style={{ display: 'flex', alignItems: 'flex-start', gap: 8, lineHeight: 1.7, cursor: 'pointer' }}>
             {box}
             <span style={checked ? { textDecoration: 'line-through', opacity: 0.55 } : undefined}>
@@ -518,12 +563,15 @@ export function renderMarkdown(text, opts = {}) {
     resolved,
   }
   return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm, remarkMath, remarkAlert]}
-      rehypePlugins={[rehypeKatex]}
-      components={components}
-    >
-      {body}
-    </ReactMarkdown>
+    <div className="glean-markdown">
+      <style>{listStyles}</style>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkMath, remarkAlert]}
+        rehypePlugins={[rehypeKatex]}
+        components={components}
+      >
+        {body}
+      </ReactMarkdown>
+    </div>
   )
 }
