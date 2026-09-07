@@ -166,15 +166,71 @@ function fencedCodeDecorations(add, state, node, cursorHead) {
   }
 }
 
+const CALLOUT_RE = /^\s*>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/
+const CALLOUT_ICONS = {
+  NOTE: '\u270e',       // pencil
+  TIP: '\u26a1',        // lightning
+  IMPORTANT: '\u2757',  // exclamation
+  WARNING: '\u26a0',    // warning
+  CAUTION: '\u26a0',    // caution
+}
+const CALLOUT_COLORS = {
+  NOTE:       { bg: 'rgba(55,130,200,0.10)', border: '#3388cc', title: '#3388cc' },
+  TIP:        { bg: 'rgba(80,180,80,0.10)',  border: '#44aa44', title: '#44aa44' },
+  IMPORTANT:  { bg: 'rgba(150,90,210,0.10)', border: '#8855cc', title: '#8855cc' },
+  WARNING:    { bg: 'rgba(200,160,50,0.10)', border: '#ccaa33', title: '#ccaa33' },
+  CAUTION:    { bg: 'rgba(200,80,70,0.10)',  border: '#cc4433', title: '#cc4433' },
+}
+
+function calloutTypeColor(type) { return CALLOUT_COLORS[type] || CALLOUT_COLORS.NOTE }
+
+// Callout: detect > [!TYPE] at the start of a blockquote, hide the
+// marker, apply a colored background, and add a bold title line.
+function calloutDecorations(add, state, node, head) {
+  const firstLine = state.doc.lineAt(node.from)
+  const m = firstLine.text.match(CALLOUT_RE)
+  if (!m) return false
+  const type = m[1]
+  const color = calloutTypeColor(type)
+  const markerLen = m[0].length
+  const lastLine = state.doc.lineAt(node.to)
+  const icon = CALLOUT_ICONS[type] || ''
+  const titleText = `${icon} ${type}`
+  // Hide the > [!TYPE] marker (reveal on cursor)
+  if (!(head >= firstLine.from && head <= firstLine.from + markerLen)) {
+    add(firstLine.from, firstLine.from + markerLen, hideMark)
+  }
+  for (let ln = firstLine.number; ln <= lastLine.number; ln++) {
+    const l = state.doc.line(ln)
+    if (ln === firstLine.number) {
+      // Title line: icon + bold type name after the hidden marker
+      add(l.from + markerLen, l.from + markerLen, Decoration.line({
+        class: 'glean-callout-title',
+      }))
+      add(l.from + markerLen, l.from + markerLen + titleText.length, Decoration.mark({
+        class: `glean-callout-icon glean-callout-${type.toLowerCase()}-icon`,
+      }))
+    } else {
+      // Body lines: callout background
+      add(l.from, l.from, Decoration.line({
+        class: `glean-callout glean-callout-${type.toLowerCase()}`,
+      }))
+    }
+  }
+  return true
+}
+
 // Blockquote: hide `>` markers, give the lines a left border.
-function blockquoteDecorations(add, state, node) {
+// If it starts with > [!TYPE], render as a colored callout box.
+function blockquoteDecorations(add, state, node, head) {
+  if (calloutDecorations(add, state, node, head)) return
   const firstLine = state.doc.lineAt(node.from)
   const lastLine = state.doc.lineAt(node.to)
   for (let ln = firstLine.number; ln <= lastLine.number; ln++) {
     const l = state.doc.line(ln)
     add(l.from, l.from, quoteLine)
-    const m = l.text.match(/^(?:\s*>\s?)+/)
-    if (m) add(l.from, l.from + m[0].length, hideMark)
+    const qm = l.text.match(/^(?:\s*>\s?)+/)
+    if (qm) add(l.from, l.from + qm[0].length, hideMark)
   }
 }
 
@@ -225,7 +281,7 @@ export function buildLivePreview(state) {
       if (name === 'SetextHeading1') { setextDecorations(add, state, node, head, 1); return }
       if (name === 'SetextHeading2') { setextDecorations(add, state, node, head, 2); return }
       if (name === 'FencedCode') { fencedCodeDecorations(add, state, node, head); return false }
-      if (name === 'Blockquote') { blockquoteDecorations(add, state, node); return }
+      if (name === 'Blockquote') { blockquoteDecorations(add, state, node, head); return }
       if (name === 'Table') { tableDecorations(add, state, node); return }
       if (name === 'Image') { imageDecorations(add, state, node); return false }
       if (name === 'TaskMarker') { taskDecorations(add, state, node, head); return false }

@@ -98,6 +98,32 @@ const gleanTheme = EditorView.theme({
   '.glean-taskbox input': {
     width: 14, height: 14, accentColor: colors.accent, cursor: 'pointer',
   },
+  // Callouts: colored boxes for > [!NOTE] etc
+  '.glean-callout-title': {
+    display: 'inline-flex',
+    alignItems: 'center',
+    fontWeight: 700,
+    fontSize: '0.95em',
+    paddingTop: '6px',
+  },
+  '.glean-callout-icon': { marginRight: '6px', fontSize: '1.1em' },
+  '.glean-callout': {
+    backgroundColor: 'rgba(55,130,200,0.10)',
+    borderLeft: '3px solid #3388cc',
+    paddingLeft: '10px',
+    marginLeft: '0',
+    paddingBottom: '2px',
+  },
+  '.glean-callout-note':        { backgroundColor: 'rgba(55,130,200,0.10)', borderLeftColor: '#3388cc' },
+  '.glean-callout-tip':         { backgroundColor: 'rgba(80,180,80,0.10)',  borderLeftColor: '#44aa44' },
+  '.glean-callout-important':   { backgroundColor: 'rgba(150,90,210,0.10)', borderLeftColor: '#8855cc' },
+  '.glean-callout-warning':     { backgroundColor: 'rgba(200,160,50,0.10)', borderLeftColor: '#ccaa33' },
+  '.glean-callout-caution':     { backgroundColor: 'rgba(200,80,70,0.10)',  borderLeftColor: '#cc4433' },
+  '.glean-callout-note-icon':   { color: '#3388cc' },
+  '.glean-callout-tip-icon':    { color: '#44aa44' },
+  '.glean-callout-important-icon': { color: '#8855cc' },
+  '.glean-callout-warning-icon':   { color: '#ccaa33' },
+  '.glean-callout-caution-icon':   { color: '#cc4433' },
   '.glean-anim': { animation: 'glean-char-fade 0.35s ease-out' },
 }, { dark: true })
 
