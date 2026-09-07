@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { colors, space, typography } from '../lib/theme'
+import { renderMarkdown } from '../lib/markdown'
 import { usePreferences } from '../lib/preferences-context'
 import { createGleanView } from '../lib/editor'
 import { EditorView } from '@codemirror/view'
@@ -94,6 +95,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const [showReplace, setShowReplace] = useState(false)
   const [hist, setHist] = useState({ canUndo: false, canRedo: false })
   const [viewState, setViewState] = useState(null)
+  const [editing, setEditing] = useState(false)
 
   // --- Animated text: sparkle particles on backspace. The insert
   // animation itself is handled by the CM6 animField decorations.
@@ -253,6 +255,23 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
       setViewState(null)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note?.id])
+
+  // When CM6 loses focus, return to preview mode
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view) return
+    const onBlur = () => {
+      // Small delay to check if focus moved to another element inside CM6
+      setTimeout(() => {
+        const active = document.activeElement
+        const cmRoot = view.dom
+        if (active && cmRoot && cmRoot.contains(active)) return
+        setEditing(false)
+      }, 100)
+    }
+    view.dom.addEventListener('blur', onBlur)
+    return () => view.dom.removeEventListener('blur', onBlur)
   }, [note?.id])
 
   // External body change (reload from disk): sync the doc when it differs
@@ -578,17 +597,39 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
           </div>
         )}
 
-        {/* The live preview editor. CM6 mounts into the inner ref div;
-            it scrolls itself, and the ContextMenu wraps it so right-click
-            opens the editor menu. Click a section to edit it inline;
-            markers hide when cursor is away. */}
+        {/* Obsidian-style editor: react-markdown renders preview,
+            CM6 handles editing. Click preview to edit, click away to render. */}
         <div ref={editorContainerRef}
           style={{ flex: 1, minWidth: 0, minHeight: 0, position: 'relative', display: 'flex', flexDirection: 'column' }}>
           {viewState && prefs.editor.cursor_trail_enabled !== false && prefs.editor.cursor_trail_mode !== 'off' && (
             <CursorTrail key={note?.id} view={viewState} containerRef={editorContainerRef} />
           )}
+          {/* Rendered preview: click to enter edit mode */}
+          <div
+            onClick={() => {
+              const view = viewRef.current
+              if (view) {
+                setEditing(true)
+                // Small delay so CM6 is visible before focus
+                requestAnimationFrame(() => view.focus())
+              }
+            }}
+            style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '12px 16px',
+              cursor: 'text', display: editing ? 'none' : 'block' }}>
+            <div style={{ color: colors.text, lineHeight: 1.6, overflowWrap: 'anywhere' }}>
+              {renderMarkdown(body, {
+                onToggle: (newBody) => onBodyChange(newBody),
+                noteNames,
+                onNoteLink: handleNoteLink,
+              })}
+            </div>
+          </div>
+          {/* CM6 editor: visible only when editing */}
           <ContextMenu items={editorMenuItems} triggerStyle={{ display: 'contents' }}>
-            <div ref={editorMountRef} style={{ flex: 1, minHeight: 0 }} />
+            <div ref={editorMountRef} style={{
+              flex: 1, minHeight: 0,
+              display: editing ? 'block' : 'none',
+            }} />
           </ContextMenu>
           {linkPopup && (() => {
             const matches = Object.keys(noteNames)

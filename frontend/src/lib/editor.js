@@ -10,7 +10,6 @@ import { markdown, markdownLanguage, markdownKeymap } from '@codemirror/lang-mar
 import { syntaxHighlighting, defaultHighlightStyle, indentUnit } from '@codemirror/language'
 import { highlightSelectionMatches } from '@codemirror/search'
 import { colors } from './theme'
-import { livePreviewField, taskClickPlugin } from './extensions/livePreview'
 import { gleanKeymaps } from './extensions/keymaps'
 import { freshField, animField, animSweeper } from './extensions/typedAnim'
 
@@ -58,94 +57,10 @@ const gleanTheme = EditorView.theme({
     color: colors.textDim,
     fontStyle: 'italic',
   },
-  // Live preview classes
-  '.glean-hide': { opacity: 0, pointerEvents: 'none' },
-  '.glean-h1': { fontSize: '1.7em', fontWeight: 700, color: colors.text, display: 'inline-block' },
-  '.glean-h2': { fontSize: '1.45em', fontWeight: 700, color: colors.text, display: 'inline-block' },
-  '.glean-h3': { fontSize: '1.25em', fontWeight: 600, color: colors.text, display: 'inline-block' },
-  '.glean-h4': { fontSize: '1.1em', fontWeight: 600, color: colors.text, display: 'inline-block' },
-  '.glean-h5': { fontSize: '1em', fontWeight: 600, color: colors.text, display: 'inline-block' },
-  '.glean-h6': { fontSize: '0.92em', fontWeight: 600, color: colors.textMuted, display: 'inline-block' },
   // Override defaultHighlightStyle heading underlines
   '.tok-heading1, .tok-heading2, .tok-heading3, .tok-heading4, .tok-heading5, .tok-heading6': {
     textDecoration: 'none',
   },
-  '.glean-bold': { fontWeight: 700 },
-  '.glean-italic': { fontStyle: 'italic' },
-  '.glean-strike': { textDecoration: 'line-through', opacity: 0.75 },
-  '.glean-icode': {
-    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-    fontSize: '0.9em',
-    backgroundColor: 'rgba(90, 106, 122, 0.18)',
-    borderRadius: 4,
-    padding: '0.5px 4px',
-  },
-  '.glean-link': {
-    color: colors.accent,
-    textDecoration: 'underline',
-    textDecorationColor: 'rgba(91, 159, 212, 0.45)',
-    cursor: 'pointer',
-  },
-  '.glean-image': { opacity: 0.55, fontStyle: 'italic' },
-  '.glean-codeblock': {
-    backgroundColor: 'rgba(90, 106, 122, 0.1)',
-    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-    fontSize: '0.92em',
-  },
-  '.glean-quote': {
-    borderLeft: `3px solid ${colors.borderStrong}`,
-    color: colors.textMuted,
-  },
-  '.glean-table-widget': {
-    borderCollapse: 'collapse',
-    width: '100%',
-    margin: '4px 0',
-    fontSize: '0.95em',
-  },
-  '.glean-table-widget th, .glean-table-widget td': {
-    border: `1px solid ${colors.border}`,
-    padding: '6px 10px',
-    textAlign: 'left',
-  },
-  '.glean-table-widget th': {
-    backgroundColor: 'rgba(91, 159, 212, 0.12)',
-    fontWeight: 600,
-  },
-  '.glean-table-widget tbody tr:hover': {
-    backgroundColor: 'rgba(180, 140, 80, 0.05)',
-  },
-  '.glean-tabledelim': { opacity: 0.35 },
-  '.glean-tasktext': { opacity: 0.45 },
-  '.glean-taskbox': { display: 'inline-flex', alignItems: 'center', margin: '0 3px' },
-  '.glean-taskbox input': {
-    width: 14, height: 14, accentColor: colors.accent, cursor: 'pointer',
-  },
-  // Callouts: colored boxes for > [!NOTE] etc
-  '.glean-callout-title': {
-    display: 'inline-flex',
-    alignItems: 'center',
-    fontWeight: 700,
-    fontSize: '0.95em',
-    paddingTop: '6px',
-  },
-  '.glean-callout-icon': { marginRight: '6px', fontSize: '1.1em' },
-  '.glean-callout': {
-    backgroundColor: 'rgba(55,130,200,0.10)',
-    borderLeft: '3px solid #3388cc',
-    paddingLeft: '10px',
-    marginLeft: '0',
-    paddingBottom: '2px',
-  },
-  '.glean-callout-note':        { backgroundColor: 'rgba(55,130,200,0.10)', borderLeftColor: '#3388cc' },
-  '.glean-callout-tip':         { backgroundColor: 'rgba(80,180,80,0.10)',  borderLeftColor: '#44aa44' },
-  '.glean-callout-important':   { backgroundColor: 'rgba(150,90,210,0.10)', borderLeftColor: '#8855cc' },
-  '.glean-callout-warning':     { backgroundColor: 'rgba(200,160,50,0.10)', borderLeftColor: '#ccaa33' },
-  '.glean-callout-caution':     { backgroundColor: 'rgba(200,80,70,0.10)',  borderLeftColor: '#cc4433' },
-  '.glean-callout-note-icon':   { color: '#3388cc' },
-  '.glean-callout-tip-icon':    { color: '#44aa44' },
-  '.glean-callout-important-icon': { color: '#8855cc' },
-  '.glean-callout-warning-icon':   { color: '#ccaa33' },
-  '.glean-callout-caution-icon':   { color: '#cc4433' },
   '.glean-anim': { animation: 'glean-char-fade 0.35s ease-out' },
 }, { dark: true })
 
@@ -189,8 +104,6 @@ export function createGleanView({ parent, doc, prefs, callbacks }) {
       placeholder('Write, the night holds what you seek.'),
       gleanTheme,
       animStyle,
-      livePreviewField,
-      taskClickPlugin,
       freshField,
       animField,
       animSweeper,
