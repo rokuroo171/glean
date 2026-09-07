@@ -36,7 +36,18 @@ class TaskCheckbox extends WidgetType {
   ignoreEvent() { return false }
 }
 
-const hideMark = Decoration.mark({ class: 'glean-hide' })
+// Widget that renders nothing - used to physically replace marker text in the DOM
+class EmptyWidget extends WidgetType {
+  constructor() { super() }
+  eq() { return true }
+  toDOM() {
+    const span = document.createElement('span')
+    span.setAttribute('aria-hidden', 'true')
+    return span
+  }
+}
+
+const hideMark = Decoration.replace({ widget: new EmptyWidget() })
 
 // Extract cells from a TableHeader or TableRow subtree node.
 // Uses firstChild/nextSibling to walk the children directly.
