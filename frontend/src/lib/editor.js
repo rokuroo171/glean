@@ -66,6 +66,10 @@ const gleanTheme = EditorView.theme({
   '.glean-h4': { fontSize: '1.1em', fontWeight: 600, color: colors.text, display: 'inline-block' },
   '.glean-h5': { fontSize: '1em', fontWeight: 600, color: colors.text, display: 'inline-block' },
   '.glean-h6': { fontSize: '0.92em', fontWeight: 600, color: colors.textMuted, display: 'inline-block' },
+  // Override defaultHighlightStyle heading underlines
+  '.tok-heading1, .tok-heading2, .tok-heading3, .tok-heading4, .tok-heading5, .tok-heading6': {
+    textDecoration: 'none',
+  },
   '.glean-bold': { fontWeight: 700 },
   '.glean-italic': { fontStyle: 'italic' },
   '.glean-strike': { textDecoration: 'line-through', opacity: 0.75 },
