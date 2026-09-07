@@ -150,7 +150,9 @@ function headingDecorations(add, state, node, cursorHead, level) {
   const textFrom = markerTo
   const textTo = Math.min(node.to, line.to)
   if (textFrom >= textTo) return
-  if (!(cursorHead >= markerFrom && cursorHead <= markerTo)) {
+  // Show # when cursor is anywhere on the heading line
+  const onLine = cursorHead >= line.from && cursorHead <= line.to
+  if (!onLine) {
     add(markerFrom, markerTo, hideMark)
   }
   // Closing hashes: `# Heading #` hides the trailing run too.
@@ -158,7 +160,7 @@ function headingDecorations(add, state, node, cursorHead, level) {
   const cm = content.match(/(\s+#+)(\s*)$/)
   if (cm && content.length > cm[0].length) {
     const closeFrom = textTo - cm[0].length
-    if (!(cursorHead >= closeFrom && cursorHead <= textTo)) {
+    if (!onLine) {
       add(closeFrom, textTo, hideMark)
     }
   }
@@ -172,7 +174,8 @@ function setextDecorations(add, state, node, cursorHead, level) {
   const textTo = underlineLine.number > 1 ? state.doc.line(underlineLine.number - 1).to : node.from
   if (textTo <= node.from) return
   add(node.from, textTo, headingMark(level))
-  if (!(cursorHead >= underlineLine.from && cursorHead <= node.to)) {
+  const onNode = cursorHead >= node.from && cursorHead <= node.to
+  if (!onNode) {
     add(underlineLine.from, underlineLine.to, hideMark)
   }
 }
@@ -186,11 +189,12 @@ function emphasisDecorations(add, state, node, cursorHead, contentMark, delimite
   const innerFrom = node.from + (openIsDelim ? delimiterLen : 0)
   const innerTo = node.to - (closeIsDelim ? delimiterLen : 0)
   if (innerFrom >= innerTo) return
-  if (openIsDelim && !(cursorHead >= node.from && cursorHead <= node.from + delimiterLen)) {
+  const onNode = cursorHead >= node.from && cursorHead <= node.to
+  if (openIsDelim && !onNode) {
     add(node.from, node.from + delimiterLen, hideMark)
   }
   add(innerFrom, innerTo, contentMark)
-  if (closeIsDelim && !(cursorHead >= node.to - delimiterLen && cursorHead <= node.to)) {
+  if (closeIsDelim && !onNode) {
     add(node.to - delimiterLen, node.to, hideMark)
   }
 }
@@ -202,11 +206,12 @@ function inlineCodeDecorations(add, state, node, cursorHead) {
   if (node.to - node.from <= fence * 2) return
   const innerFrom = node.from + fence
   const innerTo = node.to - fence
-  if (!(cursorHead >= node.from && cursorHead <= node.from + fence)) {
+  const onNode = cursorHead >= node.from && cursorHead <= node.to
+  if (!onNode) {
     add(node.from, innerFrom, hideMark)
   }
   add(innerFrom, innerTo, inlineCodeMark)
-  if (!(cursorHead >= node.to - fence && cursorHead <= node.to)) {
+  if (!onNode) {
     add(innerTo, node.to, hideMark)
   }
 }
@@ -218,11 +223,12 @@ function linkDecorations(add, state, node, cursorHead) {
   if (close <= 0) return
   const labelFrom = node.from + 1
   const labelTo = node.from + close
-  if (!(cursorHead >= node.from && cursorHead <= node.from + 1)) {
+  const onNode = cursorHead >= node.from && cursorHead <= node.to
+  if (!onNode) {
     add(node.from, labelFrom, hideMark)
   }
   add(labelFrom, labelTo, linkMark)
-  if (!(cursorHead >= node.from + close && cursorHead <= node.to)) {
+  if (!onNode) {
     add(node.from + close, node.to, hideMark)
   }
 }
@@ -231,13 +237,14 @@ function linkDecorations(add, state, node, cursorHead) {
 function fencedCodeDecorations(add, state, node, cursorHead) {
   const firstLine = state.doc.lineAt(node.from)
   const lastLine = state.doc.lineAt(node.to)
+  const onNode = cursorHead >= node.from && cursorHead <= node.to
   if (firstLine.number !== lastLine.number) {
     const openFenceTo = firstLine.to
     const closeFenceFrom = lastLine.from
-    if (!(cursorHead >= node.from && cursorHead <= openFenceTo)) {
+    if (!onNode) {
       add(node.from, openFenceTo, hideMark)
     }
-    if (!(cursorHead >= closeFenceFrom && cursorHead <= node.to)) {
+    if (!onNode) {
       add(closeFenceFrom, node.to, hideMark)
     }
   }
@@ -277,8 +284,8 @@ function calloutDecorations(add, state, node, head) {
   const lastLine = state.doc.lineAt(node.to)
   const icon = CALLOUT_ICONS[type] || ''
   const titleText = `${icon} ${type}`
-  // Hide the > [!TYPE] marker (reveal on cursor)
-  if (!(head >= firstLine.from && head <= firstLine.from + markerLen)) {
+  const onFirstLine = head >= firstLine.from && head <= firstLine.to
+  if (!onFirstLine) {
     add(firstLine.from, firstLine.from + markerLen, hideMark)
   }
   for (let ln = firstLine.number; ln <= lastLine.number; ln++) {
@@ -311,7 +318,8 @@ function blockquoteDecorations(add, state, node, head) {
     const l = state.doc.line(ln)
     add(l.from, l.from, quoteLine)
     const qm = l.text.match(/^(?:\s*>\s?)+/)
-    if (qm) add(l.from, l.from + qm[0].length, hideMark)
+    const onThisLine = head >= l.from && head <= l.to
+    if (qm && !onThisLine) add(l.from, l.from + qm[0].length, hideMark)
   }
 }
 
