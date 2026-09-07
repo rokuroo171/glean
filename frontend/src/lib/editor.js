@@ -63,7 +63,6 @@ const gleanTheme = EditorView.theme({
     textDecoration: 'none',
   },
   // Live preview decoration classes
-  '.glean-hide': { fontSize: 0, letterSpacing: -999, pointerEvents: 'none' },
   '.glean-h1': { fontSize: '1.7em', fontWeight: 700, color: colors.text, display: 'inline-block' },
   '.glean-h2': { fontSize: '1.45em', fontWeight: 700, color: colors.text, display: 'inline-block' },
   '.glean-h3': { fontSize: '1.25em', fontWeight: 600, color: colors.text, display: 'inline-block' },
