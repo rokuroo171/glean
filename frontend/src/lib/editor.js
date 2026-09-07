@@ -137,6 +137,21 @@ const gleanTheme = EditorView.theme({
   '.glean-callout-warning-icon': { color: '#ccaa33' },
   '.glean-callout-caution-icon': { color: '#cc4433' },
   '.glean-anim': { animation: 'glean-char-fade 0.35s ease-out' },
+  '.glean-math': {
+    padding: '4px 8px',
+    margin: '4px 0',
+  },
+  '.glean-math .katex-display': {
+    margin: '8px 0',
+    overflow: 'auto',
+  },
+  '.glean-mermaid': {
+    padding: '8px',
+    margin: '8px 0',
+    background: 'rgba(90, 106, 122, 0.05)',
+    borderRadius: 6,
+    border: '1px solid rgba(90, 106, 122, 0.1)',
+  },
 }, { dark: true })
 
 // Keyframes for the animated typing effect, injected once.

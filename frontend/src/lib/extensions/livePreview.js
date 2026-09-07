@@ -1,6 +1,7 @@
 import { RangeSetBuilder, StateField } from '@codemirror/state'
 import { Decoration, EditorView, ViewPlugin, WidgetType } from '@codemirror/view'
 import { syntaxTree } from '@codemirror/language'
+import { renderToString } from 'katex'
 
 // Live preview renders markdown as rich content while keeping the source
 // editable. The engine walks the markdown syntax tree and builds a
@@ -48,6 +49,70 @@ class EmptyWidget extends WidgetType {
 }
 const _emptyW = new EmptyWidget()
 function hideMark() { return Decoration.replace({ widget: _emptyW }) }
+
+// KaTeX math rendering widget
+class MathWidget extends WidgetType {
+  constructor(latex, displayMode) {
+    super()
+    this.latex = latex
+    this.displayMode = displayMode
+  }
+  eq(o) { return o.latex === this.latex && o.displayMode === this.displayMode }
+  toDOM() {
+    const span = document.createElement('span')
+    span.className = 'glean-math'
+    try {
+      span.innerHTML = renderToString(this.latex, {
+        displayMode: this.displayMode,
+        throwOnError: false,
+        trust: true,
+      })
+    } catch (e) {
+      span.textContent = this.latex
+      span.style.color = '#db4c40'
+    }
+    return span
+  }
+}
+
+// Mermaid diagram rendering widget (lazy init)
+let mermaidReady = false
+let mermaidInstance = null
+let mermaidId = 0
+
+async function ensureMermaid() {
+  if (mermaidReady) return mermaidInstance
+  const m = (await import('mermaid')).default
+  m.initialize({ startOnLoad: false, theme: 'dark' })
+  mermaidInstance = m
+  mermaidReady = true
+  return m
+}
+
+class MermaidWidget extends WidgetType {
+  constructor(code) {
+    super()
+    this.code = code
+  }
+  eq(o) { return o.code === this.code }
+  toDOM(view) {
+    const container = document.createElement('div')
+    container.className = 'glean-mermaid'
+    container.style.cssText = 'text-align:center;margin:8px 0;'
+    const id = `mermaid-${++mermaidId}`
+    container.textContent = this.code
+    ensureMermaid().then(m => {
+      m.render(id, this.code).then(({ svg }) => {
+        container.innerHTML = svg
+      }).catch(e => {
+        container.style.color = '#db4c40'
+        container.style.fontSize = '12px'
+        container.textContent = `Mermaid error: ${e.message}`
+      })
+    })
+    return container
+  }
+}
 
 // Extract cells from a TableHeader or TableRow subtree node.
 // Uses firstChild/nextSibling to walk the children directly.
@@ -246,10 +311,37 @@ function linkDecorations(add, state, node, cursorHead) {
 }
 
 // Code fences: block background over every line, fence lines hidden.
+// For math/mermaid blocks, render as widgets when cursor is not inside.
 function fencedCodeDecorations(add, state, node, cursorHead) {
   const firstLine = state.doc.lineAt(node.from)
   const lastLine = state.doc.lineAt(node.to)
   const onNode = cursorHead >= node.from && cursorHead <= node.to
+  
+  // Detect language from opening fence
+  const fenceMatch = firstLine.text.match(/^(`{3,}|~{3,})\s*(\w*)/)
+  const lang = fenceMatch ? fenceMatch[2].toLowerCase() : ''
+  
+  // Math block: render as KaTeX widget when not editing
+  if ((lang === 'math' || lang === 'latex' || lang === 'katex') && !onNode) {
+    const code = state.doc.sliceString(firstLine.to + 1, lastLine.from)
+    add(node.from, node.to, Decoration.replace({
+      widget: new MathWidget(code.trim(), true),
+      block: true,
+    }))
+    return false
+  }
+  
+  // Mermaid block: render as diagram widget when not editing
+  if (lang === 'mermaid' && !onNode) {
+    const code = state.doc.sliceString(firstLine.to + 1, lastLine.from)
+    add(node.from, node.to, Decoration.replace({
+      widget: new MermaidWidget(code.trim()),
+      block: true,
+    }))
+    return false
+  }
+  
+  // Default: style as code block
   if (firstLine.number !== lastLine.number) {
     const openFenceTo = firstLine.to
     const closeFenceFrom = lastLine.from
@@ -381,12 +473,35 @@ function taskDecorations(add, state, node, cursorHead) {
   }
 }
 
+// Inline math: detect $...$ and render as KaTeX when not editing.
+function inlineMathDecorations(add, state, cursorHead) {
+  const text = state.doc.toString()
+  const mathRegex = /\$([^$]+)\$/g
+  let match
+  while ((match = mathRegex.exec(text)) !== null) {
+    const from = match.index
+    const to = from + match[0].length
+    const latex = match[1]
+    // Skip if cursor is inside this math
+    const onMath = cursorHead >= from && cursorHead <= to
+    if (!onMath && latex.trim()) {
+      add(from, to, Decoration.replace({
+        widget: new MathWidget(latex, false),
+      }))
+    }
+  }
+}
+
 // Build the full decoration set for the current doc and cursor.
 export function buildLivePreview(state) {
   const tree = syntaxTree(state)
   const head = state.selection.main.head
   const ranges = []
   const add = (from, to, deco) => ranges.push({ from, to, deco })
+  
+  // Add inline math decorations
+  inlineMathDecorations(add, state, head)
+  
   tree.iterate({
     enter(node) {
       const name = node.name
