@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
+import rehypeRaw from 'rehype-raw'
 import { visit, SKIP } from 'unist-util-visit'
 import { colors } from './theme'
 import { highlightCode } from './prism-setup'
@@ -199,6 +200,30 @@ const listStyles = `
   }
   .glean-markdown ol > li {
     counter-increment: glean-counter;
+  }
+  .glean-markdown mark {
+    background: rgba(217, 154, 61, 0.3);
+    color: inherit;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  .glean-markdown abbr {
+    text-decoration: underline dotted ${colors.textMuted};
+    cursor: help;
+  }
+  .glean-markdown sub, .glean-markdown sup {
+    font-size: 0.75em;
+  }
+  .glean-markdown kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    font-family: ui-monospace, monospace;
+    font-size: 0.9em;
+    color: ${colors.text};
+    background: ${colors.bgElevated};
+    border: 1px solid ${colors.border};
+    border-radius: 3px;
+    box-shadow: 0 1px 0 ${colors.border};
   }
 `
 
@@ -528,8 +553,15 @@ const components = {
   summary: Summary,
 
   sup: ({ children, ...props }) => <sup style={{ fontSize: '0.75em', color: colors.accent }} {...props}>{children}</sup>,
+  sub: ({ children, ...props }) => <sub style={{ fontSize: '0.75em' }} {...props}>{children}</sub>,
+  mark: ({ children, ...props }) => <mark {...props}>{children}</mark>,
+  abbr: ({ children, ...props }) => <abbr {...props}>{children}</abbr>,
+  kbd: ({ children, ...props }) => <kbd {...props}>{children}</kbd>,
   footnoteDefinition: ({ children, ...props }) => (
     <div style={{ fontSize: 12, color: colors.textMuted, margin: '4px 0', paddingLeft: 16, borderLeft: `2px solid ${colors.border}` }} {...props}>{children}</div>
+  ),
+  footnoteReference: ({ children, ...props }) => (
+    <sup style={{ fontSize: '0.75em', color: colors.accent, cursor: 'pointer' }} {...props}>{children}</sup>
   ),
 }
 
@@ -567,7 +599,7 @@ export function renderMarkdown(text, opts = {}) {
       <style>{listStyles}</style>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath, remarkAlert]}
-        rehypePlugins={[rehypeKatex]}
+        rehypePlugins={[rehypeRaw, rehypeKatex]}
         components={components}
       >
         {body}
