@@ -30,9 +30,6 @@ const gleanTheme = EditorView.theme({
     caretColor: colors.text,
     width: '100%',
     minWidth: '100%',
-    maxWidth: '100%',
-    whiteSpace: 'pre-wrap',
-    overflowWrap: 'break-word',
     boxSizing: 'border-box',
   },
   '.cm-scroller': {
@@ -45,7 +42,6 @@ const gleanTheme = EditorView.theme({
   },
   '.cm-line': {
     padding: '0',
-    wordWrap: 'break-word',
   },
   '&.cm-focused': {
     outline: 'none',
@@ -205,6 +201,7 @@ export function createGleanView({ parent, doc, prefs, callbacks }) {
       EditorState.tabSize.of(prefs?.editor?.tab_width || 2),
       prefs?.editor?.line_numbers ? lineNumbers() : [],
       placeholder('Write, the night holds what you seek.'),
+      EditorView.lineWrapping,
       gleanTheme,
       animStyle,
       livePreviewField,
