@@ -37,17 +37,6 @@ class TaskCheckbox extends WidgetType {
   ignoreEvent() { return false }
 }
 
-class EmptyWidget extends WidgetType {
-  constructor() { super() }
-  eq() { return true }
-  toDOM() {
-    const s = document.createElement('span')
-    s.setAttribute('aria-hidden', 'true')
-    s.style.cssText = 'display:inline'
-    return s
-  }
-}
-const _emptyW = new EmptyWidget()
 function hideMark() { return hiddenMark }
 
 // Alternative hide using mark decoration with CSS
@@ -221,9 +210,6 @@ function headingMark(level) {
   return Decoration.line({ class: `glean-h${Math.min(level, 6)}` })
 }
 
-function taskCheckbox(checked) {
-  return Decoration.replace({ widget: new TaskCheckbox(checked) })
-}
 
 // Headings. ATXHeading nodes cover the whole line including the `#`
 // markers. Style the text, hide the marker run plus one space.
@@ -339,20 +325,16 @@ function fencedCodeDecorations(add, state, node, cursorHead) {
   // Math block: render as KaTeX widget when not editing
   if ((lang === 'math' || lang === 'latex' || lang === 'katex') && !onNode) {
     const code = state.doc.sliceString(firstLine.to + 1, lastLine.from)
-    add(node.from, node.to, Decoration.replace({
-      widget: new MathWidget(code.trim(), true),
-      block: true,
-    }))
+    add(node.from, node.to, hiddenMark)
+    add(node.from, node.from, Decoration.widget({ widget: new MathWidget(code.trim(), true), block: true, side: -1 }))
     return false
   }
   
   // Mermaid block: render as diagram widget when not editing
   if (lang === 'mermaid' && !onNode) {
     const code = state.doc.sliceString(firstLine.to + 1, lastLine.from)
-    add(node.from, node.to, Decoration.replace({
-      widget: new MermaidWidget(code.trim()),
-      block: true,
-    }))
+    add(node.from, node.to, hiddenMark)
+    add(node.from, node.from, Decoration.widget({ widget: new MermaidWidget(code.trim()), block: true, side: -1 }))
     return false
   }
   
@@ -446,10 +428,8 @@ function calloutDecorations(add, state, node, head) {
         bodyLines += (bodyLines ? '\n' : '') + lineText
       }
     }
-    add(node.from, node.to, Decoration.replace({
-      widget: new CalloutWidget(type, bodyLines),
-      block: true,
-    }))
+    add(node.from, node.to, hiddenMark)
+    add(node.from, node.from, Decoration.widget({ widget: new CalloutWidget(type, bodyLines), block: true, side: -1 }))
   }
   return true
 }
@@ -492,10 +472,8 @@ function tableDecorations(add, state, node) {
     rowChild = rowChild.nextSibling
   }
   if (headerCells.length === 0) return
-  add(node.from, node.to, Decoration.replace({
-    widget: new TableWidget(headerCells, bodyRows, node.from),
-    block: true,
-  }))
+  add(node.from, node.to, hiddenMark)
+  add(node.from, node.from, Decoration.widget({ widget: new TableWidget(headerCells, bodyRows, node.from), block: true, side: -1 }))
 }
 
 // Images: style the whole syntax as a dimmed placeholder.
@@ -511,7 +489,8 @@ function taskDecorations(add, state, node, cursorHead) {
   if (cursorHead >= node.from && cursorHead <= node.to) {
     add(node.from, node.to, taskTextMark)
   } else {
-    add(node.from, node.to, taskCheckbox(m[1] !== ' '))
+    add(node.from, node.to, hiddenMark)
+    add(node.from, node.from, Decoration.widget({ widget: new TaskCheckbox(m[1] !== ' ') }))
   }
 }
 
@@ -527,9 +506,8 @@ function inlineMathDecorations(add, state, cursorHead) {
     // Skip if cursor is inside this math
     const onMath = cursorHead >= from && cursorHead <= to
     if (!onMath && latex.trim()) {
-      add(from, to, Decoration.replace({
-        widget: new MathWidget(latex, false),
-      }))
+      add(from, to, hiddenMark)
+      add(from, from, Decoration.widget({ widget: new MathWidget(latex, false) }))
     }
   }
 }
