@@ -111,7 +111,6 @@ const gleanTheme = EditorView.theme({
   '.glean-table-widget': {
     borderCollapse: 'collapse',
     width: '100%',
-    margin: '4px 0',
   },
   '.glean-table-widget th, .glean-table-widget td': {
     border: `1px solid ${colors.border}`,
@@ -128,9 +127,8 @@ const gleanTheme = EditorView.theme({
   '.glean-tabledelim': { opacity: 0.35 },
   '.glean-hr': {
     borderTop: '1px solid rgba(90,106,122,0.3)',
-    marginTop: 16,
-    marginBottom: 16,
-    height: 0,
+    paddingTop: 16,
+    paddingBottom: 16,
   },
   '.glean-tasktext': { opacity: 0.45 },
   '.glean-hide-markers .cm-line': {
@@ -153,16 +151,14 @@ const gleanTheme = EditorView.theme({
   // Callout styles are handled by CalloutWidget (inline styles for GitHub match)
   '.glean-anim': { animation: 'glean-char-fade 0.35s ease-out' },
   '.glean-math': {
-    padding: '4px 8px',
-    margin: '4px 0',
+    padding: '8px',
   },
   '.glean-math .katex-display': {
     margin: '8px 0',
     overflow: 'auto',
   },
   '.glean-mermaid': {
-    padding: '8px',
-    margin: '8px 0',
+    padding: '12px',
     background: 'rgba(90, 106, 122, 0.05)',
     borderRadius: 6,
     border: '1px solid rgba(90, 106, 122, 0.1)',

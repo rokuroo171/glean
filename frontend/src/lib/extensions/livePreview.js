@@ -90,7 +90,7 @@ class MermaidWidget extends WidgetType {
   toDOM(view) {
     const container = document.createElement('div')
     container.className = 'glean-mermaid'
-    container.style.cssText = 'text-align:center;margin:8px 0;min-height:40px;'
+    container.style.cssText = 'text-align:center;padding:8px 0;min-height:40px;'
     const id = `mermaid-${++mermaidId}`
     container.textContent = 'Loading diagram...'
     ensureMermaid().then(m => {
@@ -385,7 +385,7 @@ class CalloutWidget extends WidgetType {
     const c = CALLOUT_COLORS[this.type] || CALLOUT_COLORS.NOTE
     const icon = CALLOUT_SVG[this.type] || CALLOUT_SVG.NOTE
     const wrap = document.createElement('div')
-    wrap.style.cssText = `border-left:3px solid ${c.border};border-radius:6px;background:${c.bg};padding:0 16px 4px 12px;margin:8px 0;`
+    wrap.style.cssText = `border-left:3px solid ${c.border};border-radius:6px;background:${c.bg};padding:8px 16px 12px 12px;`
     wrap.setAttribute('aria-hidden', 'true')
     const title = document.createElement('div')
     title.style.cssText = `display:flex;align-items:center;gap:6px;padding:8px 0 4px;font-weight:600;font-size:14px;color:${c.title};`
