@@ -37,6 +37,7 @@ const gleanTheme = EditorView.theme({
   '.cm-scroller': {
     fontFamily: 'inherit',
     overflow: 'auto',
+    scrollbarGutter: 'stable',
     width: '100%',
     boxSizing: 'border-box',
   },
@@ -75,18 +76,20 @@ const gleanTheme = EditorView.theme({
     textDecoration: 'none',
   },
   // Live preview decoration classes
-  '.glean-h1': { fontSize: '1.7em', fontWeight: 700, color: colors.text },
-  '.glean-h2': { fontSize: '1.45em', fontWeight: 700, color: colors.text },
-  '.glean-h3': { fontSize: '1.25em', fontWeight: 600, color: colors.text },
-  '.glean-h4': { fontSize: '1.1em', fontWeight: 600, color: colors.text },
-  '.glean-h5': { fontSize: '1em', fontWeight: 600, color: colors.text },
-  '.glean-h6': { fontSize: '0.92em', fontWeight: 600, color: colors.textMuted },
+  // NOTE: fontSize is intentionally omitted from all decoration classes.
+  // CM6 miscalculates line heights and caret positions when decorations
+  // change the font size. Headings use fontWeight + color for distinction.
+  '.glean-h1': { fontWeight: 800, color: colors.text },
+  '.glean-h2': { fontWeight: 700, color: colors.text },
+  '.glean-h3': { fontWeight: 700, color: colors.text },
+  '.glean-h4': { fontWeight: 600, color: colors.text },
+  '.glean-h5': { fontWeight: 600, color: colors.text },
+  '.glean-h6': { fontWeight: 600, color: colors.textMuted },
   '.glean-bold': { fontWeight: 700 },
   '.glean-italic': { fontStyle: 'italic' },
   '.glean-strike': { textDecoration: 'line-through', opacity: 0.75 },
   '.glean-icode': {
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-    fontSize: '0.9em',
     backgroundColor: 'rgba(90, 106, 122, 0.18)',
     borderRadius: 4,
     padding: '0.5px 4px',
@@ -99,8 +102,6 @@ const gleanTheme = EditorView.theme({
   '.glean-image': { opacity: 0.55, fontStyle: 'italic' },
   '.glean-codeblock': {
     backgroundColor: 'rgba(90, 106, 122, 0.1)',
-    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-    fontSize: '0.92em',
   },
   '.glean-quote': {
     borderLeft: `3px solid ${colors.borderStrong}`,
