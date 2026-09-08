@@ -36,7 +36,8 @@ const gleanTheme = EditorView.theme({
   },
   '.cm-scroller': {
     fontFamily: 'inherit',
-    overflow: 'auto',
+    overflowY: 'scroll',
+    overflowX: 'auto',
     scrollbarGutter: 'stable',
     width: '100%',
     boxSizing: 'border-box',
@@ -104,14 +105,13 @@ const gleanTheme = EditorView.theme({
     backgroundColor: 'rgba(90, 106, 122, 0.1)',
   },
   '.glean-quote': {
-    borderLeft: `3px solid ${colors.borderStrong}`,
+    background: `linear-gradient(to right, ${colors.borderStrong}, transparent 3px)` ,
     color: colors.textMuted,
   },
   '.glean-table-widget': {
     borderCollapse: 'collapse',
     width: '100%',
     margin: '4px 0',
-    fontSize: '0.95em',
   },
   '.glean-table-widget th, .glean-table-widget td': {
     border: `1px solid ${colors.border}`,
