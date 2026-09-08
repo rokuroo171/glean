@@ -167,8 +167,8 @@ const gleanTheme = EditorView.theme({
     color: colors.text,
   },
   '.glean-md-block h1, .glean-md-block h2, .glean-md-block h3, .glean-md-block h4, .glean-md-block h5, .glean-md-block h6': {
-    marginTop: '16px',
-    marginBottom: '8px',
+    marginTop: '2px',
+    marginBottom: '2px',
     fontWeight: 700,
     lineHeight: 1.3,
   },
@@ -180,11 +180,11 @@ const gleanTheme = EditorView.theme({
   '.glean-md-block h6': { fontSize: '0.9em', color: colors.textMuted },
   '.glean-md-block p': {
     marginTop: '0',
-    marginBottom: '8px',
+    marginBottom: '2px',
   },
   '.glean-md-block ul, .glean-md-block ol': {
     marginTop: '0',
-    marginBottom: '8px',
+    marginBottom: '2px',
     paddingLeft: '24px',
   },
   '.glean-md-block li': {
@@ -195,7 +195,7 @@ const gleanTheme = EditorView.theme({
     paddingLeft: '12px',
     color: colors.textMuted,
     marginTop: '0',
-    marginBottom: '8px',
+    marginBottom: '2px',
   },
   '.glean-md-block pre': {
     background: 'rgba(90, 106, 122, 0.1)',
@@ -203,7 +203,7 @@ const gleanTheme = EditorView.theme({
     borderRadius: 6,
     overflowX: 'auto',
     marginTop: '0',
-    marginBottom: '8px',
+    marginBottom: '2px',
   },
   '.glean-md-block code': {
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
@@ -224,14 +224,14 @@ const gleanTheme = EditorView.theme({
   '.glean-md-block hr': {
     border: 'none',
     borderTop: `1px solid rgba(90,106,122,0.3)`,
-    marginTop: '16px',
-    marginBottom: '16px',
+    marginTop: '4px',
+    marginBottom: '4px',
   },
   '.glean-md-block table': {
     borderCollapse: 'collapse',
     width: '100%',
     marginTop: '0',
-    marginBottom: '8px',
+    marginBottom: '2px',
   },
   '.glean-md-block th, .glean-md-block td': {
     border: `1px solid ${colors.border}`,
