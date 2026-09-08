@@ -29,6 +29,8 @@ const gleanTheme = EditorView.theme({
     caretColor: colors.text,
     width: '100%',
     minWidth: '100%',
+    maxWidth: '100%',
+    overflowWrap: 'break-word',
   },
   '.cm-scroller': {
     fontFamily: 'inherit',
@@ -66,12 +68,12 @@ const gleanTheme = EditorView.theme({
     textDecoration: 'none',
   },
   // Live preview decoration classes
-  '.glean-h1': { fontSize: '1.7em', fontWeight: 700, color: colors.text, display: 'inline-block' },
-  '.glean-h2': { fontSize: '1.45em', fontWeight: 700, color: colors.text, display: 'inline-block' },
-  '.glean-h3': { fontSize: '1.25em', fontWeight: 600, color: colors.text, display: 'inline-block' },
-  '.glean-h4': { fontSize: '1.1em', fontWeight: 600, color: colors.text, display: 'inline-block' },
-  '.glean-h5': { fontSize: '1em', fontWeight: 600, color: colors.text, display: 'inline-block' },
-  '.glean-h6': { fontSize: '0.92em', fontWeight: 600, color: colors.textMuted, display: 'inline-block' },
+  '.glean-h1': { fontSize: '1.7em', fontWeight: 700, color: colors.text },
+  '.glean-h2': { fontSize: '1.45em', fontWeight: 700, color: colors.text },
+  '.glean-h3': { fontSize: '1.25em', fontWeight: 600, color: colors.text },
+  '.glean-h4': { fontSize: '1.1em', fontWeight: 600, color: colors.text },
+  '.glean-h5': { fontSize: '1em', fontWeight: 600, color: colors.text },
+  '.glean-h6': { fontSize: '0.92em', fontWeight: 600, color: colors.textMuted },
   '.glean-bold': { fontWeight: 700 },
   '.glean-italic': { fontStyle: 'italic' },
   '.glean-strike': { textDecoration: 'line-through', opacity: 0.75 },
@@ -117,6 +119,16 @@ const gleanTheme = EditorView.theme({
   },
   '.glean-tabledelim': { opacity: 0.35 },
   '.glean-tasktext': { opacity: 0.45 },
+  '.glean-hide-markers .cm-line': {
+    // Hide the first character (list marker) via CSS pseudo-element
+  },
+  // Aggressive hidden marker class - forces text invisible
+  '.tok-listmark, .glean-hidden-marker': {
+    visibility: 'hidden',
+    fontSize: 0,
+    width: 0,
+    display: 'none',
+  },
   '.glean-taskbox': { display: 'inline-flex', alignItems: 'center', margin: '0 3px' },
   '.glean-taskbox input': {
     width: 14, height: 14, accentColor: colors.accent, cursor: 'pointer',

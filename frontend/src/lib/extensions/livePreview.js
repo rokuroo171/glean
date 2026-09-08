@@ -50,6 +50,9 @@ class EmptyWidget extends WidgetType {
 const _emptyW = new EmptyWidget()
 function hideMark() { return Decoration.replace({ widget: _emptyW }) }
 
+// Alternative hide using mark decoration with CSS
+const hiddenMark = Decoration.mark({ class: 'glean-hidden-mark' })
+
 // KaTeX math rendering widget
 class MathWidget extends WidgetType {
   constructor(latex, displayMode) {
@@ -98,17 +101,22 @@ class MermaidWidget extends WidgetType {
   toDOM(view) {
     const container = document.createElement('div')
     container.className = 'glean-mermaid'
-    container.style.cssText = 'text-align:center;margin:8px 0;'
+    container.style.cssText = 'text-align:center;margin:8px 0;min-height:40px;'
     const id = `mermaid-${++mermaidId}`
-    container.textContent = this.code
+    container.textContent = 'Loading diagram...'
     ensureMermaid().then(m => {
       m.render(id, this.code).then(({ svg }) => {
         container.innerHTML = svg
       }).catch(e => {
+        console.error('Mermaid render error:', e)
         container.style.color = '#db4c40'
         container.style.fontSize = '12px'
         container.textContent = `Mermaid error: ${e.message}`
       })
+    }).catch(e => {
+      console.error('Mermaid init error:', e)
+      container.style.color = '#db4c40'
+      container.textContent = `Mermaid init error: ${e.message}`
     })
     return container
   }
@@ -492,6 +500,39 @@ function inlineMathDecorations(add, state, cursorHead) {
   }
 }
 
+// List marks: hide -, *, +, 1. etc when cursor is not on the line.
+function listMarkDecorations(add, state, node, head) {
+  const line = state.doc.lineAt(node.from)
+  const onLine = head >= line.from && head <= line.to
+  if (!onLine) {
+    // Replace the marker text with an empty widget to hide it
+    add(node.from, node.to, Decoration.replace({ widget: _emptyW }))
+  }
+}
+
+// Horizontal rule: replace --- with a styled <hr>.
+class HorizontalRuleWidget extends WidgetType {
+  constructor() { super() }
+  eq() { return true }
+  toDOM() {
+    const hr = document.createElement('div')
+    hr.setAttribute('aria-hidden', 'true')
+    hr.style.cssText = `border:none;border-top:1px solid rgba(90,106,122,0.3);margin:16px 0;`
+    return hr
+  }
+}
+
+function horizontalRuleDecorations(add, state, node, head) {
+  const line = state.doc.lineAt(node.from)
+  const onLine = head >= line.from && head <= line.to
+  if (!onLine) {
+    add(line.from, line.to, Decoration.replace({
+      widget: new HorizontalRuleWidget(),
+      block: true,
+    }))
+  }
+}
+
 // Build the full decoration set for the current doc and cursor.
 export function buildLivePreview(state) {
   const tree = syntaxTree(state)
@@ -516,8 +557,10 @@ export function buildLivePreview(state) {
       if (name === 'Table') { tableDecorations(add, state, node); return }
       if (name === 'Image') { imageDecorations(add, state, node); return false }
       if (name === 'TaskMarker') { taskDecorations(add, state, node, head); return false }
+      if (name === 'ListMark') { listMarkDecorations(add, state, node, head); return false }
+      if (name === 'HorizontalRule') { horizontalRuleDecorations(add, state, node, head); return false }
       if (name === 'StrongEmphasis') { emphasisDecorations(add, state, node, head, boldMark, 2); return false }
-      if (name === 'Emphasis') { emphasisDecorations(add, state, node, head, italicMark, 1); return false }
+      if (name === 'Emphasis') { emphasisDecorations(add, state, node, head, italicMark, 1); return undefined }
       if (name === 'Strikethrough') { emphasisDecorations(add, state, node, head, strikeMark, 2); return false }
       if (name === 'InlineCode') { inlineCodeDecorations(add, state, node, head); return false }
       if (name === 'Link') { linkDecorations(add, state, node, head); return false }
