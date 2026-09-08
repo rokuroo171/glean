@@ -32,11 +32,17 @@ const gleanTheme = EditorView.theme({
     minWidth: '100%',
     maxWidth: '100%',
     overflowWrap: 'break-word',
+    boxSizing: 'border-box',
   },
   '.cm-scroller': {
     fontFamily: 'inherit',
     overflow: 'auto',
     width: '100%',
+    boxSizing: 'border-box',
+  },
+  '.cm-line': {
+    padding: '0',
+    wordWrap: 'break-word',
   },
   '&.cm-focused': {
     outline: 'none',

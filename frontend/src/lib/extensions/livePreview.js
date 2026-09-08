@@ -215,7 +215,10 @@ const strikeMark = Decoration.mark({ class: 'glean-strike' })
 const taskTextMark = Decoration.mark({ class: 'glean-tasktext' })
 
 function headingMark(level) {
-  return Decoration.mark({ class: `glean-h${Math.min(level, 6)}` })
+  // Use Decoration.line instead of Decoration.mark to avoid
+  // inconsistent line-height calculations that cause the
+  // progression scroll bug (content width changes on scroll).
+  return Decoration.line({ class: `glean-h${Math.min(level, 6)}` })
 }
 
 function taskCheckbox(checked) {
@@ -249,16 +252,19 @@ function headingDecorations(add, state, node, cursorHead, level) {
       add(closeFrom, textTo, hideMark())
     }
   }
-  add(textFrom, textTo, headingMark(level))
+  // Decoration.line must be at the line start, not a text range
+  add(line.from, line.from, headingMark(level))
 }
 
 // Setext headings: style the text lines as a heading, hide the
 // underline of `=` or `-` marks.
 function setextDecorations(add, state, node, cursorHead, level) {
+  const line = state.doc.lineAt(node.from)
   const underlineLine = state.doc.lineAt(node.to)
   const textTo = underlineLine.number > 1 ? state.doc.line(underlineLine.number - 1).to : node.from
   if (textTo <= node.from) return
-  add(node.from, textTo, headingMark(level))
+  // Decoration.line must be at the line start
+  add(line.from, line.from, headingMark(level))
   const onNode = cursorHead >= node.from && cursorHead <= node.to
   if (!onNode) {
     add(underlineLine.from, underlineLine.to, hideMark())
