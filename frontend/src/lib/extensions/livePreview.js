@@ -48,7 +48,7 @@ class EmptyWidget extends WidgetType {
   }
 }
 const _emptyW = new EmptyWidget()
-function hideMark() { return Decoration.replace({ widget: _emptyW }) }
+function hideMark() { return hiddenMark }
 
 // Alternative hide using mark decoration with CSS
 const hiddenMark = Decoration.mark({ class: 'glean-hidden-mark' })
@@ -559,30 +559,19 @@ function listMarkDecorations(add, state, node, head) {
   const onLine = head >= line.from && head <= line.to
   if (!onLine) {
     // Replace the marker text with an empty widget to hide it
-    add(node.from, node.to, Decoration.replace({ widget: _emptyW }))
+    add(node.from, node.to, hiddenMark)
   }
 }
 
 // Horizontal rule: replace --- with a styled <hr>.
-class HorizontalRuleWidget extends WidgetType {
-  constructor() { super() }
-  eq() { return true }
-  toDOM() {
-    const hr = document.createElement('div')
-    hr.setAttribute('aria-hidden', 'true')
-    hr.style.cssText = `border:none;border-top:1px solid rgba(90,106,122,0.3);margin:16px 0;`
-    return hr
-  }
-}
+const hrMark = Decoration.line({ class: 'glean-hr' })
 
 function horizontalRuleDecorations(add, state, node, head) {
   const line = state.doc.lineAt(node.from)
   const onLine = head >= line.from && head <= line.to
   if (!onLine) {
-    add(line.from, line.to, Decoration.replace({
-      widget: new HorizontalRuleWidget(),
-      block: true,
-    }))
+    add(line.from, line.from, hrMark)
+    add(line.from, line.to, hiddenMark)
   }
 }
 
@@ -609,7 +598,7 @@ export function buildLivePreview(state) {
     if (lineEnd < 0) lineEnd = docText.length
     const onDef = head >= lineStart && head <= lineEnd
     if (!onDef) {
-      add(lineStart, lineEnd, Decoration.replace({ widget: _emptyW }))
+      add(lineStart, lineEnd, hiddenMark)
     }
   }
   

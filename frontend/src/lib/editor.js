@@ -126,11 +126,20 @@ const gleanTheme = EditorView.theme({
     backgroundColor: 'rgba(180, 140, 80, 0.05)',
   },
   '.glean-tabledelim': { opacity: 0.35 },
+  '.glean-hr': {
+    borderTop: '1px solid rgba(90,106,122,0.3)',
+    marginTop: 16,
+    marginBottom: 16,
+    height: 0,
+  },
   '.glean-tasktext': { opacity: 0.45 },
   '.glean-hide-markers .cm-line': {
     // Hide the first character (list marker) via CSS pseudo-element
   },
   // Aggressive hidden marker class - forces text invisible
+  '.glean-hidden-mark': {
+    visibility: 'hidden',
+  },
   '.tok-listmark, .glean-hidden-marker': {
     visibility: 'hidden',
     fontSize: 0,
