@@ -31,6 +31,7 @@ const gleanTheme = EditorView.theme({
     width: '100%',
     minWidth: '100%',
     maxWidth: '100%',
+    whiteSpace: 'pre-wrap',
     overflowWrap: 'break-word',
     boxSizing: 'border-box',
   },
