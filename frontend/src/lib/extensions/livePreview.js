@@ -368,55 +368,82 @@ function fencedCodeDecorations(add, state, node, cursorHead) {
 }
 
 const CALLOUT_RE = /^\s*>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/
-const CALLOUT_ICONS = {
-  NOTE: '\u270e',       // pencil
-  TIP: '\u26a1',        // lightning
-  IMPORTANT: '\u2757',  // exclamation
-  WARNING: '\u26a0',    // warning
-  CAUTION: '\u26a0',    // caution
+
+// GitHub-style Lucide SVG icons for callouts
+const CALLOUT_SVG = {
+  NOTE: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+  TIP: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8l4 2"/><path d="M12 2a7 7 0 0 0-4 12.7V18h8v-3.3A7 7 0 0 0 12 2z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>',
+  IMPORTANT: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  WARNING: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  CAUTION: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
 }
+
 const CALLOUT_COLORS = {
-  NOTE:       { bg: 'rgba(55,130,200,0.10)', border: '#3388cc', title: '#3388cc' },
-  TIP:        { bg: 'rgba(80,180,80,0.10)',  border: '#44aa44', title: '#44aa44' },
-  IMPORTANT:  { bg: 'rgba(150,90,210,0.10)', border: '#8855cc', title: '#8855cc' },
-  WARNING:    { bg: 'rgba(200,160,50,0.10)', border: '#ccaa33', title: '#ccaa33' },
-  CAUTION:    { bg: 'rgba(200,80,70,0.10)',  border: '#cc4433', title: '#cc4433' },
+  NOTE:       { bg: 'rgba(56,139,253,0.10)', border: '#388bfd', title: '#58a6ff', iconBg: 'rgba(56,139,253,0.15)' },
+  TIP:        { bg: 'rgba(63,185,80,0.10)',  border: '#3fb950', title: '#3fb950', iconBg: 'rgba(63,185,80,0.15)' },
+  IMPORTANT:  { bg: 'rgba(137,87,224,0.10)', border: '#8957e5', title: '#bc8cff', iconBg: 'rgba(137,87,224,0.15)' },
+  WARNING:    { bg: 'rgba(210,153,34,0.10)', border: '#d29922', title: '#e3b341', iconBg: 'rgba(210,153,34,0.15)' },
+  CAUTION:    { bg: 'rgba(248,81,73,0.10)',  border: '#f85149', title: '#f85149', iconBg: 'rgba(248,81,73,0.15)' },
+}
+
+class CalloutWidget extends WidgetType {
+  constructor(type, bodyLines) {
+    super()
+    this.type = type
+    this.bodyLines = bodyLines
+  }
+  eq(o) { return o.type === this.type && o.bodyLines === this.bodyLines }
+  toDOM() {
+    const c = CALLOUT_COLORS[this.type] || CALLOUT_COLORS.NOTE
+    const icon = CALLOUT_SVG[this.type] || CALLOUT_SVG.NOTE
+    const wrap = document.createElement('div')
+    wrap.style.cssText = `border-left:3px solid ${c.border};border-radius:6px;background:${c.bg};padding:0 16px 4px 12px;margin:8px 0;`
+    wrap.setAttribute('aria-hidden', 'true')
+    const title = document.createElement('div')
+    title.style.cssText = `display:flex;align-items:center;gap:6px;padding:8px 0 4px;font-weight:600;font-size:14px;color:${c.title};`
+    title.innerHTML = `<span style="display:inline-flex;align-items:center;color:${c.title}">${icon}</span><span>${this.type.charAt(0) + this.type.slice(1).toLowerCase()}</span>`
+    wrap.appendChild(title)
+    const body = document.createElement('div')
+    body.style.cssText = 'color:#c8d6e0;font-size:14px;line-height:1.6;padding-bottom:4px;'
+    body.textContent = this.bodyLines
+    wrap.appendChild(body)
+    return wrap
+  }
+  ignoreEvent() { return false }
 }
 
 function calloutTypeColor(type) { return CALLOUT_COLORS[type] || CALLOUT_COLORS.NOTE }
 
-// Callout: detect > [!TYPE] at the start of a blockquote, hide the
-// marker, apply a colored background, and add a bold title line.
+// Callout: detect > [!TYPE] at the start of a blockquote, replace with
+// a GitHub-style callout widget with SVG icon, colored border, and background.
 function calloutDecorations(add, state, node, head) {
   const firstLine = state.doc.lineAt(node.from)
   const m = firstLine.text.match(CALLOUT_RE)
   if (!m) return false
   const type = m[1]
-  const color = calloutTypeColor(type)
   const markerLen = m[0].length
   const lastLine = state.doc.lineAt(node.to)
-  const icon = CALLOUT_ICONS[type] || ''
-  const titleText = `${icon} ${type}`
-  const onFirstLine = head >= firstLine.from && head <= firstLine.to
-  if (!onFirstLine) {
-    add(firstLine.from, firstLine.from + markerLen, hideMark())
-  }
-  for (let ln = firstLine.number; ln <= lastLine.number; ln++) {
-    const l = state.doc.line(ln)
-    if (ln === firstLine.number) {
-      // Title line: icon + bold type name after the hidden marker
-      add(l.from + markerLen, l.from + markerLen, Decoration.line({
-        class: 'glean-callout-title',
-      }))
-      add(l.from + markerLen, l.from + markerLen + titleText.length, Decoration.mark({
-        class: `glean-callout-icon glean-callout-${type.toLowerCase()}-icon`,
-      }))
-    } else {
-      // Body lines: callout background
-      add(l.from, l.from, Decoration.line({
-        class: `glean-callout glean-callout-${type.toLowerCase()}`,
-      }))
+  const onNode = head >= node.from && head <= node.to
+  if (!onNode) {
+    // Collect body lines (strip leading > markers)
+    let bodyLines = ''
+    for (let ln = firstLine.number; ln <= lastLine.number; ln++) {
+      const l = state.doc.line(ln)
+      let lineText = l.text
+      // Strip leading > markers
+      lineText = lineText.replace(/^\s*>\s?/, '')
+      // Skip the [!TYPE] marker on first line
+      if (ln === firstLine.number) {
+        lineText = lineText.replace(/^\[!\w+\]\s*/, '')
+      }
+      if (lineText || ln > firstLine.number) {
+        bodyLines += (bodyLines ? '\n' : '') + lineText
+      }
     }
+    add(node.from, node.to, Decoration.replace({
+      widget: new CalloutWidget(type, bodyLines),
+      block: true,
+    }))
   }
   return true
 }
