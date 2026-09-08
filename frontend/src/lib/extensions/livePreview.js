@@ -304,7 +304,8 @@ function inlineCodeDecorations(add, state, node, cursorHead) {
 // Links: hide the brackets and the `](url)` tail, style the label.
 function linkDecorations(add, state, node, cursorHead) {
   const text = state.doc.sliceString(node.from, node.to)
-  const close = text.lastIndexOf(']')
+  // For [text](url) use first ], for [text][ref] also use first ]
+  const close = text.indexOf(']')
   if (close <= 0) return
   const labelFrom = node.from + 1
   const labelTo = node.from + close
@@ -564,6 +565,20 @@ export function buildLivePreview(state) {
   
   // Add strikethrough decorations (regex-based since CM6 doesn't parse ~~)
   strikethroughDecorations(add, state, head)
+  
+  // Hide reference link definitions [label]: url
+  const docText = state.doc.toString()
+  const refDefRe = /^\s*\[([^^\]]+)\]:\s+\S/mg
+  let refMatch
+  while ((refMatch = refDefRe.exec(docText)) !== null) {
+    const lineStart = docText.lastIndexOf('\n', refMatch.index) + 1
+    let lineEnd = docText.indexOf('\n', refMatch.index)
+    if (lineEnd < 0) lineEnd = docText.length
+    const onDef = head >= lineStart && head <= lineEnd
+    if (!onDef) {
+      add(lineStart, lineEnd, Decoration.replace({ widget: _emptyW }))
+    }
+  }
   
   tree.iterate({
     enter(node) {
