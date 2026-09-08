@@ -2,25 +2,15 @@ import { RangeSetBuilder, StateField } from '@codemirror/state'
 import { Decoration, EditorView, ViewPlugin, WidgetType } from '@codemirror/view'
 import { syntaxTree } from '@codemirror/language'
 import { renderToString } from 'katex'
+import MarkdownIt from 'markdown-it'
 
-// Live preview renders markdown as rich content while keeping the source
-// editable. The engine walks the markdown syntax tree and builds a
-// decoration set each time the doc or the cursor moves:
-//
-// - inline marks (bold, italic, strike, code, links, images) get styled
-//   and their delimiters hidden
-// - headings and blockquotes hide their markers and style the text
-// - code fences get a block background with the fence lines hidden
-// - task markers render as clickable checkboxes that toggle the source
-// - tables dim the delimiter row and keep cells readable
-//
-// Hidden ranges follow the folding pattern: when the cursor touches a
-// hidden marker, the marker is shown so the user can edit it, and it
-// hides again once the cursor leaves.
-//
-// Ranges are collected and sorted by (from, startSide) before they go
-// into the RangeSetBuilder, since it requires sorted input and a plain
-// tree walk mixes block ranges with the inline ranges inside them.
+const md = new MarkdownIt({
+  html: false,
+  linkify: true,
+  typographer: false,
+  breaks: false,
+})
+md.enable('strikethrough')
 
 class TaskCheckbox extends WidgetType {
   constructor(checked) { super(); this.checked = checked }
@@ -37,12 +27,8 @@ class TaskCheckbox extends WidgetType {
   ignoreEvent() { return false }
 }
 
-function hideMark() { return hiddenMark }
-
-// Alternative hide using mark decoration with CSS
 const hiddenMark = Decoration.mark({ class: 'glean-hidden-mark' })
 
-// KaTeX math rendering widget
 class MathWidget extends WidgetType {
   constructor(latex, displayMode) {
     super()
@@ -67,7 +53,6 @@ class MathWidget extends WidgetType {
   }
 }
 
-// Mermaid diagram rendering widget (lazy init)
 let mermaidReady = false
 let mermaidInstance = null
 let mermaidId = 0
@@ -90,29 +75,20 @@ class MermaidWidget extends WidgetType {
   toDOM(view) {
     const container = document.createElement('div')
     container.className = 'glean-mermaid'
-    container.style.cssText = 'text-align:center;padding:8px 0;min-height:40px;'
     const id = `mermaid-${++mermaidId}`
     container.textContent = 'Loading diagram...'
     ensureMermaid().then(m => {
       m.render(id, this.code).then(({ svg }) => {
         container.innerHTML = svg
       }).catch(e => {
-        console.error('Mermaid render error:', e)
         container.style.color = '#db4c40'
-        container.style.fontSize = '12px'
         container.textContent = `Mermaid error: ${e.message}`
       })
-    }).catch(e => {
-      console.error('Mermaid init error:', e)
-      container.style.color = '#db4c40'
-      container.textContent = `Mermaid init error: ${e.message}`
     })
     return container
   }
 }
 
-// Extract cells from a TableHeader or TableRow subtree node.
-// Uses firstChild/nextSibling to walk the children directly.
 function extractCells(state, rowNode) {
   const cells = []
   let c = rowNode.firstChild
@@ -142,7 +118,6 @@ class TableWidget extends WidgetType {
     const table = document.createElement('table')
     table.className = 'glean-table-widget'
     table.setAttribute('aria-hidden', 'true')
-    // Header
     const thead = document.createElement('thead')
     const htr = document.createElement('tr')
     for (const cell of this.headerCells) {
@@ -152,7 +127,6 @@ class TableWidget extends WidgetType {
     }
     thead.appendChild(htr)
     table.appendChild(thead)
-    // Body
     if (this.bodyRows.length > 0) {
       const tbody = document.createElement('tbody')
       for (const row of this.bodyRows) {
@@ -166,7 +140,6 @@ class TableWidget extends WidgetType {
       }
       table.appendChild(tbody)
     }
-    // Click a cell to jump cursor into the source
     table.addEventListener('click', (e) => {
       const td = e.target.closest('td, th')
       if (!td) return
@@ -179,7 +152,6 @@ class TableWidget extends WidgetType {
         return idx >= 0 ? acc + idx : acc
       }, 0)
       const ci = Array.from(row.children).indexOf(td)
-      // Map row/col back to source position
       const allRows = [this.headerCells, ...this.bodyRows]
       if (ri < allRows.length && ci < allRows[ri].length) {
         const cellFrom = allRows[ri][ci].from
@@ -192,172 +164,8 @@ class TableWidget extends WidgetType {
   ignoreEvent() { return false }
 }
 
-const inlineCodeMark = Decoration.mark({ class: 'glean-icode' })
-const linkMark = Decoration.mark({ class: 'glean-link' })
-const imagePlaceholder = Decoration.mark({ class: 'glean-image' })
-const codeBlockLine = Decoration.line({ class: 'glean-codeblock' })
-const quoteLine = Decoration.line({ class: 'glean-quote' })
-const tableDelimiterLine = Decoration.line({ class: 'glean-tabledelim' })
-const boldMark = Decoration.mark({ class: 'glean-bold' })
-const italicMark = Decoration.mark({ class: 'glean-italic' })
-const strikeMark = Decoration.mark({ class: 'glean-strike' })
-const taskTextMark = Decoration.mark({ class: 'glean-tasktext' })
-
-function headingMark(level) {
-  // Use Decoration.line instead of Decoration.mark to avoid
-  // inconsistent line-height calculations that cause the
-  // progression scroll bug (content width changes on scroll).
-  return Decoration.line({ class: `glean-h${Math.min(level, 6)}` })
-}
-
-
-// Headings. ATXHeading nodes cover the whole line including the `#`
-// markers. Style the text, hide the marker run plus one space.
-function headingDecorations(add, state, node, cursorHead, level) {
-  const line = state.doc.lineAt(node.from)
-  const rel = node.from - line.from
-  const text = line.text.slice(rel)
-  const m = text.match(/^(#{1,6})(\s*)/)
-  if (!m) return
-  const markerFrom = node.from
-  const markerTo = markerFrom + m[1].length + Math.min(m[2].length, 1)
-  const textFrom = markerTo
-  const textTo = Math.min(node.to, line.to)
-  if (textFrom >= textTo) return
-  // Show # when cursor is anywhere on the heading line
-  const onLine = cursorHead >= line.from && cursorHead <= line.to
-  if (!onLine) {
-    add(markerFrom, markerTo, hideMark())
-  }
-  // Closing hashes: `# Heading #` hides the trailing run too.
-  const content = state.doc.sliceString(textFrom, textTo)
-  const cm = content.match(/(\s+#+)(\s*)$/)
-  if (cm && content.length > cm[0].length) {
-    const closeFrom = textTo - cm[0].length
-    if (!onLine) {
-      add(closeFrom, textTo, hideMark())
-    }
-  }
-  // Decoration.line must be at the line start, not a text range
-  add(line.from, line.from, headingMark(level))
-}
-
-// Setext headings: style the text lines as a heading, hide the
-// underline of `=` or `-` marks.
-function setextDecorations(add, state, node, cursorHead, level) {
-  const line = state.doc.lineAt(node.from)
-  const underlineLine = state.doc.lineAt(node.to)
-  const textTo = underlineLine.number > 1 ? state.doc.line(underlineLine.number - 1).to : node.from
-  if (textTo <= node.from) return
-  // Decoration.line must be at the line start
-  add(line.from, line.from, headingMark(level))
-  const onNode = cursorHead >= node.from && cursorHead <= node.to
-  if (!onNode) {
-    add(underlineLine.from, underlineLine.to, hideMark())
-  }
-}
-
-// Inline emphasis: hide the delimiter pairs, style the content.
-function emphasisDecorations(add, state, node, cursorHead, contentMark, delimiterLen) {
-  const open = state.doc.sliceString(node.from, node.from + delimiterLen)
-  const close = state.doc.sliceString(node.to - delimiterLen, node.to)
-  const openIsDelim = /^(\*\*|__|\*|_|~~)$/.test(open)
-  const closeIsDelim = /^(\*\*|__|\*|_|~~)$/.test(close)
-  const innerFrom = node.from + (openIsDelim ? delimiterLen : 0)
-  const innerTo = node.to - (closeIsDelim ? delimiterLen : 0)
-  if (innerFrom >= innerTo) return
-  const onNode = cursorHead >= node.from && cursorHead <= node.to
-  if (openIsDelim && !onNode) {
-    add(node.from, node.from + delimiterLen, hideMark())
-  }
-  add(innerFrom, innerTo, contentMark)
-  if (closeIsDelim && !onNode) {
-    add(node.to - delimiterLen, node.to, hideMark())
-  }
-}
-
-// Inline code: hide the backtick pairs, style the content.
-function inlineCodeDecorations(add, state, node, cursorHead) {
-  const text = state.doc.sliceString(node.from, node.to)
-  const fence = (text.match(/^(`+)/) || ['', '`'])[1].length
-  if (node.to - node.from <= fence * 2) return
-  const innerFrom = node.from + fence
-  const innerTo = node.to - fence
-  const onNode = cursorHead >= node.from && cursorHead <= node.to
-  if (!onNode) {
-    add(node.from, innerFrom, hideMark())
-  }
-  add(innerFrom, innerTo, inlineCodeMark)
-  if (!onNode) {
-    add(innerTo, node.to, hideMark())
-  }
-}
-
-// Links: hide the brackets and the `](url)` tail, style the label.
-function linkDecorations(add, state, node, cursorHead) {
-  const text = state.doc.sliceString(node.from, node.to)
-  // For [text](url) use first ], for [text][ref] also use first ]
-  const close = text.indexOf(']')
-  if (close <= 0) return
-  const labelFrom = node.from + 1
-  const labelTo = node.from + close
-  const onNode = cursorHead >= node.from && cursorHead <= node.to
-  if (!onNode) {
-    add(node.from, labelFrom, hideMark())
-  }
-  add(labelFrom, labelTo, linkMark)
-  if (!onNode) {
-    add(node.from + close, node.to, hideMark())
-  }
-}
-
-// Code fences: block background over every line, fence lines hidden.
-// For math/mermaid blocks, render as widgets when cursor is not inside.
-function fencedCodeDecorations(add, state, node, cursorHead) {
-  const firstLine = state.doc.lineAt(node.from)
-  const lastLine = state.doc.lineAt(node.to)
-  const onNode = cursorHead >= node.from && cursorHead <= node.to
-  
-  // Detect language from opening fence
-  const fenceMatch = firstLine.text.match(/^(`{3,}|~{3,})\s*(\w*)/)
-  const lang = fenceMatch ? fenceMatch[2].toLowerCase() : ''
-  
-  // Math block: render as KaTeX widget when not editing
-  if ((lang === 'math' || lang === 'latex' || lang === 'katex') && !onNode) {
-    const code = state.doc.sliceString(firstLine.to + 1, lastLine.from)
-    add(node.from, node.to, hiddenMark)
-    add(node.from, node.from, Decoration.widget({ widget: new MathWidget(code.trim(), true), block: true, side: -1 }))
-    return false
-  }
-  
-  // Mermaid block: render as diagram widget when not editing
-  if (lang === 'mermaid' && !onNode) {
-    const code = state.doc.sliceString(firstLine.to + 1, lastLine.from)
-    add(node.from, node.to, hiddenMark)
-    add(node.from, node.from, Decoration.widget({ widget: new MermaidWidget(code.trim()), block: true, side: -1 }))
-    return false
-  }
-  
-  // Default: style as code block
-  if (firstLine.number !== lastLine.number) {
-    const openFenceTo = firstLine.to
-    const closeFenceFrom = lastLine.from
-    if (!onNode) {
-      add(node.from, openFenceTo, hideMark())
-    }
-    if (!onNode) {
-      add(closeFenceFrom, node.to, hideMark())
-    }
-  }
-  for (let ln = firstLine.number; ln <= lastLine.number; ln++) {
-    const l = state.doc.line(ln)
-    add(l.from, l.from, codeBlockLine)
-  }
-}
-
 const CALLOUT_RE = /^\s*>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/
 
-// GitHub-style Lucide SVG icons for callouts
 const CALLOUT_SVG = {
   NOTE: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
   TIP: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8l4 2"/><path d="M12 2a7 7 0 0 0-4 12.7V18h8v-3.3A7 7 0 0 0 12 2z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>',
@@ -400,228 +208,286 @@ class CalloutWidget extends WidgetType {
   ignoreEvent() { return false }
 }
 
-function calloutTypeColor(type) { return CALLOUT_COLORS[type] || CALLOUT_COLORS.NOTE }
+class MarkdownWidget extends WidgetType {
+  constructor(html) {
+    super()
+    this.html = html
+  }
+  eq(o) { return o.html === this.html }
+  toDOM() {
+    const div = document.createElement('div')
+    div.className = 'glean-md-block'
+    div.setAttribute('aria-hidden', 'true')
+    div.innerHTML = this.html
+    return div
+  }
+  ignoreEvent() { return false }
+}
 
-// Callout: detect > [!TYPE] at the start of a blockquote, replace with
-// a GitHub-style callout widget with SVG icon, colored border, and background.
-function calloutDecorations(add, state, node, head) {
-  const firstLine = state.doc.lineAt(node.from)
-  const m = firstLine.text.match(CALLOUT_RE)
-  if (!m) return false
-  const type = m[1]
-  const markerLen = m[0].length
-  const lastLine = state.doc.lineAt(node.to)
-  const onNode = head >= node.from && head <= node.to
-  if (!onNode) {
-    // Collect body lines (strip leading > markers)
-    let bodyLines = ''
-    for (let ln = firstLine.number; ln <= lastLine.number; ln++) {
-      const l = state.doc.line(ln)
-      let lineText = l.text
-      // Strip leading > markers
-      lineText = lineText.replace(/^\s*>\s?/, '')
-      // Skip the [!TYPE] marker on first line
-      if (ln === firstLine.number) {
-        lineText = lineText.replace(/^\[!\w+\]\s*/, '')
-      }
-      if (lineText || ln > firstLine.number) {
-        bodyLines += (bodyLines ? '\n' : '') + lineText
-      }
+function getBlockRange(state, lineNum) {
+  try {
+    const line = state.doc.line(lineNum)
+    return { from: line.from, to: line.to }
+  } catch {
+    return null
+  }
+}
+
+export function buildLivePreview(state) {
+  const tree = syntaxTree(state)
+  const head = state.selection.main.head
+  const docStr = state.doc.toString()
+  const ranges = []
+  const add = (from, to, deco) => ranges.push({ from, to, deco })
+
+  const tokens = md.parse(docStr, {})
+
+  const renderedBlocks = []
+  let i = 0
+  while (i < tokens.length) {
+    const tok = tokens[i]
+
+    if (tok.type === 'inline') {
+      i++
+      continue
     }
-    add(node.from, node.to, hiddenMark)
-    add(node.from, node.from, Decoration.widget({ widget: new CalloutWidget(type, bodyLines), block: true, side: -1 }))
-  }
-  return true
-}
 
-// Blockquote: hide `>` markers, give the lines a left border.
-// If it starts with > [!TYPE], render as a colored callout box.
-function blockquoteDecorations(add, state, node, head) {
-  if (calloutDecorations(add, state, node, head)) return
-  const firstLine = state.doc.lineAt(node.from)
-  const lastLine = state.doc.lineAt(node.to)
-  for (let ln = firstLine.number; ln <= lastLine.number; ln++) {
-    const l = state.doc.line(ln)
-    add(l.from, l.from, quoteLine)
-    const qm = l.text.match(/^(?:\s*>\s?)+/)
-    const onThisLine = head >= l.from && head <= l.to
-    if (qm && !onThisLine) add(l.from, l.from + qm[0].length, hideMark())
-  }
-}
-
-// Tables: render as a styled HTML grid widget, hiding the source.
-// The cursor-reveal pattern lets the user edit by clicking a cell.
-function tableDecorations(add, state, node) {
-  if (node.to <= node.from) return
-  // Walk the document-level children to find the Table subtree at this position
-  const docNode = syntaxTree(state).topNode
-  let child = docNode.firstChild
-  while (child && !(child.name === 'Table' && child.from === node.from)) {
-    child = child.nextSibling
-  }
-  if (!child || child.name !== 'Table') return
-  let headerCells = []
-  let bodyRows = []
-  let rowChild = child.firstChild
-  while (rowChild) {
-    if (rowChild.name === 'TableHeader') {
-      headerCells = extractCells(state, rowChild)
-    } else if (rowChild.name === 'TableRow') {
-      bodyRows.push(extractCells(state, rowChild))
+    if (!tok.map) {
+      i++
+      continue
     }
-    rowChild = rowChild.nextSibling
+
+    const [startLine, endLine] = tok.map
+    const blockStart = state.doc.line(startLine + 1).from
+    const blockEnd = state.doc.line(endLine).to
+
+    const cursorInside = head >= blockStart && head <= blockEnd
+
+    if (cursorInside) {
+      i++
+      continue
+    }
+
+    const blockTokens = []
+    for (let j = i; j < tokens.length; j++) {
+      const t = tokens[j]
+      if (t.map && t.map[0] >= endLine && j > i) break
+      if (!t.map && t.type !== 'inline' && t.type.endsWith('_close')) {
+        blockTokens.push(t)
+        if (j > i && tokens[j].type === tok.type.replace('_open', '_close')) {
+          break
+        }
+      }
+      blockTokens.push(t)
+      if (t.type === tok.type.replace('_open', '_close')) break
+    }
+
+    const html = md.renderer.render(blockTokens, md.options, {})
+    add(blockStart, blockEnd, hiddenMark)
+    add(blockStart, blockStart, Decoration.widget({
+      widget: new MarkdownWidget(html),
+      block: true,
+      side: -1,
+    }))
+
+    i++
   }
-  if (headerCells.length === 0) return
-  add(node.from, node.to, hiddenMark)
-  add(node.from, node.from, Decoration.widget({ widget: new TableWidget(headerCells, bodyRows, node.from), block: true, side: -1 }))
-}
 
-// Images: style the whole syntax as a dimmed placeholder.
-function imageDecorations(add, state, node) {
-  add(node.from, node.to, imagePlaceholder)
-}
+  tree.iterate({
+    enter(node) {
+      const name = node.name
 
-// Task markers: replace `[ ]`/`[x]` with a clickable checkbox.
-function taskDecorations(add, state, node, cursorHead) {
-  const text = state.doc.sliceString(node.from, node.to)
-  const m = text.match(/^\[([ x])\]/)
-  if (!m) return
-  if (cursorHead >= node.from && cursorHead <= node.to) {
-    add(node.from, node.to, taskTextMark)
-  } else {
-    add(node.from, node.to, hiddenMark)
-    add(node.from, node.from, Decoration.widget({ widget: new TaskCheckbox(m[1] !== ' ') }))
-  }
-}
+      if (name === 'FencedCode') {
+        const firstLine = state.doc.lineAt(node.from)
+        const lastLine = state.doc.lineAt(node.to)
+        const onNode = head >= node.from && head <= node.to
+        const fenceMatch = firstLine.text.match(/^(`{3,}|~{3,})\s*(\w*)/)
+        const lang = fenceMatch ? fenceMatch[2].toLowerCase() : ''
 
-// Inline math: detect $...$ and render as KaTeX when not editing.
-function inlineMathDecorations(add, state, cursorHead) {
+        if ((lang === 'math' || lang === 'latex' || lang === 'katex') && !onNode) {
+          const code = state.doc.sliceString(firstLine.to + 1, lastLine.from)
+          add(node.from, node.to, hiddenMark)
+          add(node.from, node.from, Decoration.widget({ widget: new MathWidget(code.trim(), true), block: true, side: -1 }))
+          return false
+        }
+
+        if (lang === 'mermaid' && !onNode) {
+          const code = state.doc.sliceString(firstLine.to + 1, lastLine.from)
+          add(node.from, node.to, hiddenMark)
+          add(node.from, node.from, Decoration.widget({ widget: new MermaidWidget(code.trim()), block: true, side: -1 }))
+          return false
+        }
+
+        return false
+      }
+
+      if (name === 'Table') {
+        const onNode = head >= node.from && head <= node.to
+        if (!onNode) {
+          const docNode = tree.topNode
+          let child = docNode.firstChild
+          while (child && !(child.name === 'Table' && child.from === node.from)) {
+            child = child.nextSibling
+          }
+          if (child && child.name === 'Table') {
+            let headerCells = []
+            let bodyRows = []
+            let rowChild = child.firstChild
+            while (rowChild) {
+              if (rowChild.name === 'TableHeader') {
+                headerCells = extractCells(state, rowChild)
+              } else if (rowChild.name === 'TableRow') {
+                bodyRows.push(extractCells(state, rowChild))
+              }
+              rowChild = rowChild.nextSibling
+            }
+            if (headerCells.length > 0) {
+              add(node.from, node.to, hiddenMark)
+              add(node.from, node.from, Decoration.widget({
+                widget: new TableWidget(headerCells, bodyRows, node.from),
+                block: true,
+                side: -1,
+              }))
+            }
+          }
+        }
+        return false
+      }
+
+      if (name === 'Blockquote') {
+        const firstLine = state.doc.lineAt(node.from)
+        const lastLine = state.doc.lineAt(node.to)
+        const onNode = head >= node.from && head <= node.to
+
+        const m = firstLine.text.match(CALLOUT_RE)
+        if (m && !onNode) {
+          const type = m[1]
+          let bodyLines = ''
+          for (let ln = firstLine.number; ln <= lastLine.number; ln++) {
+            const l = state.doc.line(ln)
+            let lineText = l.text.replace(/^\s*>\s?/, '')
+            if (ln === firstLine.number) {
+              lineText = lineText.replace(/^\[!\w+\]\s*/, '')
+            }
+            if (lineText || ln > firstLine.number) {
+              bodyLines += (bodyLines ? '\n' : '') + lineText
+            }
+          }
+          add(node.from, node.to, hiddenMark)
+          add(node.from, node.from, Decoration.widget({ widget: new CalloutWidget(type, bodyLines), block: true, side: -1 }))
+        }
+        return false
+      }
+
+      if (name === 'TaskMarker') {
+        const text = state.doc.sliceString(node.from, node.to)
+        const m = text.match(/^\[([ x])\]/)
+        if (!m) return false
+        if (head >= node.from && head <= node.to) {
+          return false
+        }
+        add(node.from, node.to, hiddenMark)
+        add(node.from, node.from, Decoration.widget({ widget: new TaskCheckbox(m[1] !== ' ') }))
+        return false
+      }
+
+      if (name === 'Image') {
+        add(node.from, node.to, Decoration.mark({ class: 'glean-image' }))
+        return false
+      }
+
+      if (name === 'StrongEmphasis') {
+        if (head >= node.from && head <= node.to) {
+          add(node.from + 2, node.to - 2, Decoration.mark({ class: 'glean-bold' }))
+        } else {
+          add(node.from, node.to, hiddenMark)
+          add(node.from + 2, node.to - 2, Decoration.mark({ class: 'glean-bold' }))
+        }
+        return false
+      }
+
+      if (name === 'Emphasis') {
+        if (head >= node.from && head <= node.to) {
+          add(node.from + 1, node.to - 1, Decoration.mark({ class: 'glean-italic' }))
+        } else {
+          add(node.from, node.to, hiddenMark)
+          add(node.from + 1, node.to - 1, Decoration.mark({ class: 'glean-italic' }))
+        }
+        return false
+      }
+
+      if (name === 'InlineCode') {
+        const text = state.doc.sliceString(node.from, node.to)
+        const fence = (text.match(/^(`+)/) || ['', '`'])[1].length
+        if (node.to - node.from <= fence * 2) return false
+        const onNode = head >= node.from && head <= node.to
+        if (!onNode) {
+          add(node.from, node.from + fence, hiddenMark)
+          add(node.to - fence, node.to, hiddenMark)
+        }
+        add(node.from + fence, node.to - fence, Decoration.mark({ class: 'glean-icode' }))
+        return false
+      }
+
+      if (name === 'Link') {
+        const text = state.doc.sliceString(node.from, node.to)
+        const close = text.indexOf(']')
+        if (close <= 0) return false
+        const onNode = head >= node.from && head <= node.to
+        if (!onNode) {
+          add(node.from, node.from + 1, hiddenMark)
+          add(node.from + close, node.to, hiddenMark)
+        }
+        add(node.from + 1, node.from + close, Decoration.mark({ class: 'glean-link' }))
+        return false
+      }
+
+      return undefined
+    },
+  })
+
   const text = state.doc.toString()
-  const mathRegex = /\$([^$]+)\$/g
+  const mathRe = /\$([^$]+)\$/g
   let match
-  while ((match = mathRegex.exec(text)) !== null) {
+  while ((match = mathRe.exec(text)) !== null) {
     const from = match.index
     const to = from + match[0].length
     const latex = match[1]
-    // Skip if cursor is inside this math
-    const onMath = cursorHead >= from && cursorHead <= to
+    const onMath = head >= from && head <= to
     if (!onMath && latex.trim()) {
       add(from, to, hiddenMark)
       add(from, from, Decoration.widget({ widget: new MathWidget(latex, false) }))
     }
   }
-}
 
-// Strikethrough: detect ~~...~~ via regex since CM6 base parser doesn't parse it.
-function strikethroughDecorations(add, state, cursorHead) {
-  const text = state.doc.toString()
-  const re = /~~([^~]+?)~~/g
-  let match
-  while ((match = re.exec(text)) !== null) {
+  const strikeRe = /~~([^~]+?)~~/g
+  while ((match = strikeRe.exec(text)) !== null) {
     const from = match.index
     const to = from + match[0].length
-    const onNode = cursorHead >= from && cursorHead <= to
+    const onNode = head >= from && head <= to
     if (!onNode) {
-      add(from, from + 2, hideMark())
-      add(from + 2, to - 2, strikeMark)
-      add(to - 2, to, hideMark())
+      add(from, from + 2, hiddenMark)
+      add(from + 2, to - 2, Decoration.mark({ class: 'glean-strike' }))
+      add(to - 2, to, hiddenMark)
     } else {
-      add(from + 2, to - 2, strikeMark)
+      add(from + 2, to - 2, Decoration.mark({ class: 'glean-strike' }))
     }
   }
-}
 
-// List marks: hide -, *, +, 1. etc when cursor is not on the line.
-function listMarkDecorations(add, state, node, head) {
-  const line = state.doc.lineAt(node.from)
-  const onLine = head >= line.from && head <= line.to
-  if (!onLine) {
-    // Replace the marker text with an empty widget to hide it
-    add(node.from, node.to, hiddenMark)
-  }
-}
-
-// Horizontal rule: replace --- with a styled <hr>.
-const hrMark = Decoration.line({ class: 'glean-hr' })
-
-function horizontalRuleDecorations(add, state, node, head) {
-  const line = state.doc.lineAt(node.from)
-  const onLine = head >= line.from && head <= line.to
-  if (!onLine) {
-    add(line.from, line.from, hrMark)
-    add(line.from, line.to, hiddenMark)
-  }
-}
-
-// Build the full decoration set for the current doc and cursor.
-export function buildLivePreview(state) {
-  const tree = syntaxTree(state)
-  const head = state.selection.main.head
-  const ranges = []
-  const add = (from, to, deco) => ranges.push({ from, to, deco })
-  
-  // Add inline math decorations
-  inlineMathDecorations(add, state, head)
-  
-  // Add strikethrough decorations (regex-based since CM6 doesn't parse ~~)
-  strikethroughDecorations(add, state, head)
-  
-  // Hide reference link definitions [label]: url
-  const docText = state.doc.toString()
-  const refDefRe = /^\s*\[([^^\]]+)\]:\s+\S/mg
-  let refMatch
-  while ((refMatch = refDefRe.exec(docText)) !== null) {
-    const lineStart = docText.lastIndexOf('\n', refMatch.index) + 1
-    let lineEnd = docText.indexOf('\n', refMatch.index)
-    if (lineEnd < 0) lineEnd = docText.length
-    const onDef = head >= lineStart && head <= lineEnd
-    if (!onDef) {
-      add(lineStart, lineEnd, hiddenMark)
-    }
-  }
-  
-  tree.iterate({
-    enter(node) {
-      const name = node.name
-      if (name.startsWith('ATXHeading')) {
-        headingDecorations(add, state, node, head, Number(name.slice(-1)))
-        return
-      }
-      if (name === 'SetextHeading1') { setextDecorations(add, state, node, head, 1); return }
-      if (name === 'SetextHeading2') { setextDecorations(add, state, node, head, 2); return }
-      if (name === 'FencedCode') { fencedCodeDecorations(add, state, node, head); return false }
-      if (name === 'Blockquote') { blockquoteDecorations(add, state, node, head); return }
-      if (name === 'Table') { tableDecorations(add, state, node); return }
-      if (name === 'Image') { imageDecorations(add, state, node); return false }
-      if (name === 'TaskMarker') { taskDecorations(add, state, node, head); return false }
-      if (name === 'ListMark') { listMarkDecorations(add, state, node, head); return false }
-      if (name === 'HorizontalRule') { horizontalRuleDecorations(add, state, node, head); return false }
-      if (name === 'StrongEmphasis') { emphasisDecorations(add, state, node, head, boldMark, 2); return false }
-      if (name === 'Emphasis') { emphasisDecorations(add, state, node, head, italicMark, 1); return undefined }
-      if (name === 'Strikethrough') { emphasisDecorations(add, state, node, head, strikeMark, 2); return false }
-      if (name === 'InlineCode') { inlineCodeDecorations(add, state, node, head); return false }
-      if (name === 'Link') { linkDecorations(add, state, node, head); return false }
-      return undefined
-    },
-  })
   ranges.sort((a, b) => a.from - b.from || a.deco.startSide - b.deco.startSide || a.to - b.to)
   const builder = new RangeSetBuilder()
   for (const r of ranges) builder.add(r.from, r.to, r.deco)
   return builder.finish()
 }
 
-// The live preview state field. Rebuilds when the doc, the syntax tree,
-// or the cursor changes so hidden markers reveal at the cursor.
 export const livePreviewField = StateField.define({
   create(state) { return buildLivePreview(state) },
   update(deco, tr) {
-    // Rebuild on every transaction so cursor moves trigger marker reveal/hide
     return buildLivePreview(tr.state)
   },
   provide: f => EditorView.decorations.from(f),
 })
 
-// Toggle a task checkbox in the source when the rendered box is clicked.
 export function toggleTaskAt(view, pos) {
   const line = view.state.doc.lineAt(pos)
   const text = line.text
@@ -635,8 +501,6 @@ export function toggleTaskAt(view, pos) {
   return true
 }
 
-// Clicks on the rendered checkbox flip the source marker. The widget
-// reports ignoreEvent: false, so the editor-wide handler sees the click.
 export const taskClickPlugin = ViewPlugin.fromClass(class {
   constructor(view) {
     this.decorations = Decoration.none

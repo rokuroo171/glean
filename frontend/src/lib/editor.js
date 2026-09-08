@@ -160,6 +160,88 @@ const gleanTheme = EditorView.theme({
     borderRadius: 6,
     border: '1px solid rgba(90, 106, 122, 0.1)',
   },
+  '.glean-md-block': {
+    fontFamily: 'inherit',
+    fontSize: '14px',
+    lineHeight: '1.6',
+    color: colors.text,
+  },
+  '.glean-md-block h1, .glean-md-block h2, .glean-md-block h3, .glean-md-block h4, .glean-md-block h5, .glean-md-block h6': {
+    marginTop: '16px',
+    marginBottom: '8px',
+    fontWeight: 700,
+    lineHeight: 1.3,
+  },
+  '.glean-md-block h1': { fontSize: '1.7em' },
+  '.glean-md-block h2': { fontSize: '1.45em' },
+  '.glean-md-block h3': { fontSize: '1.25em' },
+  '.glean-md-block h4': { fontSize: '1.1em' },
+  '.glean-md-block h5': { fontSize: '1em' },
+  '.glean-md-block h6': { fontSize: '0.9em', color: colors.textMuted },
+  '.glean-md-block p': {
+    marginTop: '0',
+    marginBottom: '8px',
+  },
+  '.glean-md-block ul, .glean-md-block ol': {
+    marginTop: '0',
+    marginBottom: '8px',
+    paddingLeft: '24px',
+  },
+  '.glean-md-block li': {
+    marginBottom: '2px',
+  },
+  '.glean-md-block blockquote': {
+    borderLeft: `3px solid ${colors.borderStrong}`,
+    paddingLeft: '12px',
+    color: colors.textMuted,
+    marginTop: '0',
+    marginBottom: '8px',
+  },
+  '.glean-md-block pre': {
+    background: 'rgba(90, 106, 122, 0.1)',
+    padding: '12px',
+    borderRadius: 6,
+    overflowX: 'auto',
+    marginTop: '0',
+    marginBottom: '8px',
+  },
+  '.glean-md-block code': {
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+    fontSize: '0.92em',
+  },
+  '.glean-md-block :not(pre) > code': {
+    background: 'rgba(90, 106, 122, 0.18)',
+    borderRadius: 4,
+    padding: '0.5px 4px',
+  },
+  '.glean-md-block a': {
+    color: colors.accent,
+    textDecoration: 'none',
+  },
+  '.glean-md-block a:hover': {
+    textDecoration: 'underline',
+  },
+  '.glean-md-block hr': {
+    border: 'none',
+    borderTop: `1px solid rgba(90,106,122,0.3)`,
+    marginTop: '16px',
+    marginBottom: '16px',
+  },
+  '.glean-md-block table': {
+    borderCollapse: 'collapse',
+    width: '100%',
+    marginTop: '0',
+    marginBottom: '8px',
+  },
+  '.glean-md-block th, .glean-md-block td': {
+    border: `1px solid ${colors.border}`,
+    padding: '6px 10px',
+    textAlign: 'left',
+  },
+  '.glean-md-block th': {
+    backgroundColor: 'rgba(91, 159, 212, 0.12)',
+    fontWeight: 600,
+  },
 }, { dark: true })
 
 // Keyframes for the animated typing effect, injected once.
