@@ -500,6 +500,25 @@ function inlineMathDecorations(add, state, cursorHead) {
   }
 }
 
+// Strikethrough: detect ~~...~~ via regex since CM6 base parser doesn't parse it.
+function strikethroughDecorations(add, state, cursorHead) {
+  const text = state.doc.toString()
+  const re = /~~([^~]+?)~~/g
+  let match
+  while ((match = re.exec(text)) !== null) {
+    const from = match.index
+    const to = from + match[0].length
+    const onNode = cursorHead >= from && cursorHead <= to
+    if (!onNode) {
+      add(from, from + 2, hideMark())
+      add(from + 2, to - 2, strikeMark)
+      add(to - 2, to, hideMark())
+    } else {
+      add(from + 2, to - 2, strikeMark)
+    }
+  }
+}
+
 // List marks: hide -, *, +, 1. etc when cursor is not on the line.
 function listMarkDecorations(add, state, node, head) {
   const line = state.doc.lineAt(node.from)
@@ -542,6 +561,9 @@ export function buildLivePreview(state) {
   
   // Add inline math decorations
   inlineMathDecorations(add, state, head)
+  
+  // Add strikethrough decorations (regex-based since CM6 doesn't parse ~~)
+  strikethroughDecorations(add, state, head)
   
   tree.iterate({
     enter(node) {

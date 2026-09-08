@@ -13,6 +13,7 @@ import { colors } from './theme'
 import { livePreviewField, taskClickPlugin } from './extensions/livePreview'
 import { gleanKeymaps } from './extensions/keymaps'
 import { freshField, animField, animSweeper } from './extensions/typedAnim'
+import { strikethroughExtension } from './extensions/strikethrough'
 
 // The glean editor theme: tokens from theme.js, dark scheme.
 const gleanTheme = EditorView.theme({
@@ -197,7 +198,7 @@ export function createGleanView({ parent, doc, prefs, callbacks }) {
   const state = EditorState.create({
     doc,
     extensions: [
-      markdown({ base: markdownLanguage }),
+      markdown({ base: markdownLanguage, extensions: [strikethroughExtension()] }),
       history(),
       drawSelection(),
       highlightActiveLine(),
