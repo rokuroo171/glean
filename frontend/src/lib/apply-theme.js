@@ -3,7 +3,7 @@ import { colors } from './theme'
 /**
  * Applies a theme preset + accent color by setting CSS custom properties
  * on document.documentElement and mutating the JS colors object for
- * immediate re-render pickup.
+ * immediate re-render pickup
  */
 
 const presets = {
@@ -216,7 +216,7 @@ export function getPreset(name) {
 }
 
 /**
- * Apply theme to :root CSS custom properties.
+ * Apply theme to :root CSS custom properties
  * @param {string} presetName - one of the preset keys
  * @param {string} accentHex - override accent color, or empty string for preset default
  */

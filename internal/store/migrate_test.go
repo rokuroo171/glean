@@ -83,7 +83,7 @@ func TestMigrateCopiesEverything(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(skyDir, ".glean", "stats.json")); err != nil {
 		t.Fatal("stats.json not written")
 	}
-	// Legacy files untouched.
+	// Legacy files untouched
 	for _, name := range []string{"glean.json", "adjacency.json", "activity.json"} {
 		if _, err := os.Stat(filepath.Join(configDir, "glean", name)); err != nil {
 			t.Fatalf("legacy %s was touched: %v", name, err)

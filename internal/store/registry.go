@@ -14,9 +14,9 @@ import (
 	"github.com/glean/glean/internal/world"
 )
 
-// RegistryEntry is the persisted per-note behavior metadata. No body.
+// RegistryEntry is the persisted per-note behavior metadata. No body
 // File is the note's filename inside the sky folder, so lookups never
-// guess at dedupe names.
+// guess at dedupe names
 type RegistryEntry struct {
 	ID              string    `json:"id"`
 	Title           string    `json:"title"`
@@ -48,21 +48,21 @@ func entryToNote(e RegistryEntry) note.Note {
 	}
 }
 
-// RegistryStore persists RegistryEntry as .glean/notes.json.
+// RegistryStore persists RegistryEntry as .glean/notes.json
 type RegistryStore struct {
 	mu      sync.Mutex
 	path    string
 	entries []RegistryEntry
 }
 
-// NewID returns a random hex note id.
+// NewID returns a random hex note id
 func NewID() string {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
 }
 
-// OpenRegistry loads the registry, positioning any note missing coordinates.
+// OpenRegistry loads the registry, positioning any note missing coordinates
 func OpenRegistry(skyDir string) (*RegistryStore, error) {
 	path := filepath.Join(SidecarDir(skyDir), "notes.json")
 	s := &RegistryStore{path: path, entries: []RegistryEntry{}}
@@ -84,7 +84,7 @@ func OpenRegistry(skyDir string) (*RegistryStore, error) {
 	if s.entries == nil {
 		s.entries = []RegistryEntry{}
 	}
-	// Backfill any entry missing its filename so lookups never guess.
+	// Backfill any entry missing its filename so lookups never guess
 	changed := false
 	for i := range s.entries {
 		if s.entries[i].File == "" {
@@ -111,7 +111,7 @@ func OpenRegistry(skyDir string) (*RegistryStore, error) {
 	return s, nil
 }
 
-// All returns all entries as notes with empty bodies.
+// All returns all entries as notes with empty bodies
 func (s *RegistryStore) All() []note.Note {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -122,7 +122,7 @@ func (s *RegistryStore) All() []note.Note {
 	return out
 }
 
-// Get returns one entry by id.
+// Get returns one entry by id
 func (s *RegistryStore) Get(id string) (note.Note, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -134,7 +134,7 @@ func (s *RegistryStore) Get(id string) (note.Note, bool) {
 	return note.Note{}, false
 }
 
-// Create appends an entry and persists.
+// Create appends an entry and persists
 func (s *RegistryStore) Create(n note.Note) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -142,7 +142,7 @@ func (s *RegistryStore) Create(n note.Note) error {
 	return s.saveUnlocked()
 }
 
-// Update replaces an entry by id and persists.
+// Update replaces an entry by id and persists
 func (s *RegistryStore) Update(n note.Note) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -155,7 +155,7 @@ func (s *RegistryStore) Update(n note.Note) error {
 	return fmt.Errorf("note not found: %s", n.ID)
 }
 
-// Delete removes an entry by id and persists.
+// Delete removes an entry by id and persists
 func (s *RegistryStore) Delete(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

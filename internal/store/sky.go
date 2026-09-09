@@ -8,20 +8,20 @@ import (
 	"runtime"
 )
 
-// KnownSky is a remembered sky entry for the manage-skies UI.
+// KnownSky is a remembered sky entry for the manage-skies UI
 type KnownSky struct {
 	Name string `json:"name"`
 	Path string `json:"path"`
 }
 
-// SkyPointer is the app-level pointer to the configured Sky folder.
+// SkyPointer is the app-level pointer to the configured Sky folder
 type SkyPointer struct {
 	SkyPath          string     `json:"sky_path"`
 	MigrationSkipped bool       `json:"migration_skipped,omitempty"`
 	KnownSkies       []KnownSky `json:"known_skies,omitempty"`
 }
 
-// AppConfigDir returns the platform-appropriate config directory for glean.
+// AppConfigDir returns the platform-appropriate config directory for glean
 //
 // Linux:  $XDG_CONFIG_HOME/glean  (defaults to ~/.config/glean)
 // Windows: %APPDATA%/glean       (C:\Users\<user>\AppData\Roaming\glean)
@@ -58,7 +58,7 @@ func AppConfigDir() (string, error) {
 	}
 }
 
-// PointerPath returns the path to the app pointer file.
+// PointerPath returns the path to the app pointer file
 func PointerPath() (string, error) {
 	dir, err := AppConfigDir()
 	if err != nil {
@@ -67,7 +67,7 @@ func PointerPath() (string, error) {
 	return filepath.Join(dir, "app.json"), nil
 }
 
-// LoadPointer reads the pointer, returning ok=false when the file is missing.
+// LoadPointer reads the pointer, returning ok=false when the file is missing
 func LoadPointer() (SkyPointer, bool, error) {
 	path, err := PointerPath()
 	if err != nil {
@@ -89,7 +89,7 @@ func LoadPointer() (SkyPointer, bool, error) {
 	return p, true, nil
 }
 
-// SavePointer writes the pointer atomically.
+// SavePointer writes the pointer atomically
 func SavePointer(p SkyPointer) error {
 	dir, err := AppConfigDir()
 	if err != nil {
@@ -116,7 +116,7 @@ func SavePointer(p SkyPointer) error {
 	return nil
 }
 
-// ResolveSky returns the configured sky folder and whether one exists.
+// ResolveSky returns the configured sky folder and whether one exists
 func ResolveSky() (string, bool, error) {
 	p, ok, err := LoadPointer()
 	if err != nil || !ok {
@@ -128,7 +128,7 @@ func ResolveSky() (string, bool, error) {
 	return p.SkyPath, true, nil
 }
 
-// SidecarDir returns the hidden sidecar folder inside a Sky folder.
+// SidecarDir returns the hidden sidecar folder inside a Sky folder
 func SidecarDir(skyDir string) string {
 	return filepath.Join(skyDir, ".glean")
 }
@@ -137,7 +137,7 @@ type skyMeta struct {
 	Name string `json:"name"`
 }
 
-// CreateSky creates the Sky folder and its sidecar, writing the sky name.
+// CreateSky creates the Sky folder and its sidecar, writing the sky name
 func CreateSky(dir, name string) error {
 	if err := os.MkdirAll(SidecarDir(dir), 0o755); err != nil {
 		return fmt.Errorf("create sky folder: %w", err)
@@ -157,7 +157,7 @@ func CreateSky(dir, name string) error {
 	return nil
 }
 
-// LoadSkyName reads the sky name from the sidecar.
+// LoadSkyName reads the sky name from the sidecar
 func LoadSkyName(skyDir string) (string, error) {
 	raw, err := os.ReadFile(filepath.Join(SidecarDir(skyDir), "sky.json"))
 	if err != nil {
@@ -170,8 +170,8 @@ func LoadSkyName(skyDir string) (string, error) {
 	return m.Name, nil
 }
 
-// SanitizeSkyName makes a sky name safe as a folder name and caps it.
-// Errors when nothing survives sanitizing.
+// SanitizeSkyName makes a sky name safe as a folder name and caps it
+// Errors when nothing survives sanitizing
 func SanitizeSkyName(name string) (string, error) {
 	out := SanitizeTitle(name)
 	if len(out) > 60 {
@@ -183,7 +183,7 @@ func SanitizeSkyName(name string) (string, error) {
 	return out, nil
 }
 
-// AddKnownSky adds a sky to the known list if not already present.
+// AddKnownSky adds a sky to the known list if not already present
 func AddKnownSky(name, path string) error {
 	p, ok, err := LoadPointer()
 	if err != nil {
@@ -192,7 +192,7 @@ func AddKnownSky(name, path string) error {
 	if !ok {
 		p = SkyPointer{}
 	}
-	// Dedupe by path.
+	// Dedupe by path
 	for _, ks := range p.KnownSkies {
 		if ks.Path == path {
 			return nil
@@ -202,7 +202,7 @@ func AddKnownSky(name, path string) error {
 	return SavePointer(p)
 }
 
-// RemoveKnownSky removes a sky from the known list by path.
+// RemoveKnownSky removes a sky from the known list by path
 func RemoveKnownSky(path string) error {
 	p, ok, err := LoadPointer()
 	if err != nil || !ok {
@@ -218,7 +218,7 @@ func RemoveKnownSky(path string) error {
 	return SavePointer(p)
 }
 
-// SwitchSky updates the active sky path and reloads the pointer.
+// SwitchSky updates the active sky path and reloads the pointer
 func SwitchSky(path string) error {
 	p, ok, err := LoadPointer()
 	if err != nil {

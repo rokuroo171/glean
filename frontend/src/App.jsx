@@ -19,7 +19,7 @@ const ONBOARDING_STEPS = [
 ]
 
 // Mock mode defaults to the workspace; #setup=1 and #recovery=1 force the
-// other gates so the screens can be reached from the browser dev server.
+// other gates so the screens can be reached from the browser dev server
 function mockSkyState() {
   const params = new URLSearchParams(window.location.hash.slice(1))
   if (params.get('setup') === '1') {
@@ -41,7 +41,7 @@ const MOCK_NOTES = [
   { id: '4', title: 'Brilliant beacon', body: 'Roadmap and milestones ahead.', created_at: new Date(Date.now() - 172800000).toISOString(), last_visited: new Date(Date.now() - 172800000).toISOString(), visit_count: 25, last_manual_water: null, world_x: 36, world_y: 8, positioned: true, stage: 'brilliantstar', species: 'hot' },
 ]
 
-// Mock-created notes survive loadSky refetches.
+// Mock-created notes survive loadSky refetches
 let mockCreated = []
 
 async function getNotes() {
@@ -97,7 +97,7 @@ export default function App() {
   const [systemInfo, setSystemInfo] = useState(null)
 
   // The pointer gate: setup for a new user, recovery for a missing sky,
-  // workspace for everyone else.
+  // workspace for everyone else
   useEffect(() => {
     (async () => {
       const st = wails ? await wails.App.SkyState() : mockSkyState()
@@ -125,7 +125,7 @@ export default function App() {
   }, [])
 
   // Sky data loads only once the workspace is the active gate, so a fresh
-  // setup gets its scan results instead of the empty pre-setup state.
+  // setup gets its scan results instead of the empty pre-setup state
   useEffect(() => {
     if (setup !== 'workspace') return
     // Direct call to avoid stale useCallback closures
@@ -165,7 +165,7 @@ export default function App() {
   const handleRefreshNote = useCallback(async (id) => {
     if (wails) {
       const note = await wails.App.GetNote(id)
-      // Wails may wrap multi-return methods in an array.
+      // Wails may wrap multi-return methods in an array
       return Array.isArray(note) ? note[0] : note
     }
     return notes.find(n => n.id === id) || null
@@ -174,9 +174,9 @@ export default function App() {
   const handleSaveNow = useCallback(async (id) => {
     const note = notes.find(n => n.id === id)
     if (!note) return
-    // Skip if the body hasn't been loaded from disk yet.
+    // Skip if the body hasn't been loaded from disk yet
     // noteBodies[id] is undefined before OpenNote returns,
-    // and saving empty string would wipe the file.
+    // and saving empty string would wipe the file
     if (!(id in noteBodies)) return
     const body = noteBodies[id]
     if (wails) await wails.App.SaveNote(id, note.title, body)
@@ -203,7 +203,7 @@ export default function App() {
   }, [loadSky])
 
   const handleCreate = useCallback(async (title, contextId, folder) => {
-    // Path-style creation: "Ideas/Deep/work" -> folder "Ideas/Deep", title "work".
+    // Path-style creation: "Ideas/Deep/work" -> folder "Ideas/Deep", title "work"
     if (!folder && title && title.includes('/')) {
       const parts = title.split('/')
       const filePart = parts.pop()

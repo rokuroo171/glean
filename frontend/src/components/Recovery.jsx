@@ -13,7 +13,7 @@ export default function Recovery({ onCreateNew, onComplete }) {
 
   async function locate() {
     // Native OS folder picker via the Go backend (window.runtime has no
-    // directory dialog, so the old prompt() fallback is replaced).
+    // directory dialog, so the old prompt() fallback is replaced)
     let dir = wails?.App?.PickFolder ? await wails.App.PickFolder() : null
     if (!dir) return
     setBusy(true)

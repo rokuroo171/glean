@@ -8,21 +8,21 @@ import (
 	"sync"
 )
 
-// WorkspaceState is the persisted state of the workspace.
+// WorkspaceState is the persisted state of the workspace
 type WorkspaceState struct {
 	OpenIDs      []string `json:"open_ids"`
 	ActiveID     string   `json:"active_id"`
 	SkyCollapsed bool     `json:"sky_collapsed"`
 }
 
-// WorkspaceStore persists WorkspaceState as .glean/workspace.json.
+// WorkspaceStore persists WorkspaceState as .glean/workspace.json
 type WorkspaceStore struct {
 	mu   sync.Mutex
 	path string
 	data WorkspaceState
 }
 
-// OpenWorkspace loads the workspace state, defaulting to empty.
+// OpenWorkspace loads the workspace state, defaulting to empty
 func OpenWorkspace(skyDir string) (*WorkspaceStore, error) {
 	path := filepath.Join(SidecarDir(skyDir), "workspace.json")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -47,7 +47,7 @@ func OpenWorkspace(skyDir string) (*WorkspaceStore, error) {
 	return s, nil
 }
 
-// State returns a copy of the persisted state.
+// State returns a copy of the persisted state
 func (s *WorkspaceStore) State() WorkspaceState {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -55,7 +55,7 @@ func (s *WorkspaceStore) State() WorkspaceState {
 	return out
 }
 
-// Set persists a new tab state.
+// Set persists a new tab state
 func (s *WorkspaceStore) Set(st WorkspaceState) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

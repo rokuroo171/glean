@@ -11,7 +11,7 @@ import (
 )
 
 // scanDir recursively collects md files under dir, returning relative paths
-// from skyRoot. It skips the .glean sidecar directory.
+// from skyRoot. It skips the .glean sidecar directory
 func scanDir(dir, skyRoot string) (map[string]string, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -22,7 +22,7 @@ func scanDir(dir, skyRoot string) (map[string]string, error) {
 		full := filepath.Join(dir, e.Name())
 		rel, _ := filepath.Rel(skyRoot, full)
 		if e.IsDir() {
-			// Skip the sidecar directory and hidden directories.
+			// Skip the sidecar directory and hidden directories
 			if strings.HasPrefix(e.Name(), ".") {
 				continue
 			}
@@ -39,7 +39,7 @@ func scanDir(dir, skyRoot string) (map[string]string, error) {
 			continue
 		}
 
-		// Key is the lowercase relative path without extension.
+		// Key is the lowercase relative path without extension
 		key := strings.ToLower(strings.TrimSuffix(rel, filepath.Ext(rel)))
 		files[key] = rel
 	}
@@ -48,7 +48,7 @@ func scanDir(dir, skyRoot string) (map[string]string, error) {
 
 // Scan reconciles the sky folder with the registry. Md files anywhere in
 // the tree without a registry entry become new notes; entries whose file
-// is gone are removed. The File field stores the relative path from sky root.
+// is gone are removed. The File field stores the relative path from sky root
 func Scan(skyDir string, reg *RegistryStore) (added []note.Note, removedIDs []string, err error) {
 	files, err := scanDir(skyDir, skyDir)
 	if err != nil {
@@ -83,7 +83,7 @@ func Scan(skyDir string, reg *RegistryStore) (added []note.Note, removedIDs []st
 		if claimed[key] {
 			continue
 		}
-		// Title is the filename without extension.
+		// Title is the filename without extension
 		base := filepath.Base(relPath)
 		title := strings.TrimSuffix(base, filepath.Ext(base))
 		n := note.Note{ID: NewID(), Title: title, File: relPath}
@@ -100,7 +100,7 @@ func Scan(skyDir string, reg *RegistryStore) (added []note.Note, removedIDs []st
 
 // ScanAddOnly is like Scan but never removes notes. It only adds new md
 // files that have no registry entry. Safe to call on window focus without
-// risking data loss from matching failures.
+// risking data loss from matching failures
 func ScanAddOnly(skyDir string, reg *RegistryStore) ([]note.Note, error) {
 	files, err := scanDir(skyDir, skyDir)
 	if err != nil {

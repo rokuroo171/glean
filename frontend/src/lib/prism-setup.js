@@ -1,7 +1,7 @@
 import Prism from 'prismjs'
 
 // Curated language set for note-taking. Import order matters:
-// jsx clones `javascript`, tsx clones `jsx`, so bases must load first.
+// jsx clones `javascript`, tsx clones `jsx`, so bases must load first
 import 'prismjs/components/prism-markup.js'      // html, xml, svg
 import 'prismjs/components/prism-clike.js'        // base for c-family
 import 'prismjs/components/prism-javascript.js'   // js
@@ -31,7 +31,7 @@ import 'prismjs/components/prism-docker.js'
 
 /**
  * Highlight code with Prism. Returns an HTML string of token spans,
- * or null when the language is unknown (caller renders plain text).
+ * or null when the language is unknown (caller renders plain text)
  * @param {string} code
  * @param {string} lang - fenced code language id, e.g. "js", "python"
  */

@@ -65,7 +65,7 @@ export default function Workspace({
     document.body.style.userSelect = 'none'
   }
 
-  // Restore tabs once at mount. Night is always open.
+  // Restore tabs once at mount. Night is always open
   useEffect(() => {
     (async () => {
       const st = await fetchWorkspaceState()
@@ -192,10 +192,10 @@ export default function Workspace({
     saveWorkspaceState({ open_ids: openIds, active_id: activeId, sky_collapsed: next })
   }
 
-  // Load the body for the active tab once notes are available.
+  // Load the body for the active tab once notes are available
   // On startup, tabs restore from saved state but bodies are not loaded
   // yet. Without this, the editor shows empty content and the focus
-  // handler fires a false "File changed on disk" alert.
+  // handler fires a false "File changed on disk" alert
   useEffect(() => {
     if (!activeId || !notes.length) return
     if (activeId in noteBodies) return
@@ -203,7 +203,7 @@ export default function Workspace({
   }, [activeId, notes, noteBodies, onOpenNote])
 
   // The command center opens from the title bar pill, or with the
-  // shortcuts both references use: Ctrl+K and Ctrl+O.
+  // shortcuts both references use: Ctrl+K and Ctrl+O
   useEffect(() => {
     const onKey = (e) => {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K' || e.key === 'o' || e.key === 'O')) {
@@ -216,10 +216,10 @@ export default function Workspace({
   }, [])
 
   // When the window regains focus, re-scan the sky folder for new or
-  // removed md files and check if the active note changed on disk.
+  // removed md files and check if the active note changed on disk
   useEffect(() => {
     const onFocus = async () => {
-      // Re-scan picks up external md files added to the sky folder.
+      // Re-scan picks up external md files added to the sky folder
       onRescan()
       if (!activeId || dirty[activeId]) return
       const note = await onRefreshNote(activeId)
@@ -245,7 +245,7 @@ export default function Workspace({
   const activeNote = notes.find(n => n.id === activeId) || null
   const body = activeNote ? (noteBodies[activeNote.id] || '') : ''
 
-  // Update window title and taskbar preview when active note or pseudo tab changes.
+  // Update window title and taskbar preview when active note or pseudo tab changes
   useEffect(() => {
     if (wails?.App?.SetWindowTitle) {
       if (pseudoTab === 'stats') {
@@ -264,7 +264,7 @@ export default function Workspace({
     }
   }, [activeNote, pseudoTab])
 
-  // Backlinks: which other notes mention the current note's title.
+  // Backlinks: which other notes mention the current note's title
   const backlinks = useMemo(() => {
     if (!activeNote) return 0
     const title = activeNote.title.toLowerCase()
@@ -312,7 +312,7 @@ export default function Workspace({
         </div>
       )}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-        {/* Persistent left icon rail -- always visible, carries app navigation. */}
+        {/* Persistent left icon rail -- always visible, carries app navigation */}
         <div style={{ width: 44, borderRight: `1px solid ${colors.border}`, flexShrink: 0,
           display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: space[2], gap: space[2],
           background: colors.bgTranslucent, backdropFilter: 'blur(12px)' }}>
@@ -341,7 +341,7 @@ export default function Workspace({
             <Icon name="bar-chart" size={16} />
           </button>
         </div>
-        {/* File explorer panel -- slides in/out next to the icon rail. */}
+        {/* File explorer panel -- slides in/out next to the icon rail */}
         {!skyCollapsed && (
           <>
           <div style={{ width: sidebarWidth, borderRight: `1px solid ${colors.border}`, display: 'flex', minHeight: 0,

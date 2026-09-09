@@ -3,7 +3,7 @@ import { usePreferences, speciesPalette } from '../lib/preferences-context'
 
 const SIZE_MAP = { sm: 14, md: 18, lg: 24 }
 
-/** Four-point star icon. Color from note species or explicit color prop. */
+/** Four-point star icon. Color from note species or explicit color prop */
 export default function StarIcon({ species = 'neutral', color, size = 'md', glow = true }) {
   const { prefs } = usePreferences()
   const palette = speciesPalette(prefs.sky || {})

@@ -4,7 +4,7 @@ import { Decoration, EditorView, ViewPlugin } from '@codemirror/view'
 // Animated typing: freshly inserted characters carry a short-lived
 // animation class, and backspace triggers sparkles. The ranges are
 // tracked in a state field so they map through later edits; a sweep
-// effect prunes ranges past their lifetime.
+// effect prunes ranges past their lifetime
 
 export const FADE_MS = 350
 
@@ -12,7 +12,7 @@ const clearFresh = StateEffect.define()
 
 // Tracks fresh insert ranges: [{from, to, ts}]. Newly typed (non-undo,
 // non-redo, single-line) insertions are recorded; the sweep effect
-// prunes them once past their lifetime.
+// prunes them once past their lifetime
 export const freshField = StateField.define({
   create() { return [] },
   update(ranges, tr) {
@@ -43,7 +43,7 @@ export const freshField = StateField.define({
 
 const animMark = Decoration.mark({ class: 'glean-anim' })
 
-// Derives the animation decorations from the fresh ranges.
+// Derives the animation decorations from the fresh ranges
 export const animField = StateField.define({
   create(state) {
     const fresh = state.field(freshField, false)
@@ -64,7 +64,7 @@ function buildSet(fresh) {
 }
 
 // Sweeps expired ranges with a timer so animations end even when the
-// user stops typing.
+// user stops typing
 export const animSweeper = ViewPlugin.fromClass(class {
   constructor(view) {
     this.timer = setInterval(() => {

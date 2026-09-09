@@ -7,7 +7,7 @@ import { bodyPreview, relativeTime, pickGreeting } from '../lib/format'
 import { springs, motionTokens } from '../lib/motion-tokens'
 import { useSafeMotion, useReducedMotion } from '../hooks/useReducedMotion'
 
-/** Decorative background stars for Home. Static, right-weighted per ref. */
+/** Decorative background stars for Home. Static, right-weighted per ref */
 const DECOR_STARS = [
   { x: '72%', y: '18%', size: 28, color: colors.starCool },
   { x: '85%', y: '32%', size: 20, color: colors.starPurple },
@@ -45,7 +45,7 @@ function HomeBackground() {
           backgroundSize: '100% 100%',
         }}
       />
-      {/* Nebula wash. Right side. */}
+      {/* Nebula wash. Right side */}
       <div
         style={{
           position: 'absolute',

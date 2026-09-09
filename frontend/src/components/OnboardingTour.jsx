@@ -17,7 +17,7 @@ function measure(target) {
 /**
  * Step-by-step onboarding popover. Each step either targets a CSS selector
  * (element gets a highlight ring and the popover anchors to it) or has no
- * target (popover renders as a centered card).
+ * target (popover renders as a centered card)
  *
  * steps: [{ title, body, target? }]
  */
@@ -50,11 +50,11 @@ export default function OnboardingTour({ steps, onDone, onSkip }) {
       top = below
       side = 'below'
     } else if (above - CARD_H >= 0) {
-      // Card sits above the target: its bottom edge lands 14px above it.
+      // Card sits above the target: its bottom edge lands 14px above it
       top = above - CARD_H
       side = 'above'
     } else {
-      // Neither side fits cleanly; clamp the card inside the viewport.
+      // Neither side fits cleanly; clamp the card inside the viewport
       top = Math.max(12, window.innerHeight - CARD_H)
       side = 'above'
     }
@@ -63,7 +63,7 @@ export default function OnboardingTour({ steps, onDone, onSkip }) {
 
   useEffect(() => {
     let t1, t2
-    // Wait a beat for the workspace to settle, then measure.
+    // Wait a beat for the workspace to settle, then measure
     t1 = setTimeout(() => {
       place()
       t2 = setTimeout(place, 150)
@@ -76,7 +76,7 @@ export default function OnboardingTour({ steps, onDone, onSkip }) {
     }
   }, [place])
 
-  // Entrance animation per step.
+  // Entrance animation per step
   useEffect(() => {
     setVisible(false)
     const t = setTimeout(() => setVisible(true), 30)

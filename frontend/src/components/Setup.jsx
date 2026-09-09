@@ -32,7 +32,7 @@ export default function Setup({ onComplete }) {
 
   const cleaned = validSkyName(name)
 
-  // Resize the window for the brand screen: small card, then expand on next.
+  // Resize the window for the brand screen: small card, then expand on next
   useState(() => {
     if (wails?.App?.SetWindowSize) wails.App.SetWindowSize(560, 380)
     return () => { if (wails?.App?.SetWindowSize) wails.App.SetWindowSize(1200, 800) }
@@ -40,7 +40,7 @@ export default function Setup({ onComplete }) {
 
   function handleBrandNext() {
     setExiting(true)
-    // Wait for exit animation, then resize and transition.
+    // Wait for exit animation, then resize and transition
     setTimeout(() => {
       if (wails?.App?.SetWindowSize) wails.App.SetWindowSize(1200, 800)
       setMode('name')

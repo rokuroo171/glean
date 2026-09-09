@@ -2,7 +2,7 @@ package main
 
 import "github.com/glean/glean/internal/store"
 
-// GetWorkspaceState returns the persisted tab state.
+// GetWorkspaceState returns the persisted tab state
 func (a *App) GetWorkspaceState() (store.WorkspaceState, error) {
 	if a.workspace == nil {
 		return store.WorkspaceState{}, nil
@@ -10,7 +10,7 @@ func (a *App) GetWorkspaceState() (store.WorkspaceState, error) {
 	return a.workspace.State(), nil
 }
 
-// SaveWorkspaceState persists the tab state.
+// SaveWorkspaceState persists the tab state
 func (a *App) SaveWorkspaceState(st store.WorkspaceState) error {
 	if a.workspace == nil {
 		return nil

@@ -62,7 +62,7 @@ func TestScanKeepsDedupedFiles(t *testing.T) {
 	skyDir := t.TempDir()
 	reg, _ := OpenRegistry(skyDir)
 	// Two notes whose titles sanitize to the same stem, each owning a
-	// different dedupe file. Both must survive a scan.
+	// different dedupe file. Both must survive a scan
 	a := note.Note{ID: NewID(), Title: "Steady light", File: "Steady light.md",
 		Positioned: true, WorldX: 1, WorldY: 1}
 	b := note.Note{ID: NewID(), Title: "Steady light!", File: "Steady light 2.md",

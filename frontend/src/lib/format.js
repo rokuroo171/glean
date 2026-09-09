@@ -1,4 +1,4 @@
-/** Display formatting helpers. Cosmetic layer only. */
+/** Display formatting helpers. Cosmetic layer only */
 
 export function relativeTime(dateStr) {
   if (!dateStr) return ''
@@ -59,7 +59,7 @@ export function timeGreeting() {
 /**
  * pickGreeting. Returns { time, observation } so the greeting line and the
  * tagline below it stay one source of truth -- the default phrase exists
- * exactly once in the UI, never stacked twice.
+ * exactly once in the UI, never stacked twice
  * All phrasing is observation, not notification: "Your sky has been quiet lately" ✓
  * "You haven't visited in 3 days!" ✗
  */
@@ -82,14 +82,14 @@ export function pickGreeting(stats, notes) {
     return (now - lv) < 7 * dayMs
   }).length
 
-  // A well-visited star within the last 14 days gets a nameless nod.
-  // Filenames stay in the explorer, not in the sky voice.
+  // A well-visited star within the last 14 days gets a nameless nod
+  // Filenames stay in the explorer, not in the sky voice
   const hasBrightStar = notes.some(n => {
     const lv = new Date(n.last_visited || n.created_at).getTime()
     return (now - lv) < 14 * dayMs && (n.visit_count || 0) >= 5
   })
 
-  // Pick observation. One sentence that captures a feeling.
+  // Pick observation. One sentence that captures a feeling
   let observation = defaultObservation
 
   if (recentCount === 0 && notes.length > 2) {
@@ -109,7 +109,7 @@ export function pickGreeting(stats, notes) {
 
 export function bodyPreview(body, maxLen = 56) {
   if (!body || !body.trim()) return '(empty)'
-  // Strip markdown syntax for preview. Headers, bold, italic, code, links.
+  // Strip markdown syntax for preview. Headers, bold, italic, code, links
   const stripped = body
     .replace(/^#{1,6}\s+/gm, '')        // # headers
     .replace(/\*\*(.+?)\*\*/g, '$1')   // **bold**

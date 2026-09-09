@@ -10,7 +10,7 @@ import (
 )
 
 // SkyStateView is what the frontend uses to decide setup, recovery, or
-// workspace.
+// workspace
 type SkyStateView struct {
 	Configured       bool   `json:"configured"`
 	SkyMissing       bool   `json:"sky_missing"`
@@ -21,7 +21,7 @@ type SkyStateView struct {
 	MigrationSkipped bool   `json:"migration_skipped"`
 }
 
-// SkyState reports the current setup state.
+// SkyState reports the current setup state
 func (a *App) SkyState() SkyStateView {
 	skyDir, ok, err := store.ResolveSky()
 	if err != nil || !ok {
@@ -48,7 +48,7 @@ func (a *App) SkyState() SkyStateView {
 	}
 }
 
-// DefaultSkyPath returns Documents/<sanitized name>, falling back to home.
+// DefaultSkyPath returns Documents/<sanitized name>, falling back to home
 func (a *App) DefaultSkyPath(name string) (string, error) {
 	clean, err := store.SanitizeSkyName(name)
 	if err != nil {
@@ -58,16 +58,16 @@ func (a *App) DefaultSkyPath(name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// Default: Documents/glean/<sky-name>. Namespaced, discoverable, syncable.
+	// Default: Documents/glean/<sky-name>. Namespaced, discoverable, syncable
 	docs := filepath.Join(home, "Documents", "glean", clean)
 	if _, err := os.Stat(filepath.Join(home, "Documents")); err == nil {
 		return docs, nil
 	}
-	// Fallback if Documents does not exist.
+	// Fallback if Documents does not exist
 	return filepath.Join(home, "glean", clean), nil
 }
 
-// openSkyAt wires the stores for a sky folder and scans it.
+// openSkyAt wires the stores for a sky folder and scans it
 func (a *App) openSkyAt(skyDir string) error {
 	reg, err := store.OpenRegistry(skyDir)
 	if err != nil {
@@ -90,8 +90,8 @@ func (a *App) openSkyAt(skyDir string) error {
 	return nil
 }
 
-// SetupSky creates a new sky with a name and points the app at it.
-// It does NOT scan for existing files -- a fresh sky starts empty.
+// SetupSky creates a new sky with a name and points the app at it
+// It does NOT scan for existing files -- a fresh sky starts empty
 func (a *App) SetupSky(name, dir string) (SkyStateView, error) {
 	clean, err := store.SanitizeSkyName(name)
 	if err != nil {
@@ -100,14 +100,14 @@ func (a *App) SetupSky(name, dir string) (SkyStateView, error) {
 	if err := store.CreateSky(dir, clean); err != nil {
 		return SkyStateView{}, err
 	}
-	// Preserve the known-skies list instead of wiping it with a fresh pointer.
+	// Preserve the known-skies list instead of wiping it with a fresh pointer
 	p, _, _ := store.LoadPointer()
 	p.SkyPath = dir
 	if err := store.SavePointer(p); err != nil {
 		return SkyStateView{}, err
 	}
 	store.AddKnownSky(clean, dir)
-	// Wire stores without scanning -- a new sky has no files yet.
+	// Wire stores without scanning -- a new sky has no files yet
 	reg, err := store.OpenRegistry(dir)
 	if err != nil {
 		return SkyStateView{}, err
@@ -127,7 +127,7 @@ func (a *App) SetupSky(name, dir string) (SkyStateView, error) {
 }
 
 // OpenSky adopts an existing folder, reusing its name when it is already a
-// sky and deriving one otherwise.
+// sky and deriving one otherwise
 func (a *App) OpenSky(dir string) (SkyStateView, error) {
 	name := filepath.Base(dir)
 	if _, err := os.Stat(filepath.Join(store.SidecarDir(dir), "sky.json")); err == nil {
@@ -137,7 +137,7 @@ func (a *App) OpenSky(dir string) (SkyStateView, error) {
 	} else if err := store.CreateSky(dir, name); err != nil {
 		return SkyStateView{}, err
 	}
-	// Preserve the known-skies list instead of wiping it with a fresh pointer.
+	// Preserve the known-skies list instead of wiping it with a fresh pointer
 	p, _, _ := store.LoadPointer()
 	p.SkyPath = dir
 	if err := store.SavePointer(p); err != nil {
@@ -151,7 +151,7 @@ func (a *App) OpenSky(dir string) (SkyStateView, error) {
 }
 
 // MigrateSky imports the legacy store into the current sky and
-// removes the legacy files so the offer does not reappear.
+// removes the legacy files so the offer does not reappear
 func (a *App) MigrateSky() (store.MigrateReport, error) {
 	if a.skyDir == "" {
 		return store.MigrateReport{}, nil
@@ -164,7 +164,7 @@ func (a *App) MigrateSky() (store.MigrateReport, error) {
 }
 
 // SkipMigration records that the user declined the legacy import and
-// removes the legacy store files so the offer never appears again.
+// removes the legacy store files so the offer never appears again
 func (a *App) SkipMigration() error {
 	p, _, err := store.LoadPointer()
 	if err != nil {
@@ -174,7 +174,7 @@ func (a *App) SkipMigration() error {
 	if err := store.SavePointer(p); err != nil {
 		return err
 	}
-	// Remove legacy files so the offer does not reappear.
+	// Remove legacy files so the offer does not reappear
 	store.RemoveLegacy()
 	return nil
 }

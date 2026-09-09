@@ -12,7 +12,7 @@ import (
 	"github.com/glean/glean/internal/world"
 )
 
-// LegacyPaths returns the three legacy JSON paths in the config dir.
+// LegacyPaths returns the three legacy JSON paths in the config dir
 func LegacyPaths() (notesPath, trailsPath, statsPath string, err error) {
 	dir, err := AppConfigDir()
 	if err != nil {
@@ -23,7 +23,7 @@ func LegacyPaths() (notesPath, trailsPath, statsPath string, err error) {
 		filepath.Join(dir, "activity.json"), nil
 }
 
-// HasLegacy reports whether any legacy JSON store exists.
+// HasLegacy reports whether any legacy JSON store exists
 func HasLegacy() (bool, error) {
 	notes, _, _, err := LegacyPaths()
 	if err != nil {
@@ -31,7 +31,7 @@ func HasLegacy() (bool, error) {
 	}
 	// Only the notes file determines legacy status. Adjacency and
 	// activity are sidecar data that may linger after the notes are
-	// already gone.
+	// already gone
 	_, statErr := os.Stat(notes)
 	if statErr == nil {
 		return true, nil
@@ -42,14 +42,14 @@ func HasLegacy() (bool, error) {
 	return false, statErr
 }
 
-// MigrateReport summarizes a legacy import.
+// MigrateReport summarizes a legacy import
 type MigrateReport struct {
 	Imported int      `json:"imported"`
 	Failures []string `json:"failures,omitempty"`
 }
 
 // RemoveLegacy deletes the three legacy JSON files from the config dir
-// so the migration offer does not reappear after skip or import.
+// so the migration offer does not reappear after skip or import
 func RemoveLegacy() {
 	dir, err := AppConfigDir()
 	if err != nil {
@@ -61,7 +61,7 @@ func RemoveLegacy() {
 }
 
 // Migrate copies the legacy store into a Sky folder. Legacy files are
-// read-only here.
+// read-only here
 func Migrate(skyDir string) (MigrateReport, error) {
 	notesPath, trailsPath, statsPath, err := LegacyPaths()
 	if err != nil {

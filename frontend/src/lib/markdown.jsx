@@ -10,7 +10,7 @@ import { highlightCode } from './prism-setup'
 import 'katex/dist/katex.min.css'
 
 /**
- * remark plugin: GFM alerts (> [!NOTE] etc).
+ * remark plugin: GFM alerts (> [!NOTE] etc)
  *
  * Works on the mdast AST, BEFORE rendering. Strips the marker text from
  * the blockquote's first paragraph and re-tags the node for the renderer
@@ -18,13 +18,13 @@ import 'katex/dist/katex.min.css'
  * data.hProperties). This is the ONLY mechanism react-markdown actually
  * honors: replacing the node with a custom type is silently flattened to
  * a plain div (verified empirically), so custom element names here is
- * what makes the `alertbox` component fire.
+ * what makes the `alertbox` component fire
  *
  * The alert tag always sits at the start of the blockquote's FIRST
  * paragraph. It may be plain text or strong/emphasis-wrapped; we flatten
  * the leading inline runs to text to find the tag, then consume the tag
  * length across inline nodes so the marker vanishes from whichever node
- * holds it (keeping the strong wrapper for the remainder).
+ * holds it (keeping the strong wrapper for the remainder)
  */
 const ALERT_RE = /^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/i
 

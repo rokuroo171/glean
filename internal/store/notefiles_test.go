@@ -65,7 +65,7 @@ func TestWriteReadDelete(t *testing.T) {
 func TestValidateInsideDir(t *testing.T) {
 	root := t.TempDir()
 
-	// Valid path inside root.
+	// Valid path inside root
 	inner := filepath.Join(root, "sub", "file.md")
 	if err := ValidateInsideDir(root, inner); err != nil {
 		t.Fatalf("expected no error for inner path, got: %v", err)
@@ -77,12 +77,12 @@ func TestValidateInsideDir(t *testing.T) {
 		t.Fatal("expected error for path escaping root")
 	}
 
-	// Absolute path outside root.
+	// Absolute path outside root
 	if err := ValidateInsideDir(root, "/etc/passwd"); err == nil {
 		t.Fatal("expected error for /etc/passwd")
 	}
 
-	// Same directory is fine.
+	// Same directory is fine
 	if err := ValidateInsideDir(root, root); err != nil {
 		t.Fatalf("root itself should be valid: %v", err)
 	}
@@ -90,12 +90,12 @@ func TestValidateInsideDir(t *testing.T) {
 
 func TestFileNameForCapsAtLimit(t *testing.T) {
 	skyDir := t.TempDir()
-	// Create many duplicates to test the cap.
+	// Create many duplicates to test the cap
 	for i := 0; i < 5; i++ {
 		name := filepath.Join(skyDir, "dup"+string(rune('0'+i))+".md")
 		os.WriteFile(name, []byte("x"), 0o644)
 	}
-	// Should still work (under the 10000 limit).
+	// Should still work (under the 10000 limit)
 	got, err := FileNameFor(skyDir, "", "dup")
 	if err != nil {
 		t.Fatal(err)

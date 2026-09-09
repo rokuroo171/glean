@@ -1,16 +1,16 @@
 /**
- * GFM Strikethrough extension for CodeMirror 6.
+ * GFM Strikethrough extension for CodeMirror 6
  *
  * Adds `~~text~~` as a parsed `Strikethrough` node type so the live
- * preview decorations can style it and hide the `~~` delimiters.
+ * preview decorations can style it and hide the `~~` delimiters
  */
 import { tags } from '@lezer/highlight'
 
 export const StrikethroughTag = tags.strikethrough
 
 /**
- * Inline parser that recognizes `~~...~~` (double tilde) strikethrough.
- * Single `~` is NOT parsed (strict GFM).
+ * Inline parser that recognizes `~~...~~` (double tilde) strikethrough
+ * Single `~` is NOT parsed (strict GFM)
  */
 export const strikethroughParser = {
   name: 'Strikethrough',
@@ -41,7 +41,7 @@ export const strikethroughParser = {
 
 /**
  * Syntax extension that adds the strikethrough inline parser
- * and the node type to the markdown language.
+ * and the node type to the markdown language
  */
 export function strikethroughExtension() {
   return {

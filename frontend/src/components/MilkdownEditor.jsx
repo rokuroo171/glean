@@ -169,9 +169,9 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
     }
   }, [get, loading, editorInstanceRef])
 
-  // Push external markdown (async body load, note switch) into the editor.
+  // Push external markdown (async body load, note switch) into the editor
   // Skips when the editor itself emitted the value, so typing never fights
-  // the parent state.
+  // the parent state
   useEffect(() => {
     if (loading || !get) return
     const editor = get()

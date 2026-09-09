@@ -13,9 +13,9 @@ import { GetPalette } from '../../wailsjs/go/main/App'
 
 const wails = window.go?.main
 
-// Color temperature evolution (Idea 7). Behavioral coloring.
-// Frequently visited stars shift warmer (amber/gold), neglected stars shift cooler (blue-white).
-// Blend between cold and warm palettes based on recency of last visit.
+// Color temperature evolution (Idea 7). Behavioral coloring
+// Frequently visited stars shift warmer (amber/gold), neglected stars shift cooler (blue-white)
+// Blend between cold and warm palettes based on recency of last visit
 const COLOR_COLD = { core: '#b8d4ff', glow: '#5a9aff', accent: '#7ab4ff' }
 const COLOR_WARM = { core: '#ffd6a5', glow: '#ffb366', accent: '#ffc080' }
 
@@ -45,7 +45,7 @@ function blendColors(cold, warm, t) {
   return { core: blend(cold.core, warm.core), glow: blend(cold.glow, warm.glow), accent: blend(cold.accent, warm.accent) }
 }
 
-// LOD thresholds (Idea 19). Progressive detail disclosure.
+// LOD thresholds (Idea 19). Progressive detail disclosure
 const LOD = {
   constellation: 0.5,  // lines fade in above this scale
   labels: 0.8,         // star titles fade in above this scale
@@ -56,7 +56,7 @@ function lodFactor(scale, lo, hi) {
   return Math.max(0, Math.min(1, (scale - lo) / (hi - lo)))
 }
 
-// Stage sizes. Scale with visit count, never dominate the canvas.
+// Stage sizes. Scale with visit count, never dominate the canvas
 const STAGE_RADIUS = {
   faintspeck: 4,
   dimstar: 8,
@@ -65,7 +65,7 @@ const STAGE_RADIUS = {
   brilliantstar: 26,
 }
 
-// Ambient palette from time-of-day + season (mirrors Go ambient.Palette).
+// Ambient palette from time-of-day + season (mirrors Go ambient.Palette)
 function ambientPalette() {
   const hour = new Date().getHours()
   const month = new Date().getMonth() // 0-11
@@ -73,7 +73,7 @@ function ambientPalette() {
   if (hour < 12) { line = '#3a5a4a'; text = '#6a8a9a' }
   else if (hour < 20) { line = '#3a5a3a'; text = '#7a9a7a' }
   else { line = '#5a4a3a'; text = '#9a8a6a' }
-  // Seasonal sky tint + events.
+  // Seasonal sky tint + events
   let sky, nebula, aurora = false, meteorBoost = 1
   const winter = month === 11 || month <= 1
   const spring = month >= 2 && month <= 4
@@ -82,9 +82,9 @@ function ambientPalette() {
   else if (spring) { sky = '#0B1418'; nebula = '#1f3a2e' }
   else if (summer) { sky = '#0B0F1E'; nebula = '#2a2140' }
   else { sky = '#140F0B'; nebula = '#3a2a1a' }
-  // Aurora nights: winter, after dark.
+  // Aurora nights: winter, after dark
   if (winter && (hour >= 19 || hour < 6)) aurora = true
-  // Meteor-shower weeks: Quadrantids, Lyrids, Perseids, Orionids, Leonids, Geminids.
+  // Meteor-shower weeks: Quadrantids, Lyrids, Perseids, Orionids, Leonids, Geminids
   const d = new Date()
   const dom = d.getDate()
   if (month === 0 && dom >= 1 && dom <= 5) meteorBoost = 4
@@ -97,7 +97,7 @@ function ambientPalette() {
 }
 
 // Points for one aurora curtain band at time t (seconds). Shared by the
-// mount and the rAF drift so both draw the same shape.
+// mount and the rAF drift so both draw the same shape
 function auroraBandPoints(b, t, width, height) {
   const baseY = height * (0.10 + b * 0.11)
   const amp = 26 + b * 18
@@ -119,10 +119,10 @@ function seededRand(seed) {
   return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646 }
 }
 
-// Integer hash/mix. Decorrelates tile coordinates before PRNG seeding.
+// Integer hash/mix. Decorrelates tile coordinates before PRNG seeding
 // Raw linear combinations (tileX * A + tileY * B) fed into an LCG produce
 // linearly-correlated outputs (banding). This xorshift-mix scrambles bits
-// so adjacent tiles produce completely different PRNG sequences.
+// so adjacent tiles produce completely different PRNG sequences
 function hashMix(x) {
   x |= 0; x = (x ^ (x >>> 16)) * 0x45d9f3b | 0
   x = (x ^ (x >>> 16)) * 0x45d9f3b | 0
@@ -131,10 +131,10 @@ function hashMix(x) {
 }
 
 // ─── Tiling twinkle field ────────────────────────────────────────────
-// Stars are generated per-tile using a seeded PRNG indexed by (tileX, tileY, starIndex).
+// Stars are generated per-tile using a seeded PRNG indexed by (tileX, tileY, starIndex)
 // The renderer computes which tiles are visible from camera + scale, then renders stars
 // from each tile with world positions mod-wrapped into [0, TILE_SIZE). This gives an
-// infinite starfield with no edges, at any pan position and any scale 0.2-3.
+// infinite starfield with no edges, at any pan position and any scale 0.2-3
 const TWINKLE_TILE_SIZE = 1000
 const BG_TWINKLE_COLORS = {
   warm:    '#bba080',
@@ -142,7 +142,7 @@ const BG_TWINKLE_COLORS = {
   neutral: '#999999',
 }
 
-// Generate a single twinkle star for a given tile + index. Deterministic via seeded PRNG.
+// Generate a single twinkle star for a given tile + index. Deterministic via seeded PRNG
 function makeTwinkleStar(tileX, tileY, index, variant) {
   const variantSalt = variant === 'near' ? 0x1A2B3C4D : 0x5E6F7081
   const rand = seededRand(hashMix(tileX * 7919 + tileY * 6271 + index * 3571 + variantSalt))
@@ -164,8 +164,8 @@ function makeTwinkleStar(tileX, tileY, index, variant) {
   }
 }
 
-// Compute the set of tile offsets that fully cover the visible world-space range.
-// wxMin/wyMin = top-left corner of viewport in world coords, vpW/vpH = viewport size in world coords.
+// Compute the set of tile offsets that fully cover the visible world-space range
+// wxMin/wyMin = top-left corner of viewport in world coords, vpW/vpH = viewport size in world coords
 function getVisibleTiles(wxMin, wyMin, vpW, vpH, tileSize) {
   const margin = 1  // 1-tile margin each side covers idle drift (~3 world units at min zoom)
   const minTx = Math.floor(wxMin / tileSize) - margin
@@ -183,7 +183,7 @@ function getVisibleTiles(wxMin, wyMin, vpW, vpH, tileSize) {
 
 // ─── Tiling nebula dust clouds (Idea 21) ──────────────────────────
 // Faint, large color gradients in the deep background. Optimized: no shadowBlur
-// (the #1 perf killer, forces offscreen canvas per circle), reduced count.
+// (the #1 perf killer, forces offscreen canvas per circle), reduced count
 const NEBULA_TILE_SIZE = 600
 const NEBULA_COLORS = [
   { fill: '#1a1a3a', glow: '#2a2a5a' },  // deep indigo
@@ -238,7 +238,7 @@ function spawnComet() {
 }
 
 // ─── Fuzzy match helper (Idea 18) ───────────────────────────────────
-// Returns a score (higher = better match) or 0 for no match.
+// Returns a score (higher = better match) or 0 for no match
 function fuzzyMatch(query, text) {
   const q = query.toLowerCase()
   const t = text.toLowerCase()
@@ -265,9 +265,9 @@ function daysSinceVisit(note) {
   return (Date.now() - new Date(note.last_visited).getTime()) / 86400000
 }
 
-// Dormant star dimming (Idea 6). Render-time only, no stage regression.
-// Stars not visited in 21+ days dim to 30%, after 30 days to 15%.
-// Minimum floor of 0.15 keeps them visible. The star is still there.
+// Dormant star dimming (Idea 6). Render-time only, no stage regression
+// Stars not visited in 21+ days dim to 30%, after 30 days to 15%
+// Minimum floor of 0.15 keeps them visible. The star is still there
 function dormantDimming(daysSince) {
   if (daysSince < 21) return 1.0
   if (daysSince < 30) return 1.0 - (0.7 * (daysSince - 21) / 9) // 1.0 → 0.3
@@ -277,7 +277,7 @@ function dormantDimming(daysSince) {
 
 // ─── Fresh constellation layout (Idea 27) ─────────────────────────────
 // Obsidian-style: every open regenerates positions from scratch. Nothing
-// persists; a right-drag move lasts only until the next open.
+// persists; a right-drag move lasts only until the next open
 function generateLayout(notes, links) {
   const n = notes.length
   const area = Math.max(60, Math.sqrt(n) * 300)
@@ -341,7 +341,7 @@ function generateLayout(notes, links) {
 // The dragged star is pinned to the cursor; every star linked to it is
 // tugged along by a spring (Hooke) with damping, so neighbors lag and
 // wobble instead of moving rigidly. Rest length matches the layout
-// relaxation spring so a released link settles back to its natural gap.
+// relaxation spring so a released link settles back to its natural gap
 const STAR_SPRING_REST = 140
 const STAR_SPRING_K = 0.18
 const STAR_SPRING_DAMPING = 0.86
@@ -353,7 +353,7 @@ function stepStarSprings(r) {
   const { pos, vel, edges, pinned } = r
   const ids = Object.keys(pos)
   // Spring attraction along links. The pinned star is immovable, so all
-  // force goes into its neighbors.
+  // force goes into its neighbors
   edges.forEach(([a, b]) => {
     const pa = pos[a]
     const pb = pos[b]
@@ -367,7 +367,7 @@ function stepStarSprings(r) {
     if (b !== pinned) { vel[b].x -= ux * f; vel[b].y -= uy * f }
   })
   // Light mutual repulsion so linked stars do not pile up on the pinned
-  // one while it is being dragged.
+  // one while it is being dragged
   for (let i = 0; i < ids.length; i++) {
     for (let j = i + 1; j < ids.length; j++) {
       const a = ids[i]
@@ -386,7 +386,7 @@ function stepStarSprings(r) {
       if (b !== pinned) { vel[b].x += ux * f; vel[b].y += uy * f }
     }
   }
-  // Integrate with damping (under 1 gives a visible wobble, then settle).
+  // Integrate with damping (under 1 gives a visible wobble, then settle)
   ids.forEach(id => {
     const v = vel[id]
     v.x *= STAR_SPRING_DAMPING
@@ -414,7 +414,7 @@ export default function Constellation({
 
   // ─── Session layout (Idea 27) ───────────────────────────────────────
   // Fresh random positions every open, never persisted. Left-drag a star
-  // to reposition it (linked stars follow) until the next open.
+  // to reposition it (linked stars follow) until the next open
   const layoutDoneRef = useRef(false)
   const starDragRef = useRef(null)
   const suppressClickRef = useRef(null)
@@ -432,7 +432,7 @@ export default function Constellation({
 
   // Generate once per open when notes arrive after mount. New notes
   // created mid-session get a spot anchored to a linked star, or a
-  // random position when unlinked.
+  // random position when unlinked
   useEffect(() => {
     if (!notes || notes.length === 0) return
     if (!layoutDoneRef.current) {
@@ -458,7 +458,7 @@ export default function Constellation({
     })
   }, [notes, links, sessionPos])
   // Starfield knobs (from Customization > Constellation). Re-render the
-  // layers when they change so the field responds live.
+  // layers when they change so the field responds live
   const starDensity = skyPrefs.density || 'normal'
   const twinkleSpeed = skyPrefs.twinkle_speed || 'normal'
   const starColor = skyPrefs.star_color || 'natural'
@@ -476,7 +476,7 @@ export default function Constellation({
   const isDraggingRef = useRef(false)
   const dragStartRef = useRef(null)
 
-  // Pan inertia (Idea 5). Drag release continues with deceleration.
+  // Pan inertia (Idea 5). Drag release continues with deceleration
   const inertiaRafRef = useRef(null)
   const velocityRef = useRef({ vx: 0, vy: 0, lastX: 0, lastY: 0, lastTime: 0 })
 
@@ -493,7 +493,7 @@ export default function Constellation({
 
   // Hover state (triggers re-render, acceptable at low frequency)
   const [hoveredStar, setHoveredStar] = useState(null)
-  // Constellation pulse. Tracks fade-out timing for previously hovered star.
+  // Constellation pulse. Tracks fade-out timing for previously hovered star
   const prevHoveredRef = useRef(null)
   const pulseFadeRef = useRef(null)
   // Press feedback for Konva stars (item 1, micro-feedback on click)
@@ -517,7 +517,7 @@ export default function Constellation({
   const [isClosing, setIsClosing] = useState(false)
   const closeTimerRef = useRef(null)
 
-  // Session trail (Idea 20). Ghost path connecting recently opened notes.
+  // Session trail (Idea 20). Ghost path connecting recently opened notes
   const [sessionTrail, setSessionTrail] = useState([]) // [{id, x, y, timestamp}]
   const SESSION_TRAIL_MAX_AGE_MS = 60000 // 60 seconds
   const SESSION_TRAIL_MIN_OPACITY = 0.04
@@ -532,13 +532,13 @@ export default function Constellation({
   // ─── Zoom-to-note flight (Idea 14) ──────────────────────────────────
   const flyToRafRef = useRef(null)
 
-  // Stage crossing burst (Idea 2). Localized meteor at star position.
+  // Stage crossing burst (Idea 2). Localized meteor at star position
   const [stageBursts, setStageBursts] = useState([])
   const stageBurstTimersRef = useRef({})
 
-  // Arrival animation (item 4). noteId -> timestamp.
+  // Arrival animation (item 4). noteId -> timestamp
   const [arrivingStars, setArrivingStars] = useState({})
-  // Departure animation (item 5). { id, start } or null.
+  // Departure animation (item 5). { id, start } or null
   const [departingStar, setDepartingStar] = useState(null)
   const departTimerRef = useRef(null)
   const arrivalTimersRef = useRef({})
@@ -548,7 +548,7 @@ export default function Constellation({
   const meteorBoost = palette.meteorBoost || 1
   const auroraActive = !!palette.aurora && !reducedMotion
   // Aurora runs imperatively on the rAF loop (refs, no React state) so
-  // the curtains drift without re-rendering the whole constellation.
+  // the curtains drift without re-rendering the whole constellation
   const auroraLayerRef = useRef(null)
   const auroraLineRefs = useRef([])
   const auroraActiveRef = useRef(auroraActive)
@@ -558,7 +558,7 @@ export default function Constellation({
     const fetchPalette = () => {
       if (!wails) return // browser/mock mode: keep hardcoded ambientPalette()
       // If the user pinned a season in Customization, ask the backend
-      // for that season's palette instead of the current wall-clock one.
+      // for that season's palette instead of the current wall-clock one
       GetPalette().then(c => {
         if (mounted) setPalette({
           line: c.accent,
@@ -572,7 +572,7 @@ export default function Constellation({
     }
     fetchPalette()
     // Re-fetch every 30 minutes to catch hour-of-day changes, and
-    // immediately when the user pins a new season in Customization.
+    // immediately when the user pins a new season in Customization
     const interval = setInterval(fetchPalette, 30 * 60 * 1000)
     return () => { mounted = false; clearInterval(interval) }
   }, [skyPrefs.season])
@@ -709,7 +709,7 @@ export default function Constellation({
       clearTimeout(meteorTimerRef.current)
       clearTimeout(cometTimerRef.current)
     }
-    // meteorBoost re-triggers the schedule when a shower palette arrives.
+    // meteorBoost re-triggers the schedule when a shower palette arrives
   }, [reducedMotion, meteorBoost])
 
   // ─── Animation loop ──────────────────────────────────────────────────
@@ -737,7 +737,7 @@ export default function Constellation({
         .map(c => ({ ...c, x: c.x + c.vx * dt, y: c.y + c.vy * dt, life: c.life + dt }))
         .filter(c => c.life < c.maxLife)
 
-      // Drift the aurora curtains. Own layer only, no React re-render.
+      // Drift the aurora curtains. Own layer only, no React re-render
       if (auroraActiveRef.current && auroraLayerRef.current) {
         const t = now / 3000
         const width = window.innerWidth
@@ -761,14 +761,14 @@ export default function Constellation({
   // --- Show/hide home button ---
   const showHomeButton = !hideHomeButton && !selectedNote && !editingNote && !showNewPrompt && !showStats && !searchOpen
 
-  // Search fly-to (Idea 18). Focus input when search opens.
+  // Search fly-to (Idea 18). Focus input when search opens
   useEffect(() => {
     if (searchOpen && searchInputRef.current) {
       searchInputRef.current.focus()
     }
   }, [searchOpen])
 
-  // Search results (Idea 18). Fuzzy match on note titles.
+  // Search results (Idea 18). Fuzzy match on note titles
   const searchResults = searchQuery.trim()
     ? notes
         .map(n => ({ note: n, score: fuzzyMatch(searchQuery, n.title) }))
@@ -777,7 +777,7 @@ export default function Constellation({
         .slice(0, 8)
     : []
 
-  // Fly-to-note from search (Idea 18). Reuse camera flight logic.
+  // Fly-to-note from search (Idea 18). Reuse camera flight logic
   const handleSearchSelect = useCallback((note) => {
     setSearchOpen(false)
     setSearchQuery('')
@@ -817,13 +817,13 @@ export default function Constellation({
   // ─── World → screen coordinate transform ─────────────────────────────
   const worldToScreen = useCallback((wx, wy, layer) => {
     if (layer === 'bg') {
-      // Background twinkle: zooms at 45% rate + pans at 45% rate (parallax depth).
+      // Background twinkle: zooms at 45% rate + pans at 45% rate (parallax depth)
       return {
         x: wx * scale * 0.45 + camera.x * 0.45,
         y: wy * scale * 0.45 + camera.y * 0.45,
       }
     }
-    // Foreground note-stars: full zoom + camera pan.
+    // Foreground note-stars: full zoom + camera pan
     return {
       x: wx * scale + camera.x,
       y: wy * scale + camera.y,
@@ -838,7 +838,7 @@ export default function Constellation({
     // Any hit on a shape (a star, or one of its inner paths/labels) must
     // not pan. Only an empty-canvas hit reaches the stage itself. The old
     // name check missed the star's children, so pan engaged underneath a
-    // star drag and kept chasing the cursor after release.
+    // star drag and kept chasing the cursor after release
     if (target && target !== e.target.getStage()) return
     // Cancel entrance drift if user starts panning
     if (driftRafRef.current) {
@@ -856,7 +856,7 @@ export default function Constellation({
       inertiaRafRef.current = null
     }
     // A settle left over from a released star drag must not survive into
-    // a pan (it would keep moving stars and re-arm on the pan's release).
+    // a pan (it would keep moving stars and re-arm on the pan's release)
     cancelStarSettle()
     starDragRef.current = null
 
@@ -868,12 +868,12 @@ export default function Constellation({
 
   const handleMouseMove = useCallback((e) => {
     // Star drag (Idea 27). The pinned star snaps to the cursor; linked
-    // stars wobble after it on springs, graph-view style.
+    // stars wobble after it on springs, graph-view style
     if (starDragRef.current) {
       const r = starDragRef.current
       // Released: the settle loop owns the simulation now. A stray
       // mousemove must not re-pin the star or the cursor keeps dragging
-      // it (the delayed-detach feel).
+      // it (the delayed-detach feel)
       if (r.settling) return
       const dx = (e.evt.clientX - r.clientX) / scale
       const dy = (e.evt.clientY - r.clientY) / scale
@@ -881,9 +881,9 @@ export default function Constellation({
         r.moved = true
         setPressedStar(null)
       }
-      // Pinned star follows the cursor exactly.
+      // Pinned star follows the cursor exactly
       r.pos[r.pinned] = { x: r.startX + dx, y: r.startY + dy }
-      // Spring relaxation of the linked neighborhood.
+      // Spring relaxation of the linked neighborhood
       for (let s = 0; s < STAR_DRAG_SUBSTEPS; s++) stepStarSprings(r)
       const next = {}
       for (const id in r.pos) next[id] = r.pos[id]
@@ -891,7 +891,7 @@ export default function Constellation({
       e.target.getStage().container().style.cursor = 'grabbing'
       return
     }
-    // Pan (drag to move camera). Use ref to avoid stale closure.
+    // Pan (drag to move camera). Use ref to avoid stale closure
     if (isDraggingRef.current && dragStartRef.current) {
       const now = performance.now()
       const v = velocityRef.current
@@ -912,7 +912,7 @@ export default function Constellation({
       return
     }
     // ── Idle cursor awareness (Idea 8) ──
-    // Track cursor position and reset idle timer on every move.
+    // Track cursor position and reset idle timer on every move
     cursorRef.current = { x: e.evt.clientX, y: e.evt.clientY }
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
     // If we had an idle star, start a 300ms fade-out
@@ -959,7 +959,7 @@ export default function Constellation({
 
   // ─── Star-drag settle + finalize ─────────────────────────────────────
   // After release, let the linked springs keep wobbling for a moment and
-  // decay to rest before freezing the session positions.
+  // decay to rest before freezing the session positions
   const cancelStarSettle = () => {
     if (starSettleRafRef.current) {
       cancelAnimationFrame(starSettleRafRef.current)
@@ -971,7 +971,7 @@ export default function Constellation({
     let frames = 0
     const tick = () => {
       // A newer drag or press replaced us: stop silently. Finalizing
-      // here would null starDragRef out from under the new drag.
+      // here would null starDragRef out from under the new drag
       if (starDragRef.current !== r) {
         starSettleRafRef.current = null
         return
@@ -996,16 +996,16 @@ export default function Constellation({
   }
 
   const finalizeStarDrag = (r) => {
-    // Only the drag we own may clear the ref; a newer drag stays intact.
+    // Only the drag we own may clear the ref; a newer drag stays intact
     if (starDragRef.current === r) starDragRef.current = null
     cancelStarSettle()
-    // Make sure the pan never stayed engaged underneath the star drag.
+    // Make sure the pan never stayed engaged underneath the star drag
     isDraggingRef.current = false
     setIsDragging(false)
     dragStartRef.current = null
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur()
     if (stageRef.current) stageRef.current.container().style.cursor = 'default'
-    // A real drag must not open the note on release.
+    // A real drag must not open the note on release
     if (r.moved) {
       suppressClickRef.current = r.noteId
       setTimeout(() => { if (suppressClickRef.current === r.noteId) suppressClickRef.current = null }, 600)
@@ -1013,7 +1013,7 @@ export default function Constellation({
   }
 
   // ─── Constellation line pulse on hover (Idea 1) ───────────────────────
-  // When hover leaves, trigger a 200ms fade-out pulse on previously connected lines.
+  // When hover leaves, trigger a 200ms fade-out pulse on previously connected lines
   const schedulePulseFade = useCallback(() => {
     const starId = prevHoveredRef.current
     if (!starId) return
@@ -1036,9 +1036,9 @@ export default function Constellation({
     if (starDragRef.current) {
       const r = starDragRef.current
       e.target.getStage().container().style.cursor = 'default'
-      // Let the linked stars' springs settle back; a lone star ends now.
+      // Let the linked stars' springs settle back; a lone star ends now
       // The settling flag also stops the window-level fallback from
-      // starting a second simulation for the same release.
+      // starting a second simulation for the same release
       if (!r.settling) {
         r.settling = true
         if (r.moved && r.edges.length > 0) settleStarDrag(r)
@@ -1050,7 +1050,7 @@ export default function Constellation({
     setIsDragging(false)
     dragStartRef.current = null
 
-    // Pan inertia (Idea 5). Apply deceleration if velocity is significant.
+    // Pan inertia (Idea 5). Apply deceleration if velocity is significant
     if (!reducedMotion) {
       const v = velocityRef.current
       const speed = Math.hypot(v.vx, v.vy)
@@ -1092,12 +1092,12 @@ export default function Constellation({
   }, [])
 
   // Safety: end a star drag even when the pointer releases outside the
-  // stage (window-level fallback).
+  // stage (window-level fallback)
   useEffect(() => {
     const up = () => {
       const r = starDragRef.current
       // The stage handler already started settling this release; the
-      // bubble-up must not start a second, fighting simulation.
+      // bubble-up must not start a second, fighting simulation
       if (r && !r.settling) {
         r.settling = true
         if (r.moved && r.edges.length > 0) settleStarDrag(r)
@@ -1180,14 +1180,14 @@ export default function Constellation({
     }
   }, [editingNote, editBody, onSave])
 
-  // Auto-save. Saves without closing the editor.
+  // Auto-save. Saves without closing the editor
   const handleAutoSave = useCallback(async () => {
     if (editingNote) {
       await onSave(editingNote.id, editingNote.title, editBody)
     }
   }, [editingNote, editBody, onSave])
 
-  // Delete with departure animation (item 5). Star shrinks before removal.
+  // Delete with departure animation (item 5). Star shrinks before removal
   const handleDeleteRequest = useCallback((noteId) => {
     if (reducedMotion) {
       onDelete(noteId)
@@ -1201,9 +1201,9 @@ export default function Constellation({
     }, 400)
   }, [reducedMotion, onDelete, onCloseNote])
 
-  // Note click. Fires returning pulse + camera flight (Idea 14) + session trail (Idea 20).
+  // Note click. Fires returning pulse + camera flight (Idea 14) + session trail (Idea 20)
   const handleStarClick = useCallback((noteId) => {
-    // Ignore the click that ends a real star drag.
+    // Ignore the click that ends a real star drag
     if (suppressClickRef.current === noteId) {
       suppressClickRef.current = null
       return
@@ -1219,7 +1219,7 @@ export default function Constellation({
       })
     }
 
-    // Session trail (Idea 20). Append opened note to ghost trail.
+    // Session trail (Idea 20). Append opened note to ghost trail
     if (note) {
       setSessionTrail(prev => {
         const now = Date.now()
@@ -1235,7 +1235,7 @@ export default function Constellation({
       })
     }
 
-    // Camera flight (Idea 14). Pan + subtle zoom to center the star.
+    // Camera flight (Idea 14). Pan + subtle zoom to center the star
     if (!reducedMotion && note) {
       if (flyToRafRef.current) cancelAnimationFrame(flyToRafRef.current)
       if (driftRafRef.current) { cancelAnimationFrame(driftRafRef.current); driftRafRef.current = null }
@@ -1290,7 +1290,7 @@ export default function Constellation({
         const now = Date.now()
         // Triple-pulse sparkle (existing item 13)
         setPulseMap(prev => ({ ...prev, [noteId]: { type: 'stageUp', start: now } }))
-        // Shooting star burst (Idea 2). Spawn 2-3 short streaks from star position.
+        // Shooting star burst (Idea 2). Spawn 2-3 short streaks from star position
         if (!reducedMotion) {
           const note = notes.find(n => n.id === noteId)
           if (note) {
@@ -1317,7 +1317,7 @@ export default function Constellation({
     }
   }, [onStageUp, notes, reducedMotion, posOf])
 
-  // Wish glow trigger (item 2). Fires on every successful wish.
+  // Wish glow trigger (item 2). Fires on every successful wish
   useEffect(() => {
     if (onWishGlow) {
       onWishGlow.current = (noteId) => {
@@ -1463,7 +1463,7 @@ export default function Constellation({
           })()}
         </Layer>
 
-        {/* Nebula dust clouds (Idea 21). Deep background atmosphere. */}
+        {/* Nebula dust clouds (Idea 21). Deep background atmosphere */}
         {nebulaEnabled && <Layer listening={false}>
           {(() => {
             const P = 0.3
@@ -1473,7 +1473,7 @@ export default function Constellation({
             const wyMin = -camera.y / scale
             const tiles = getVisibleTiles(wxMin, wyMin, vpW, vpH, NEBULA_TILE_SIZE)
             // Seasonal nebula hue from the ambient palette when present;
-            // otherwise the theme's default cloud colors.
+            // otherwise the theme's default cloud colors
             const nebulaColors = palette.nebula
               ? [{ fill: palette.nebula, glow: palette.nebula }]
               : NEBULA_COLORS
@@ -1546,7 +1546,7 @@ export default function Constellation({
 
         {/* ── Foreground layer (note-stars, constellations, particles) ── */}
         <Layer>
-          {/* Constellation lines. Draw-in animation for newly earned connections. */}
+          {/* Constellation lines. Draw-in animation for newly earned connections */}
           {/* Deduplicate by pairId to prevent double-rendering from duplicate backend pairs */}
           {(() => {
             const seen = new Set()
@@ -1571,7 +1571,7 @@ export default function Constellation({
               lineOpacity = Math.min(lineOpacity, drawProgress * (link.dimmed ? 0.08 : 0.2))
             }
             // ── Pulse on hover (Idea 1) ──────────────────────────────────
-            // Connected lines brighten while hovering; fade back over 200ms on leave.
+            // Connected lines brighten while hovering; fade back over 200ms on leave
             const isPulseActive = hoveredStar && (
               link.note_a === hoveredStar || link.note_b === hoveredStar
             )
@@ -1607,7 +1607,7 @@ export default function Constellation({
           })
           })()}
 
-          {/* Star proximity hints (Idea 10). Skip hints that overlap with existing constellation lines. */}
+          {/* Star proximity hints (Idea 10). Skip hints that overlap with existing constellation lines */}
           {hoveredStar && !reducedMotion && (() => {
             const note = notes.find(n => n.id === hoveredStar)
             if (!note) return null
@@ -1656,10 +1656,10 @@ export default function Constellation({
             const np = posOf(note)
             const s = worldToScreen(np.x, np.y, 'fg')
             const days = daysSinceVisit(note)
-            // Color temperature evolution (Idea 7). Blend warm/cold based on visit recency.
+            // Color temperature evolution (Idea 7). Blend warm/cold based on visit recency
             const warmth = warmthFromVisits(days)
             // Species remap: the blend endpoints come from the user's
-            // override palette so custom colors tint every star.
+            // override palette so custom colors tint every star
             const sp = speciesPalette(skyPrefs)
             const noteColors = blendColors(
               { core: sp.cool, glow: sp.cool, accent: sp.cool },
@@ -1667,7 +1667,7 @@ export default function Constellation({
               warmth,
             )
             // Hub-star sizing (Idea 27): a note with many wikilinks grows
-            // into a bigger star, accumulating with its outbound link count.
+            // into a bigger star, accumulating with its outbound link count
             const linkCount = note.link_count || 0
             const hubBoost = 1 + Math.min(2, linkCount) * 0.45
             const baseRadius = (STAGE_RADIUS[note.stage] || 4) * hubBoost
@@ -1689,7 +1689,7 @@ export default function Constellation({
               pulseBoost = Math.sin(progress * Math.PI) * 0.4
             }
 
-            // Stage-up flourish (item 13). Bright sparkle pulse.
+            // Stage-up flourish (item 13). Bright sparkle pulse
             let stageUpBoost = 0
             if (pulse?.type === 'stageUp') {
               const elapsed = (Date.now() - pulse.start) / 1000
@@ -1699,7 +1699,7 @@ export default function Constellation({
               }
             }
 
-            // Wish glow (item 2). Brief soft brightness on every wish.
+            // Wish glow (item 2). Brief soft brightness on every wish
             let wishGlowBoost = 0
             if (pulse?.type === 'wishGlow') {
               const elapsed = (Date.now() - pulse.start) / 1000
@@ -1709,7 +1709,7 @@ export default function Constellation({
               }
             }
 
-            // Arrival animation (item 4). Scale from 0, glow burst.
+            // Arrival animation (item 4). Scale from 0, glow burst
             const arrivalTime = arrivingStars[note.id]
             let arrivalScale = 1
             let arrivalGlow = 0
@@ -1722,7 +1722,7 @@ export default function Constellation({
               }
             }
 
-            // Departure animation (item 5). Shrink and fade.
+            // Departure animation (item 5). Shrink and fade
             let departScale = 1
             let departOpacity = 1
             if (departingStar?.id === note.id) {
@@ -1732,19 +1732,19 @@ export default function Constellation({
             }
 
             // ── Hover glow expansion (Idea 4) ─────────────────────────────
-            // Glow radius expands 1.2× on hover; brightness bumps +0.05.
-            // Clean separation from press-scale: press affects Group scale, hover affects glow paths + opacity.
+            // Glow radius expands 1.2× on hover; brightness bumps +0.05
+            // Clean separation from press-scale: press affects Group scale, hover affects glow paths + opacity
             const hoverBrighten = isHovered ? 0.05 : 0
             const hoverGlowScale = isHovered ? 1.2 : 1
 
             // ── Idle cursor awareness (Idea 8) ─────────────────────────────
-            // Nearest star to idle cursor brightens subtly (+0.05 opacity, +10% glow).
+            // Nearest star to idle cursor brightens subtly (+0.05 opacity, +10% glow)
             const isIdleTarget = idleStar === note.id && idleFade > 0 && !reducedMotion
             const idleBrighten = isIdleTarget ? 0.05 * idleFade : 0
             const idleGlowScale = isIdleTarget ? 1 + 0.1 * idleFade : 1
 
-            // Dormant star dimming (Idea 6). Render-time only.
-            // Stars not visited in 21+ days dim gradually. No stage regression.
+            // Dormant star dimming (Idea 6). Render-time only
+            // Stars not visited in 21+ days dim gradually. No stage regression
             const dormancy = dormantDimming(days)
 
             const glowOpacity = Math.min(1, (0.12 + shimmer + pulseBoost + stageUpBoost + wishGlowBoost + arrivalGlow + hoverBrighten + idleBrighten) * dormancy)
@@ -1768,13 +1768,13 @@ export default function Constellation({
                 onMouseDown={(e) => {
                   // Left-drag reposition (Idea 27). Session-only physics:
                   // the pinned star follows the cursor and linked stars
-                  // wobble behind it on springs, graph-view style.
+                  // wobble behind it on springs, graph-view style
                   if (e.evt.button === 0) {
                     // Stop the browser from moving keyboard focus to the
-                    // canvas during the drag (the focus-collision bug).
+                    // canvas during the drag (the focus-collision bug)
                     e.evt.preventDefault()
                     // A previous drag may still be settling; cancel it
-                    // so its stale loop cannot fight this new drag.
+                    // so its stale loop cannot fight this new drag
                     cancelStarSettle()
                     const memberIds = new Set([note.id])
                     const queue = [note.id]
@@ -1826,7 +1826,7 @@ export default function Constellation({
                 }}
                 listening
               >
-                {/* Outer glow halo. Soft bloom behind the star. */}
+                {/* Outer glow halo. Soft bloom behind the star */}
                 <Path
                   data={starD}
                   scale={{ x: starScale * 2 * hoverGlowScale * idleGlowScale, y: starScale * 2 * hoverGlowScale * idleGlowScale }}
@@ -1837,7 +1837,7 @@ export default function Constellation({
                   shadowColor={noteColors.glow}
                   shadowBlur={radius * 0.8}
                 />
-                {/* Inner glow. Closer bloom. */}
+                {/* Inner glow. Closer bloom */}
                 <Path
                   data={starD}
                   scale={{ x: starScale * 1.5 * hoverGlowScale * idleGlowScale, y: starScale * 1.5 * hoverGlowScale * idleGlowScale }}
@@ -1848,7 +1848,7 @@ export default function Constellation({
                   shadowColor={noteColors.glow}
                   shadowBlur={radius * 0.5}
                 />
-                {/* Star core. The 4-point shape. */}
+                {/* Star core. The 4-point shape */}
                 <Path
                   data={starD}
                   scale={{ x: starScale, y: starScale }}
@@ -1866,7 +1866,7 @@ export default function Constellation({
                   opacity={coreOpacity * 0.7}
                 />
 
-                {/* Title label. LOD: fades in past zoom 0.8. */}
+                {/* Title label. LOD: fades in past zoom 0.8 */}
                 {(note.stage === 'steadystar' || note.stage === 'brightstar' || note.stage === 'brilliantstar') && (
                   <Text
                     y={radius + 10}
@@ -1878,7 +1878,7 @@ export default function Constellation({
                     opacity={0.5 * lodFactor(scale, LOD.labels, LOD.labels + 0.2)}
                   />
                 )}
-                {/* Note body preview. LOD: shows brief excerpt past zoom 1.2. */}
+                {/* Note body preview. LOD: shows brief excerpt past zoom 1.2 */}
                 {scale > LOD.preview && note.body && (
                   <Text
                     y={radius + 24}
@@ -1894,7 +1894,7 @@ export default function Constellation({
             )
           })}
 
-          {/* Session trail (Idea 20). Ghost path connecting recently opened notes. */}
+          {/* Session trail (Idea 20). Ghost path connecting recently opened notes */}
           {/* Skip segments that overlap with existing constellation lines to prevent visual doubling */}
           {sessionTrail.length >= 2 && !reducedMotion && (() => {
             const now = Date.now()
@@ -1931,7 +1931,7 @@ export default function Constellation({
             })
           })()}
 
-          {/* Stage crossing bursts (Idea 2). Localized shooting stars. */}
+          {/* Stage crossing bursts (Idea 2). Localized shooting stars */}
           {!reducedMotion && stageBursts.map(s => {
             const progress = s.life / s.maxLife
             const opacity = progress < 0.2 ? progress / 0.2 : 1 - (progress - 0.2) / 0.8
@@ -2209,7 +2209,7 @@ export default function Constellation({
         )}
       </AnimatePresence>
 
-      {/* Return to Home. Quiet top-left icon, section 16 click-first. */}
+      {/* Return to Home. Quiet top-left icon, section 16 click-first */}
       {showHomeButton && (
         <button
           type="button"

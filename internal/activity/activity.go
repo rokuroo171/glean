@@ -13,7 +13,7 @@ import (
 	"github.com/glean/glean/internal/note"
 )
 
-// Activity is the persisted sky activity summary.
+// Activity is the persisted sky activity summary
 type Activity struct {
 	DailyCounts    map[string]int `json:"daily_counts"`
 	CurrentStreak  int            `json:"current_streak"`
@@ -22,7 +22,7 @@ type Activity struct {
 	Milestones     Milestones     `json:"milestones"`
 }
 
-// Milestones records the first time a sky-level threshold became true.
+// Milestones records the first time a sky-level threshold became true
 type Milestones struct {
 	FirstSproutAt *time.Time `json:"first_sprout_at,omitempty"`
 	FirstTreeAt   *time.Time `json:"first_tree_at,omitempty"`
@@ -30,19 +30,19 @@ type Milestones struct {
 	TwentyNotesAt *time.Time `json:"twenty_notes_at,omitempty"`
 }
 
-// Store persists Activity as activity.json.
+// Store persists Activity as activity.json
 type Store struct {
 	mu   sync.Mutex
 	path string
 	data Activity
 }
 
-// ConfigPath returns the stats path inside the sky sidecar.
+// ConfigPath returns the stats path inside the sky sidecar
 func ConfigPath(skyDir string) (string, error) {
 	return filepath.Join(skyDir, ".glean", "stats.json"), nil
 }
 
-// Open loads stats.json from the sky sidecar, creating it if missing.
+// Open loads stats.json from the sky sidecar, creating it if missing
 func Open(skyDir string) (*Store, error) {
 	path, err := ConfigPath(skyDir)
 	if err != nil {
@@ -75,7 +75,7 @@ func Open(skyDir string) (*Store, error) {
 	return s, nil
 }
 
-// Data returns a copy of the activity summary.
+// Data returns a copy of the activity summary
 func (s *Store) Data() Activity {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -88,7 +88,7 @@ func (s *Store) Data() Activity {
 	return out
 }
 
-// Record increments today's activity and refreshes streaks/milestones.
+// Record increments today's activity and refreshes streaks/milestones
 func (s *Store) Record(now time.Time, notes []note.Note) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

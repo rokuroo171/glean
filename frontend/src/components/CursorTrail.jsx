@@ -1,5 +1,5 @@
 /**
- * CursorTrail -- transient effects on top of the NATIVE text caret.
+ * CursorTrail -- transient effects on top of the NATIVE text caret
  *
  * The native caret is the caret. The browser draws it from the same
  * layout as the text, so it is pixel-exact at any depth by
@@ -7,10 +7,10 @@
  * replacement: it only tints it and adds short-lived effects:
  *
  * - beam (default): a fading comet band from the old caret position to
- *   the new one on REAL jumps (clicks, arrow keys, undo/redo).
- *   Per-character typing stays quiet, like a native caret.
- * - sparkle: star particles emit at the old caret position and fade.
- * - ink: bezier stroke that follows the caret path and fades tail->head.
+ *   the new one on REAL jumps (clicks, arrow keys, undo/redo)
+ *   Per-character typing stays quiet, like a native caret
+ * - sparkle: star particles emit at the old caret position and fade
+ * - ink: bezier stroke that follows the caret path and fades tail->head
  */
 
 import { useEffect, useRef } from 'react'
@@ -20,11 +20,11 @@ const ACCENT_FALLBACK = '#5b9fd4'
 const INTENSITY = { subtle: 0.6, normal: 1, vivid: 1.6 }
 // The comet band fires only on REAL jumps (clicks, arrow keys,
 // undo/redo) - jumps of at least one line. Per-character typing
-// advances less than this and stays quiet, like a native caret.
+// advances less than this and stays quiet, like a native caret
 const JUMP_MIN = 16
 
 // "beam" is the default trail style. Older prefs may still hold the
-// previous mode name - alias it so saved settings survive.
+// previous mode name - alias it so saved settings survive
 function normalizeMode(m) {
   if (m === 'kitty') return 'beam'
   return m || 'beam'
@@ -47,7 +47,7 @@ export default function CursorTrail({ view, containerRef }) {
   const { prefs } = usePreferences()
   const ed = prefs.editor || {}
 
-  // Live prefs + accent color for the RAF loop (no re-subscribing).
+  // Live prefs + accent color for the RAF loop (no re-subscribing)
   prefsRef.current = ed
   colorRef.current = ed.cursor_trail_color === 'accent'
     ? (getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || ACCENT_FALLBACK)
@@ -55,16 +55,16 @@ export default function CursorTrail({ view, containerRef }) {
 
   const enabled = ed.cursor_trail_enabled !== false
 
-  // Canvas sizing, devicePixelRatio aware.
+  // Canvas sizing, devicePixelRatio aware
   useEffect(() => {
     const canvas = canvasRef.current
     const container = containerRef?.current
     if (!canvas || !container) return
     const fit = () => {
       // The canvas is absolutely positioned (see style below) so it stays
-      // out of the layout flow - it must never push the textarea around.
+      // out of the layout flow - it must never push the textarea around
       // Size the bitmap to the visible scrollport (not the full content
-      // height) so a deep caret can never land outside the bitmap.
+      // height) so a deep caret can never land outside the bitmap
       const dpr = window.devicePixelRatio || 1
       const w = Math.max(1, container.clientWidth)
       const h = Math.max(1, container.clientHeight)
@@ -82,12 +82,12 @@ export default function CursorTrail({ view, containerRef }) {
   // Caret tracking. When the trail is enabled it hides the native caret
   // and draws its own; when disabled the component MUST NOT touch the
   // native caret at all - an invisible custom caret is worse than the
-  // native one, so pass through completely.
+  // native one, so pass through completely
   useEffect(() => {
     if (!view) return
     if (!enabled) return
 
-    // Coalesce measure triggers into one layout read per frame.
+    // Coalesce measure triggers into one layout read per frame
     let measurePending = false
     const scheduleMeasure = (fromScroll) => {
       if (measurePending) return
@@ -134,7 +134,7 @@ export default function CursorTrail({ view, containerRef }) {
       const mode = normalizeMode(e.cursor_trail_mode)
       const prev = targetRef.current
       if (!prev) {
-        // First position: plant the drawn position and target.
+        // First position: plant the drawn position and target
         posRef.current = { ...pos }
         targetRef.current = pos
         lastMoveAtRef.current = performance.now()
@@ -144,24 +144,24 @@ export default function CursorTrail({ view, containerRef }) {
       if (dist <= 0.5) return // jitter: ignore entirely
       // The caret is always chased, so it flows to the new position
       // even between big jumps; every real move (however small)
-      // refreshes the fade clock so the trail stays alive while typing.
-      // The threshold only gates the 0o---o0 band and bursts.
+      // refreshes the fade clock so the trail stays alive while typing
+      // The threshold only gates the 0o---o0 band and bursts
       targetRef.current = pos
       // Scroll re-measures move the caret with the text but are not
       // caret jumps: no stretch band, no burst. The band also needs a
       // real jump distance (JUMP_MIN) so per-keystroke typing stays a
-      // quiet native caret with no smear over the characters.
+      // quiet native caret with no smear over the characters
       if (!fromScroll && dist > Math.max(threshold, JUMP_MIN)) {
         // The stretch band: from the PREVIOUS caret position to this
         // new one, both captured as fixed points so the ghost persists
-        // after the caret lands (typing right leaves `---o0|` behind).
+        // after the caret lands (typing right leaves `---o0|` behind)
         jumpRef.current = { fx: prev.x, fy: prev.y + (prev.h || 0) / 2, tx: pos.x, ty: pos.y + (pos.h || 0) / 2, fh: (prev.h || 22) / 2, th: (pos.h || 22) / 2, t: performance.now(), dist }
         if (mode === 'beam') { inkPointsRef.current.length = 0; sparklesRef.current.length = 0; samplesRef.current.length = 0 }
         if (mode === 'sparkle') { inkPointsRef.current.length = 0; samplesRef.current.length = 0 }
         if (mode === 'ink') { samplesRef.current.length = 0; sparklesRef.current.length = 0 }
       }
       lastMoveAtRef.current = performance.now()
-      // Trail effects only when the toggle is on.
+      // Trail effects only when the toggle is on
       if (enabled) {
         if (mode === 'ink' && !fromScroll && dist > 1) {
           inkPointsRef.current.push({ x: pos.x, y: pos.y + (pos.h || 22) / 2, t: performance.now() })
@@ -174,7 +174,7 @@ export default function CursorTrail({ view, containerRef }) {
 
     // When the WRAPPER scrolls, the absolutely positioned canvas would
     // scroll away with the content. Jump it back by the scroll offset so
-    // it always covers the visible scrollport.
+    // it always covers the visible scrollport
     const pin = () => {
       const c = canvasRef.current
       const sc = containerRef?.current
@@ -192,11 +192,11 @@ export default function CursorTrail({ view, containerRef }) {
     // coordsAtPos is a cheap layout read (unlike the old full-document
     // mirror), so poll it every frame. That catches every caret move -
     // typing, arrows, clicks, IME, undo/redo - without a separate event
-    // stream. measure() no-ops when the position is unchanged.
+    // stream. measure() no-ops when the position is unchanged
     const pollInterval = setInterval(() => measure(false), 50)
 
     // Measure once on mount so the drawn caret appears immediately,
-    // even before the user touches the keyboard.
+    // even before the user touches the keyboard
     pin()
     measure(false)
 
@@ -209,8 +209,8 @@ export default function CursorTrail({ view, containerRef }) {
     }
   }, [view, enabled])
 
-  // Animation loop. Always runs (custom caret is always visible).
-  // Trail effects are gated on `enabled` inside the frame.
+  // Animation loop. Always runs (custom caret is always visible)
+  // Trail effects are gated on `enabled` inside the frame
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -237,12 +237,12 @@ export default function CursorTrail({ view, containerRef }) {
       const rgb = parseHex(colorRef.current)
       const target = targetRef.current
 
-      // The native caret is the caret - nothing synthetic replaces it.
+      // The native caret is the caret - nothing synthetic replaces it
       // posRef chases the target only so the beam band can sample a
-      // smooth path for its tail.
+      // smooth path for its tail
       posRef.current = target ? { ...target } : posRef.current
 
-      // Trail effects only fire when the toggle is on.
+      // Trail effects only fire when the toggle is on
       if (enabled) {
         if (mode === 'beam') {
           drawBeam(ctx, now, dt, { fast, slow, length, mul, rgb },
@@ -261,7 +261,7 @@ export default function CursorTrail({ view, containerRef }) {
 
     // Some environments throttle rAF while the window is occluded or the
     // compositor is offscreen, which would freeze the caret. A watchdog
-    // keeps the loop stepping (at least ~10fps) until rAF recovers.
+    // keeps the loop stepping (at least ~10fps) until rAF recovers
     const watchdog = setInterval(() => {
       const now = performance.now()
       if (running && now - lastFrame > 120) frame(now)
@@ -290,8 +290,8 @@ function drawBeam(ctx, now, dt, p, refs) {
   const pos = posRef.current
   if (!target || !pos) return
 
-  // The animation loop eases posRef toward target for all modes.
-  // Here we only read the distance for band/tail decisions.
+  // The animation loop eases posRef toward target for all modes
+  // Here we only read the distance for band/tail decisions
   const dx = target.x - pos.x
   const dy = target.y - pos.y
   const dist = Math.hypot(dx, dy)
@@ -300,7 +300,7 @@ function drawBeam(ctx, now, dt, p, refs) {
   // caret to the new caret, fading purely on age (not on the head's
   // travel), so after the caret lands the dash still reads. Typing
   // right leaves `---o0|` tail-left; typing left / backspace leaves
-  // `|0o---`. The head bump stays at the landing end until it fades.
+  // `|0o---`. The head bump stays at the landing end until it fades
   const jmp = jumpRef?.current
   if (jmp) {
     const age = now - jmp.t
@@ -312,7 +312,7 @@ function drawBeam(ctx, now, dt, p, refs) {
       const fade = Math.exp(-age / 85)
       // Comet taper: NOTHING at the old caret (t=0), FAT at the
       // landing caret (t=1). The shape is a teardrop/comet, not a
-      // symmetric 0o---o0 double-bump.
+      // symmetric 0o---o0 double-bump
       const headW = (jmp.th || 9) * p.mul * Math.min(1, age / 30)
       const pts = []
       const N = 10
@@ -325,14 +325,14 @@ function drawBeam(ctx, now, dt, p, refs) {
       ctx.globalAlpha = 1
       // The band IS the trail for this move: skip the samples tail while
       // it lives so the two never compete. The native caret underneath
-      // stays where the browser puts it.
+      // stays where the browser puts it
       return
     }
   }
 
   // Sample the head's actual path. The tail is capped to a short fixed
   // distance behind the head so a far teleport reads as a head sweeping
-  // to the target, never a long streak spanning the whole jump.
+  // to the target, never a long streak spanning the whole jump
   if (dist > 1.2) {
     samplesRef.current.push({ x: pos.x, y: pos.y, t: now })
   }
@@ -343,18 +343,18 @@ function drawBeam(ctx, now, dt, p, refs) {
       list.shift()
     }
   }
-  // Age cap, then cull anything still beyond the tail cap.
+  // Age cap, then cull anything still beyond the tail cap
   const maxAge = Math.max(80, p.slow * 0.8)
   while (list.length > 0 && now - list[0].t > maxAge) list.shift()
   while (list.length > 0 && Math.hypot(list[0].x - pos.x, list[0].y - pos.y) > tailLen * 1.5) list.shift()
   if (list.length < 1) {
-    // Nothing to draw yet: rest state is the native caret alone.
+    // Nothing to draw yet: rest state is the native caret alone
     ctx.globalAlpha = 1
     return
   }
 
   // Tapered tail, centered vertically on the caret line: reads as
-  // the caret stretching, never a blob or flag.
+  // the caret stretching, never a blob or flag
   const ttl = Math.max(70, Math.min(110, p.fast * 1.2))
   const halfH = (pos.h || 22) / 2
   const headW = 3.5 * p.mul
@@ -376,7 +376,7 @@ function drawBeam(ctx, now, dt, p, refs) {
 
 
 // Fill the ribbon as per-segment quads so width and alpha can vary along
-// the path smoothly (fatter at the caret ends, thinner in the middle).
+// the path smoothly (fatter at the caret ends, thinner in the middle)
 function drawRibbon(ctx, pts, rgb, widthScale, alphaScale) {
   for (let i = 1; i < pts.length; i++) {
     const p0 = pts[i - 1]
@@ -415,7 +415,7 @@ function drawSparkles(ctx, now, p, sparklesRef) {
     sp.vy *= 0.96
     sp.rotation += sp.rotSpeed
 
-    // Two-stage fade: fast initial pop, slower tail.
+    // Two-stage fade: fast initial pop, slower tail
     const a = sp.maxA * (0.5 * Math.exp(-age / p.fast) + 0.5 * Math.exp(-age / p.slow))
     if (a < 0.004) { list.splice(i, 1); continue }
     const sz = sp.size * (0.3 + Math.exp(-age / (p.slow * 0.6)) * 0.7)
@@ -428,7 +428,7 @@ function drawSparkles(ctx, now, p, sparklesRef) {
     ctx.shadowColor = `rgba(${p.rgb.r},${p.rgb.g},${p.rgb.b},0.8)`
     ctx.shadowBlur = 8 * p.mul
 
-    // 4-pointed star.
+    // 4-pointed star
     ctx.beginPath()
     for (let j = 0; j < 4; j++) {
       const ang = (j * Math.PI) / 2
@@ -464,7 +464,7 @@ function drawInk(ctx, now, p, inkPointsRef) {
   const pts = inkPointsRef.current
   if (pts.length < 2) return
 
-  // Duration scales with intensity: subtle = short, vivid = long.
+  // Duration scales with intensity: subtle = short, vivid = long
   const maxAge = p.slow * (1.5 + p.mul * 1.5)
   while (pts.length > 0 && now - pts[0].t > maxAge) pts.shift()
   const cap = Math.max(16, p.length * 8)
@@ -476,8 +476,8 @@ function drawInk(ctx, now, p, inkPointsRef) {
   ctx.shadowColor = `rgba(${p.rgb.r},${p.rgb.g},${p.rgb.b},0.3)`
   ctx.shadowBlur = 2
 
-  // Pre-compute speed for each point (inverse of time gap).
-  // Slow moves = thick, fast moves = thin.
+  // Pre-compute speed for each point (inverse of time gap)
+  // Slow moves = thick, fast moves = thin
   const speeds = []
   for (let i = 0; i < pts.length; i++) {
     if (i === 0) { speeds.push(0); continue }
@@ -486,7 +486,7 @@ function drawInk(ctx, now, p, inkPointsRef) {
     speeds.push(dd / dt) // px/ms
   }
 
-  // Smooth the speeds so width transitions aren't jarring.
+  // Smooth the speeds so width transitions aren't jarring
   const smooth = []
   for (let i = 0; i < speeds.length; i++) {
     const prev = speeds[Math.max(0, i - 1)]
@@ -495,13 +495,13 @@ function drawInk(ctx, now, p, inkPointsRef) {
     smooth.push((prev + curr * 2 + next) / 4)
   }
 
-  // Map speed to width: slow (0 px/ms) = thick, fast (>0.5 px/ms) = thin.
+  // Map speed to width: slow (0 px/ms) = thick, fast (>0.5 px/ms) = thin
   const THIN = 0.6 * p.mul
   const THICK = 4.5 * p.mul
   const SPEED_RANGE = 0.5
 
-  // Draw as a single continuous bezier stroke with varying width.
-  // Use cubic bezier segments for smoother curves than quadratic.
+  // Draw as a single continuous bezier stroke with varying width
+  // Use cubic bezier segments for smoother curves than quadratic
   ctx.beginPath()
   let started = false
   let lastW = THIN
@@ -523,14 +523,14 @@ function drawInk(ctx, now, p, inkPointsRef) {
     }
 
     // Cubic bezier tension: control points pull toward the midpoint
-    // for smoother curves than raw quadratic.
+    // for smoother curves than raw quadratic
     const prev = pts[i - 1]
     const curr = pts[i]
     const tension = 0.35
     const mx = (prev.x + curr.x) / 2
     const my = (prev.y + curr.y) / 2
 
-    // Draw segment with interpolated width (average of prev and curr).
+    // Draw segment with interpolated width (average of prev and curr)
     const segW = (lastW + w) / 2
     ctx.globalAlpha = alpha
     ctx.strokeStyle = `rgb(${p.rgb.r},${p.rgb.g},${p.rgb.b})`
@@ -560,7 +560,7 @@ function drawInk(ctx, now, p, inkPointsRef) {
 
 // Caret geometry straight from the CodeMirror 6 view: coordsAtPos is the
 // browser's own layout position for the caret, pixel-exact under line
-// wrapping, fonts, tabs and scroll - no mirror or char-width estimation.
+// wrapping, fonts, tabs and scroll - no mirror or char-width estimation
 function getCursorPixelPos(view, container) {
   if (!view || !container) return null
   const head = view.state.selection.main.head

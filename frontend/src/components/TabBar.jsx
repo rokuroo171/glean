@@ -16,14 +16,14 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
   const pseudoLabel = pseudoTab === 'stats' ? 'Sky overview' : pseudoTab === 'customization' ? 'Customization' : 'Settings'
   const [hovered, setHovered] = useState(null)
   // While the cursor is in the bar, tab widths are frozen so closing a
-  // tab slides the next one under the cursor (spam-close). Released on leave.
+  // tab slides the next one under the cursor (spam-close). Released on leave
   const [frozenW, setFrozenW] = useState(null)
   const tabsWrapRef = useRef(null)
   const releaseTimer = useRef(null)
 
-  // Compute a compact width that fits all current tabs, and hold it.
+  // Compute a compact width that fits all current tabs, and hold it
   // Re-entering cancels any pending release, so the expand only fires
-  // once per genuine leave (no nudge spam on rapid in/out).
+  // once per genuine leave (no nudge spam on rapid in/out)
   const freezeWidth = () => {
     if (releaseTimer.current) {
       clearTimeout(releaseTimer.current)
@@ -37,7 +37,7 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
     setFrozenW(Math.max(TAB_MIN, Math.min(TAB_MAX, Math.floor(avail / count))))
   }
 
-  // Expand once, only after the cursor has stayed out of the bar.
+  // Expand once, only after the cursor has stayed out of the bar
   const scheduleRelease = () => {
     if (releaseTimer.current) clearTimeout(releaseTimer.current)
     releaseTimer.current = setTimeout(() => {
@@ -50,7 +50,7 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
   useEffect(() => () => { if (releaseTimer.current) clearTimeout(releaseTimer.current) }, [])
 
   // Frozen: fixed width, no reflow on close. Otherwise: equal flex tabs
-  // that shrink to fit and expand up to TAB_MAX.
+  // that shrink to fit and expand up to TAB_MAX
   const tabStyle = frozenW != null
     ? { width: frozenW, flex: '0 0 auto' }
     : { flex: '1 1 0', minWidth: TAB_MIN, maxWidth: TAB_MAX }

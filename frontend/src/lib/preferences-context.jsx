@@ -39,10 +39,10 @@ const defaultPrefs = {
   },
 }
 
-// Palette used by every star-rendering surface (icons, panels, konva).
-// An empty override falls back to the theme's preset species color.
+// Palette used by every star-rendering surface (icons, panels, konva)
+// An empty override falls back to the theme's preset species color
 // Importing colors from theme.js directly is unsafe because applyTheme
-// mutates it, so this closure keeps the same live reference.
+// mutates it, so this closure keeps the same live reference
 import { colors } from './theme'
 
 export function speciesPalette(skyPrefs, fallbackColors = colors) {
@@ -55,7 +55,7 @@ export function speciesPalette(skyPrefs, fallbackColors = colors) {
 }
 
 // Merge loaded prefs over the defaults so any field the backend does not
-// know about yet (or an old preferences.json lacks) keeps its default.
+// know about yet (or an old preferences.json lacks) keeps its default
 function mergePrefs(base, loaded) {
   return {
     ...base,

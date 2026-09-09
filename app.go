@@ -27,7 +27,7 @@ import (
 	wailsrt "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// App is the Wails application struct. Bound methods are exposed to the React frontend.
+// App is the Wails application struct. Bound methods are exposed to the React frontend
 type App struct {
 	ctx          context.Context
 	store        *store.RegistryStore
@@ -39,14 +39,14 @@ type App struct {
 	lastNoteOpen time.Time
 }
 
-// SetWindowTitle updates the window title bar and taskbar preview text.
-// Call from the frontend as notes are opened or closed.
+// SetWindowTitle updates the window title bar and taskbar preview text
+// Call from the frontend as notes are opened or closed
 func (a *App) SetWindowTitle(title string) {
 	wailsrt.WindowSetTitle(a.ctx, title)
 }
 
 // NewApp wires the sky-based stores when a sky is configured. Without a
-// pointer the stores stay nil and the frontend shows the setup screen.
+// pointer the stores stay nil and the frontend shows the setup screen
 func NewApp() (*App, error) {
 	skyDir, ok, err := store.ResolveSky()
 	if err != nil {
@@ -55,9 +55,9 @@ func NewApp() (*App, error) {
 	if !ok {
 		return &App{}, nil
 	}
-	// Check the sky folder actually exists before opening stores.
+	// Check the sky folder actually exists before opening stores
 	// Without this, a deleted folder opens empty stores and the frontend
-	// shows a ghost workspace instead of the recovery screen.
+	// shows a ghost workspace instead of the recovery screen
 	info, err := os.Stat(skyDir)
 	if err != nil || !info.IsDir() {
 		return &App{}, nil
@@ -69,7 +69,7 @@ func NewApp() (*App, error) {
 	return a, nil
 }
 
-// NoteView is the JSON-safe note representation sent to the frontend.
+// NoteView is the JSON-safe note representation sent to the frontend
 type NoteView struct {
 	ID              string    `json:"id"`
 	Title           string    `json:"title"`
@@ -110,7 +110,7 @@ func noteToView(n note.Note, linkCounts map[string]int) NoteView {
 // distinct notes each note links to by [[wikilink]]. Unresolved targets
 // (no matching note title) are skipped, matching GetLinks. Reading each
 // body is the same cost GetLinks already pays, and the map is reused
-// across the whole scan (files are read once, not per note).
+// across the whole scan (files are read once, not per note)
 func (a *App) outboundLinkCounts() map[string]int {
 	counts := make(map[string]int)
 	if a.store == nil {
@@ -162,8 +162,8 @@ func stageName(s growth.Stage) string {
 	}
 }
 
-// colorTempFromID derives a deterministic star color temperature from the note ID.
-// Uses the same FNV hash as world positioning for consistency.
+// colorTempFromID derives a deterministic star color temperature from the note ID
+// Uses the same FNV hash as world positioning for consistency
 func colorTempFromID(id string) string {
 	temps := []string{"warm", "cool", "neutral", "hot"}
 	h := fnvHash(id)
@@ -177,7 +177,7 @@ func fnvHash(s string) uint64 {
 }
 
 // GetNotes returns all notes as views for the sky canvas. Bodies stay
-// empty here; they load on open.
+// empty here; they load on open
 func (a *App) GetNotes() []NoteView {
 	if a.store == nil {
 		return nil
@@ -201,7 +201,7 @@ func (a *App) GetNotes() []NoteView {
 // ScanSky re-scans the sky folder for new md files and returns the
 // updated note list. Called on window focus so external files become
 // stars without a relaunch. Unlike the startup scan, this never removes
-// notes -- it only adds new ones -- to avoid losing bodies.
+// notes -- it only adds new ones -- to avoid losing bodies
 func (a *App) ScanSky() []NoteView {
 	if a.store == nil {
 		return nil
@@ -224,14 +224,14 @@ func (a *App) ScanSky() []NoteView {
 	return views
 }
 
-// notePath resolves a note's md file from the registry's recorded path.
-// File stores the relative path from skyDir (e.g. "glean/arch.md").
+// notePath resolves a note's md file from the registry's recorded path
+// File stores the relative path from skyDir (e.g. "glean/arch.md")
 func (a *App) notePath(n note.Note) (string, error) {
 	var p string
 	if n.File != "" {
 		p = filepath.Join(a.skyDir, n.File)
 	} else {
-		// Legacy entry without File -- derive from title at root.
+		// Legacy entry without File -- derive from title at root
 		var err error
 		p, err = store.FileNameFor(a.skyDir, "", n.Title)
 		if err != nil {
@@ -245,7 +245,7 @@ func (a *App) notePath(n note.Note) (string, error) {
 }
 
 // GetNote returns a single note by ID, loading its body from the md file
-// without recording a visit.
+// without recording a visit
 func (a *App) GetNote(id string) (NoteView, bool) {
 	if a.store == nil {
 		return NoteView{}, false
@@ -266,8 +266,8 @@ func (a *App) GetNote(id string) (NoteView, bool) {
 	return noteToView(n, nil), true
 }
 
-// CreateNote creates a new note with a title and returns it.
-// The optional folder param places the note in a subfolder directly.
+// CreateNote creates a new note with a title and returns it
+// The optional folder param places the note in a subfolder directly
 func (a *App) CreateNote(title string, contextID string, folder string) (NoteView, error) {
 	if a.store == nil {
 		return NoteView{}, fmt.Errorf("no sky configured")
@@ -279,7 +279,7 @@ func (a *App) CreateNote(title string, contextID string, folder string) (NoteVie
 	notes := a.store.All()
 	p := world.PositionForNew(notes, contextID, id)
 
-	// If folder is provided directly, use it. Otherwise derive from contextID.
+	// If folder is provided directly, use it. Otherwise derive from contextID
 	if folder == "" && contextID != "" {
 		if ctx, ok := a.store.Get(contextID); ok && ctx.File != "" {
 			folder = store.FolderOf(ctx.File)
@@ -313,7 +313,7 @@ func (a *App) CreateNote(title string, contextID string, folder string) (NoteVie
 	return noteToView(n, nil), nil
 }
 
-// SaveNote writes the md file, renames on title change, updates the registry.
+// SaveNote writes the md file, renames on title change, updates the registry
 func (a *App) SaveNote(id, title, body string) error {
 	if a.store == nil {
 		return fmt.Errorf("no sky configured")
@@ -327,14 +327,14 @@ func (a *App) SaveNote(id, title, body string) error {
 		return err
 	}
 	if strings.EqualFold(store.SanitizeTitle(title), store.SanitizeTitle(n.Title)) {
-		// Same title, keep the existing file.
+		// Same title, keep the existing file
 		if err := store.WriteNoteFile(oldPath, body); err != nil {
 			return err
 		}
 		n.Title = title
 		return a.store.Update(n)
 	}
-	// Title changed -- create new file in the same folder, remove old.
+	// Title changed -- create new file in the same folder, remove old
 	folder := store.FolderOf(n.File)
 	newPath, err := store.FileNameFor(a.skyDir, folder, title)
 	if err != nil {
@@ -354,7 +354,7 @@ func (a *App) SaveNote(id, title, body string) error {
 // .glean/assets/ folder and returns the vault-relative path to embed
 // in a note, e.g. ".glean/assets/sunset.png". The md file stays
 // portable: it references a location inside the vault, not an
-// absolute path or a pasted blob.
+// absolute path or a pasted blob
 func (a *App) ImportImage(name, dataURI string) (string, error) {
 	if a.store == nil {
 		return "", fmt.Errorf("no sky configured")
@@ -367,7 +367,7 @@ func (a *App) ImportImage(name, dataURI string) (string, error) {
 }
 
 // base64FromDataURI strips the "data:<mime>;base64," prefix and
-// decodes the rest. Anything without a comma is rejected.
+// decodes the rest. Anything without a comma is rejected
 func base64FromDataURI(dataURI string) ([]byte, error) {
 	_, b64, ok := strings.Cut(dataURI, ",")
 	if !ok {
@@ -380,7 +380,7 @@ func base64FromDataURI(dataURI string) ([]byte, error) {
 	return raw, nil
 }
 
-// DeleteNote removes the registry entry and the md file.
+// DeleteNote removes the registry entry and the md file
 func (a *App) DeleteNote(id string) error {
 	if a.store == nil {
 		return fmt.Errorf("no sky configured")
@@ -401,7 +401,7 @@ func (a *App) DeleteNote(id string) error {
 	return a.store.Delete(id)
 }
 
-// WaterNote performs a manual wish on a note (once per day).
+// WaterNote performs a manual wish on a note (once per day)
 func (a *App) WaterNote(id string) (bool, error) {
 	if a.store == nil {
 		return false, nil
@@ -424,7 +424,7 @@ func (a *App) WaterNote(id string) (bool, error) {
 
 // OpenNote records a visit (passive wish) and returns the note, loading
 // its body from the md file. Also records adjacency transitions for
-// constellation line rendering.
+// constellation line rendering
 func (a *App) OpenNote(id string) (NoteView, error) {
 	if a.store == nil {
 		return NoteView{}, fmt.Errorf("no sky configured")
@@ -445,7 +445,7 @@ func (a *App) OpenNote(id string) (NoteView, error) {
 
 	now := time.Now()
 
-	// Record adjacency transition from previous note to this one.
+	// Record adjacency transition from previous note to this one
 	if a.adjacency != nil && a.lastNoteID != "" && !a.lastNoteOpen.IsZero() {
 		_, _ = a.adjacency.RecordTransition(
 			adjacency.VisitEvent{NoteID: a.lastNoteID, OpenedAt: a.lastNoteOpen, ClosedAt: now},
@@ -463,18 +463,18 @@ func (a *App) OpenNote(id string) (NoteView, error) {
 	}
 	a.recordActivity()
 	return noteToView(n, nil), nil
-} // TrailView is the JSON-safe trail representation for the frontend.
-// Wails auto-serializes return values, so we return this directly.
+} // TrailView is the JSON-safe trail representation for the frontend
+// Wails auto-serializes return values, so we return this directly
 type TrailView struct {
 	NoteA  string `json:"note_a"`
 	NoteB  string `json:"note_b"`
 	Dimmed bool   `json:"dimmed"`
 }
 
-// GetLinks returns all resolved wikilink edges across the sky's notes.
+// GetLinks returns all resolved wikilink edges across the sky's notes
 // Each pair is the IDs of two notes connected by at least one [[Title]]
 // reference (either direction), deduped and sorted. Unresolved links
-// ([[Missing]]) are excluded here; the preview styles them itself.
+// ([[Missing]]) are excluded here; the preview styles them itself
 func (a *App) GetLinks() []TrailView {
 	if a.store == nil {
 		return nil
@@ -511,7 +511,7 @@ func (a *App) GetLinks() []TrailView {
 	return views
 }
 
-// linkPairKey returns a canonical, order-independent key for a note pair.
+// linkPairKey returns a canonical, order-independent key for a note pair
 func linkPairKey(a, b string) string {
 	if a < b {
 		return a + "\x00" + b
@@ -519,7 +519,7 @@ func linkPairKey(a, b string) string {
 	return b + "\x00" + a
 }
 
-// StatsView is the JSON-safe stats representation for the frontend.
+// StatsView is the JSON-safe stats representation for the frontend
 type StatsView struct {
 	TotalNotes     int            `json:"total_notes"`
 	StageCounts    map[string]int `json:"stage_counts"`
@@ -530,7 +530,7 @@ type StatsView struct {
 	DailyCounts    map[string]int `json:"daily_counts"`
 }
 
-// MilestonesView mirrors activity.Milestones for JSON serialization.
+// MilestonesView mirrors activity.Milestones for JSON serialization
 type MilestonesView struct {
 	FirstSproutAt *string `json:"first_sprout_at,omitempty"`
 	FirstTreeAt   *string `json:"first_tree_at,omitempty"`
@@ -538,7 +538,7 @@ type MilestonesView struct {
 	TwentyNotesAt *string `json:"twenty_notes_at,omitempty"`
 }
 
-// GetStats returns sky stats: stage counts, streaks, milestones, daily activity.
+// GetStats returns sky stats: stage counts, streaks, milestones, daily activity
 func (a *App) GetStats() StatsView {
 	if a.store == nil {
 		return StatsView{}
@@ -581,7 +581,7 @@ func timeToStr(t *time.Time) *string {
 	return &s
 }
 
-// PaletteView is the JSON-safe ambient palette for the frontend.
+// PaletteView is the JSON-safe ambient palette for the frontend
 type PaletteView struct {
 	Primary     string `json:"primary"`
 	Secondary   string `json:"secondary"`
@@ -595,7 +595,7 @@ type PaletteView struct {
 	MeteorBoost int    `json:"meteor_boost"`
 }
 
-// GetSkyName returns the configured sky's display name.
+// GetSkyName returns the configured sky's display name
 func (a *App) GetSkyName() string {
 	name, err := store.LoadSkyName(a.skyDir)
 	if err != nil {
@@ -604,23 +604,23 @@ func (a *App) GetSkyName() string {
 	return name
 }
 
-// GetSkyPath returns the configured sky folder path.
+// GetSkyPath returns the configured sky folder path
 func (a *App) GetSkyPath() string {
 	return a.skyDir
 }
 
-// SystemInfo holds basic runtime information.
+// SystemInfo holds basic runtime information
 type SystemInfo struct {
 	OS   string `json:"os"`
 	Arch string `json:"arch"`
 }
 
-// GetSystemInfo returns the host OS and architecture.
+// GetSystemInfo returns the host OS and architecture
 func (a *App) GetSystemInfo() SystemInfo {
 	return SystemInfo{OS: runtime.GOOS, Arch: runtime.GOARCH}
 }
 
-// OpenURL opens a URL in the system default browser.
+// OpenURL opens a URL in the system default browser
 func (a *App) OpenURL(url string) error {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
@@ -634,10 +634,10 @@ func (a *App) OpenURL(url string) error {
 	return cmd.Start()
 }
 
-// GetPalette returns the ambient color palette based on current time-of-day and season.
+// GetPalette returns the ambient color palette based on current time-of-day and season
 func (a *App) GetPalette() PaletteView {
 	// The user can pin a season in Customization to preview any sky;
-	// an empty override means the real wall-clock palette.
+	// an empty override means the real wall-clock palette
 	season := ""
 	if a.store != nil {
 		prefs := store.LoadPreferences()
@@ -665,7 +665,7 @@ func (a *App) GetPalette() PaletteView {
 // seasonDate returns a representative date for a pinned season so the
 // ambient palette can render it. ("" is never passed here; the caller
 // checks first.) Each choice lands mid-season with a nearby meteor
-// shower so previews show the seasonal extras too.
+// shower so previews show the seasonal extras too
 func seasonDate(season string) time.Time {
 	year := time.Now().Year()
 	switch season {
@@ -690,7 +690,7 @@ func (a *App) recordActivity() {
 
 // PickFolder opens the native OS directory picker and returns the selected
 // path, or empty string if cancelled. Works on Windows, macOS, and Linux
-// (uses whatever GTK/Qt file chooser the desktop environment provides).
+// (uses whatever GTK/Qt file chooser the desktop environment provides)
 func (a *App) PickFolder() string {
 	if a.ctx == nil {
 		return ""
@@ -704,7 +704,7 @@ func (a *App) PickFolder() string {
 	return dir
 }
 
-// CreateFolder creates a new empty directory under the sky.
+// CreateFolder creates a new empty directory under the sky
 func (a *App) CreateFolder(name, folder string) error {
 	if a.store == nil {
 		return fmt.Errorf("no sky configured")
@@ -729,7 +729,7 @@ func (a *App) CreateFolder(name, folder string) error {
 }
 
 // ListFolders returns all subdirectories in the sky as a flat list of
-// relative paths (e.g. ["A", "A/B", "A/B/C"]). Empty for root-only skies.
+// relative paths (e.g. ["A", "A/B", "A/B/C"]). Empty for root-only skies
 func (a *App) ListFolders() []string {
 	if a.skyDir == "" {
 		return []string{}
@@ -760,7 +760,7 @@ func (a *App) ListFolders() []string {
 	return result
 }
 
-// MoveNote moves a note to a different folder within the sky.
+// MoveNote moves a note to a different folder within the sky
 func (a *App) MoveNote(id, targetFolder string) error {
 	if a.store == nil {
 		return fmt.Errorf("no sky configured")
@@ -793,8 +793,8 @@ func (a *App) MoveNote(id, targetFolder string) error {
 	return a.store.Update(n)
 }
 
-// folderNameValid rejects names that are unsafe or illegal as a folder name.
-// Names must stay a single path segment and be usable on Windows too.
+// folderNameValid rejects names that are unsafe or illegal as a folder name
+// Names must stay a single path segment and be usable on Windows too
 func folderNameValid(name string) error {
 	if name == "" {
 		return fmt.Errorf("folder name is empty")
@@ -811,7 +811,7 @@ func folderNameValid(name string) error {
 	return nil
 }
 
-// folderPathValid validates every segment of a relative folder path.
+// folderPathValid validates every segment of a relative folder path
 func folderPathValid(folder string) error {
 	folder = strings.Trim(folder, "/")
 	if folder == "" {
@@ -826,7 +826,7 @@ func folderPathValid(folder string) error {
 }
 
 // RenameFolder renames a folder inside the sky and updates the registry
-// paths of every note that lives under it.
+// paths of every note that lives under it
 func (a *App) RenameFolder(folder, newName string) error {
 	if a.store == nil {
 		return fmt.Errorf("no sky configured")
@@ -862,7 +862,7 @@ func (a *App) RenameFolder(folder, newName string) error {
 		return fmt.Errorf("rename folder: %w", err)
 	}
 
-	// Update registry entries whose file lives under the renamed folder.
+	// Update registry entries whose file lives under the renamed folder
 	prefix := relOld + "/"
 	for _, n := range a.store.All() {
 		f := filepath.ToSlash(n.File)
@@ -878,7 +878,7 @@ func (a *App) RenameFolder(folder, newName string) error {
 }
 
 // DeleteFolder removes a folder (and everything in it) from the sky and
-// drops the registry entries of every note it contained.
+// drops the registry entries of every note it contained
 func (a *App) DeleteFolder(folder string) error {
 	if a.store == nil {
 		return fmt.Errorf("no sky configured")
@@ -905,7 +905,7 @@ func (a *App) DeleteFolder(folder string) error {
 		return fmt.Errorf("delete folder: %w", err)
 	}
 
-	// Drop every registry entry under the deleted folder.
+	// Drop every registry entry under the deleted folder
 	for _, n := range a.store.All() {
 		f := filepath.ToSlash(n.File)
 		if f != rel && !strings.HasPrefix(f, prefix) {
@@ -921,7 +921,7 @@ func (a *App) DeleteFolder(folder string) error {
 }
 
 // SetWindowSize resizes the OS window. Used by the setup intro to show a
-// small welcome card, then expand to full size for the setup forms.
+// small welcome card, then expand to full size for the setup forms
 func (a *App) SetWindowSize(width, height int) {
 	if a.ctx == nil {
 		return
@@ -930,15 +930,15 @@ func (a *App) SetWindowSize(width, height int) {
 	wailsrt.WindowCenter(a.ctx)
 }
 
-// KnownSkyView is the JSON-safe known sky entry for the frontend.
+// KnownSkyView is the JSON-safe known sky entry for the frontend
 type KnownSkyView struct {
 	Name string `json:"name"`
 	Path string `json:"path"`
 }
 
-// GetKnownSkies returns all remembered skies for the manage-skies UI.
+// GetKnownSkies returns all remembered skies for the manage-skies UI
 // Skies whose folder no longer exists on disk are filtered out, so the
-// list never shows stale entries for deleted/moved folders.
+// list never shows stale entries for deleted/moved folders
 func (a *App) GetKnownSkies() []KnownSkyView {
 	p, _, err := store.LoadPointer()
 	if err != nil || p.KnownSkies == nil {
@@ -955,30 +955,30 @@ func (a *App) GetKnownSkies() []KnownSkyView {
 	return views
 }
 
-// SwitchSky changes the active sky to the given path and reloads everything.
-// Returns the new sky name on success.
+// SwitchSky changes the active sky to the given path and reloads everything
+// Returns the new sky name on success
 func (a *App) SwitchSky(path string) (string, error) {
 	if err := store.SwitchSky(path); err != nil {
 		return "", err
 	}
-	// Close old stores.
+	// Close old stores
 	a.store = nil
 	a.adjacency = nil
 	a.activity = nil
 	a.workspace = nil
-	// Open the new sky.
+	// Open the new sky
 	if err := a.openSkyAt(path); err != nil {
 		return "", err
 	}
 	return a.GetSkyName(), nil
 }
 
-// RemoveKnownSky removes a sky from the known list. Does not delete files.
+// RemoveKnownSky removes a sky from the known list. Does not delete files
 func (a *App) RemoveKnownSky(path string) error {
 	return store.RemoveKnownSky(path)
 }
 
-// PreferencesView is the JSON-safe preferences representation for the frontend.
+// PreferencesView is the JSON-safe preferences representation for the frontend
 type PreferencesView struct {
 	Theme  ThemePrefsView  `json:"theme"`
 	Layout LayoutPrefsView `json:"layout"`
@@ -1030,7 +1030,7 @@ type SkyPrefsView struct {
 	Season         string `json:"season"`
 }
 
-// GetPreferences returns the user's customization preferences.
+// GetPreferences returns the user's customization preferences
 func (a *App) GetPreferences() PreferencesView {
 	p := store.LoadPreferences()
 	showStatus := true
@@ -1081,9 +1081,9 @@ func (a *App) GetPreferences() PreferencesView {
 	}
 }
 
-// SavePreferences persists the user's customization preferences.
+// SavePreferences persists the user's customization preferences
 func (a *App) SavePreferences(p PreferencesView) error {
-	// Validate and sanitize inputs.
+	// Validate and sanitize inputs
 	validPresets := map[string]bool{"midnight": true, "aurora": true, "ember": true, "ocean": true, "lavender": true, "nord": true, "gruvbox": true, "tokyo-night": true, "catppuccin-mocha": true, "paper": true, "catppuccin-latte": true}
 	if !validPresets[p.Theme.Preset] {
 		p.Theme.Preset = "midnight"
@@ -1092,7 +1092,7 @@ func (a *App) SavePreferences(p PreferencesView) error {
 		p.Theme.AccentHex = "#5b9fd4"
 	}
 	// "kitty" was the original reference name for the default trail;
-	// normalize it to "beam" so saved prefs keep working.
+	// normalize it to "beam" so saved prefs keep working
 	if p.Editor.CursorTrailMode == "kitty" {
 		p.Editor.CursorTrailMode = "beam"
 	}
@@ -1101,7 +1101,7 @@ func (a *App) SavePreferences(p PreferencesView) error {
 		p.Editor.CursorTrailMode = "beam"
 	}
 	// Season override: empty = auto (wall-clock), otherwise one of the
-	// four previews so the user can see any sky any day.
+	// four previews so the user can see any sky any day
 	validSeasons := map[string]bool{"": true, "winter": true, "spring": true, "summer": true, "autumn": true}
 	if !validSeasons[p.Sky.Season] {
 		p.Sky.Season = ""
@@ -1113,7 +1113,7 @@ func (a *App) SavePreferences(p PreferencesView) error {
 	if !validIntensity[p.Editor.CursorTrailIntensity] {
 		p.Editor.CursorTrailIntensity = "normal"
 	}
-	// Decay invariant: fast must be <= slow, or the two-stage fade inverts.
+	// Decay invariant: fast must be <= slow, or the two-stage fade inverts
 	if p.Editor.CursorTrailDecayFast < 10 || p.Editor.CursorTrailDecayFast > 500 {
 		p.Editor.CursorTrailDecayFast = 80
 	}
@@ -1145,7 +1145,7 @@ func (a *App) SavePreferences(p PreferencesView) error {
 	enabled := p.Editor.CursorTrailEnabled
 	spell := p.Editor.SpellCheckEnabled
 	animated := p.Editor.AnimatedTextEnabled
-	// Sky validation: fall back to defaults when out of range.
+	// Sky validation: fall back to defaults when out of range
 	validSkyDensity := map[string]bool{"sparse": true, "normal": true, "dense": true}
 	if !validSkyDensity[p.Sky.Density] {
 		p.Sky.Density = "normal"
@@ -1203,7 +1203,7 @@ func (a *App) SavePreferences(p PreferencesView) error {
 	})
 }
 
-// isValidHex checks that a string is a valid 6-digit hex color like "#aabbcc".
+// isValidHex checks that a string is a valid 6-digit hex color like "#aabbcc"
 func isValidHex(s string) bool {
 	if len(s) != 7 || s[0] != '#' {
 		return false
@@ -1217,7 +1217,7 @@ func isValidHex(s string) bool {
 	return true
 }
 
-// OpenVaultFolder opens the vault directory in the system file manager.
+// OpenVaultFolder opens the vault directory in the system file manager
 func (a *App) OpenVaultFolder() error {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
@@ -1231,7 +1231,7 @@ func (a *App) OpenVaultFolder() error {
 	return cmd.Start()
 }
 
-// ExportSky zips the vault folder and returns the zip data as base64.
+// ExportSky zips the vault folder and returns the zip data as base64
 func (a *App) ExportSky() (string, error) {
 	zipPath := filepath.Join(os.TempDir(), "glean-export.zip")
 	f, err := os.Create(zipPath)
@@ -1280,7 +1280,7 @@ func (a *App) ExportSky() (string, error) {
 	return base64.StdEncoding.EncodeToString(data), nil
 }
 
-// ImportNotes extracts a base64-encoded zip into the vault folder.
+// ImportNotes extracts a base64-encoded zip into the vault folder
 func (a *App) ImportNotes(data string) error {
 	raw, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
@@ -1313,7 +1313,7 @@ func (a *App) ImportNotes(data string) error {
 	return nil
 }
 
-// DeleteSky removes the vault folder and all its contents.
+// DeleteSky removes the vault folder and all its contents
 func (a *App) DeleteSky() error {
 	return os.RemoveAll(a.skyDir)
 }

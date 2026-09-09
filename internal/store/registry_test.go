@@ -118,7 +118,7 @@ func TestRegistryPositionsMissingNotes(t *testing.T) {
 	if err := reg.Create(n); err != nil {
 		t.Fatal(err)
 	}
-	// A fresh open runs LockMissingPositions over the entries.
+	// A fresh open runs LockMissingPositions over the entries
 	reg2, err := OpenRegistry(skyDir)
 	if err != nil {
 		t.Fatal(err)

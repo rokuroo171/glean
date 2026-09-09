@@ -29,7 +29,7 @@ function Control({ label, onClick, danger }) {
 }
 
 // The native title bar is gone (frameless), so the app draws its own
-// window controls. Hidden in the browser mock, window.runtime is absent.
+// window controls. Hidden in the browser mock, window.runtime is absent
 export default function WindowControls() {
   if (!runtime) return null
   return (

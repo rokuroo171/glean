@@ -15,7 +15,7 @@ import { gleanKeymaps } from './extensions/keymaps'
 import { freshField, animField, animSweeper } from './extensions/typedAnim'
 import { strikethroughExtension } from './extensions/strikethrough'
 
-// The glean editor theme: tokens from theme.js, dark scheme.
+// The glean editor theme: tokens from theme.js, dark scheme
 const gleanTheme = EditorView.theme({
   '&': {
     color: colors.text,
@@ -74,9 +74,9 @@ const gleanTheme = EditorView.theme({
     textDecoration: 'none',
   },
   // Live preview decoration classes
-  // NOTE: fontSize is intentionally omitted from all decoration classes.
+  // NOTE: fontSize is intentionally omitted from all decoration classes
   // CM6 miscalculates line heights and caret positions when decorations
-  // change the font size. Headings use fontWeight + color for distinction.
+  // change the font size. Headings use fontWeight + color for distinction
   '.glean-h1': { fontWeight: 800, color: colors.text },
   '.glean-h2': { fontWeight: 700, color: colors.text },
   '.glean-h3': { fontWeight: 700, color: colors.text },
@@ -244,7 +244,7 @@ const gleanTheme = EditorView.theme({
   },
 }, { dark: true })
 
-// Keyframes for the animated typing effect, injected once.
+// Keyframes for the animated typing effect, injected once
 const animStyle = EditorView.baseTheme({
   '@keyframes glean-char-fade': {
     '0%': { opacity: 0, transform: 'translateY(-4px)' },
@@ -254,7 +254,7 @@ const animStyle = EditorView.baseTheme({
 })
 
 /**
- * Build a CodeMirror 6 editor bound to the given prefs and callbacks.
+ * Build a CodeMirror 6 editor bound to the given prefs and callbacks
  * callbacks:
  *   onBodyChange(newBody)
  *   onCursorChange({line, col})
@@ -277,8 +277,8 @@ export function createGleanView({ parent, doc, prefs, callbacks }) {
       drawSelection(),
       highlightActiveLine(),
       highlightSelectionMatches(),
-      // No defaultHighlightStyle: decorations handle all markdown styling.
-      // This removes underlines, syntax colors, and other ugly CM6 defaults.
+      // No defaultHighlightStyle: decorations handle all markdown styling
+      // This removes underlines, syntax colors, and other ugly CM6 defaults
       indentUnit.of(' '.repeat(prefs?.editor?.tab_width || 2)),
       EditorState.tabSize.of(prefs?.editor?.tab_width || 2),
       prefs?.editor?.line_numbers ? lineNumbers() : [],
@@ -292,7 +292,7 @@ export function createGleanView({ parent, doc, prefs, callbacks }) {
       animField,
       animSweeper,
       // Image paste/drop are intercepted at the content DOM level so
-      // CM6's default text insertion never runs first.
+      // CM6's default text insertion never runs first
       EditorView.domEventHandlers({
         paste(event, view) {
           const items = (event.clipboardData && event.clipboardData.items) || []
@@ -319,7 +319,7 @@ export function createGleanView({ parent, doc, prefs, callbacks }) {
         },
       }),
       // Glean keymaps must win over the defaults for Tab, Enter,
-      // Backspace, and the formatting shortcuts.
+      // Backspace, and the formatting shortcuts
       Prec.high(gleanKeymaps(prefsRef, callbacks)),
       keymap.of([...defaultKeymap, ...historyKeymap, ...markdownKeymap, indentWithTab]),
       EditorView.updateListener.of(update => {

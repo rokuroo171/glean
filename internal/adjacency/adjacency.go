@@ -10,12 +10,12 @@ import (
 	"time"
 )
 
-// AdjacencyLog is the persisted inferred path data.
+// AdjacencyLog is the persisted inferred path data
 type AdjacencyLog struct {
 	Pairs []PairCount `json:"pairs"`
 }
 
-// PairCount records inferred co-visit strength between two notes.
+// PairCount records inferred co-visit strength between two notes
 type PairCount struct {
 	NoteA          string    `json:"note_a"`
 	NoteB          string    `json:"note_b"`
@@ -23,26 +23,26 @@ type PairCount struct {
 	LastReinforced time.Time `json:"last_reinforced"`
 }
 
-// VisitEvent is an in-memory note open/close event for this app session.
+// VisitEvent is an in-memory note open/close event for this app session
 type VisitEvent struct {
 	NoteID   string
 	OpenedAt time.Time
 	ClosedAt time.Time
 }
 
-// Store persists AdjacencyLog as adjacency.json.
+// Store persists AdjacencyLog as adjacency.json
 type Store struct {
 	mu   sync.Mutex
 	path string
 	data AdjacencyLog
 }
 
-// ConfigPath returns the trails path inside the sky sidecar.
+// ConfigPath returns the trails path inside the sky sidecar
 func ConfigPath(skyDir string) (string, error) {
 	return filepath.Join(skyDir, ".glean", "trails.json"), nil
 }
 
-// Open loads trails.json from the sky sidecar, creating it if missing.
+// Open loads trails.json from the sky sidecar, creating it if missing
 func Open(skyDir string) (*Store, error) {
 	path, err := ConfigPath(skyDir)
 	if err != nil {
@@ -75,7 +75,7 @@ func Open(skyDir string) (*Store, error) {
 	return s, nil
 }
 
-// Pairs returns a copy of all inferred pairs.
+// Pairs returns a copy of all inferred pairs
 func (s *Store) Pairs() []PairCount {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -84,7 +84,7 @@ func (s *Store) Pairs() []PairCount {
 	return out
 }
 
-// RecordTransition reinforces the pair if two consecutive visits qualify.
+// RecordTransition reinforces the pair if two consecutive visits qualify
 func (s *Store) RecordTransition(previous, next VisitEvent, now time.Time) (bool, error) {
 	if !Qualifies(previous, next) {
 		return false, nil
@@ -92,7 +92,7 @@ func (s *Store) RecordTransition(previous, next VisitEvent, now time.Time) (bool
 	return true, s.Reinforce(previous.NoteID, next.NoteID, now)
 }
 
-// Reinforce increments an inferred pair without reducing or deleting old counts.
+// Reinforce increments an inferred pair without reducing or deleting old counts
 func (s *Store) Reinforce(noteA, noteB string, now time.Time) error {
 	a, b := NormalizePair(noteA, noteB)
 	if a == "" || b == "" || a == b {
@@ -125,7 +125,7 @@ func (s *Store) Reinforce(noteA, noteB string, now time.Time) error {
 	return s.saveUnlocked()
 }
 
-// Qualifies implements session adjacency with intent.
+// Qualifies implements session adjacency with intent
 func Qualifies(previous, next VisitEvent) bool {
 	if previous.NoteID == "" || next.NoteID == "" || previous.NoteID == next.NoteID {
 		return false
@@ -140,7 +140,7 @@ func Qualifies(previous, next VisitEvent) bool {
 	return gap >= 0 && gap <= 10*time.Minute
 }
 
-// IsDimmed reports whether a rendered path should appear faded.
+// IsDimmed reports whether a rendered path should appear faded
 func IsDimmed(pair PairCount, now time.Time) bool {
 	if pair.LastReinforced.IsZero() {
 		return true
@@ -148,7 +148,7 @@ func IsDimmed(pair PairCount, now time.Time) bool {
 	return now.Sub(pair.LastReinforced) > 14*24*time.Hour
 }
 
-// NormalizePair makes pair counting undirected while preserving the pair fields.
+// NormalizePair makes pair counting undirected while preserving the pair fields
 func NormalizePair(noteA, noteB string) (string, string) {
 	if noteA <= noteB {
 		return noteA, noteB

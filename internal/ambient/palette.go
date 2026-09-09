@@ -6,9 +6,9 @@ import (
 	"time"
 )
 
-// ColorSet holds cosmetic hex-color strings for sky rendering.
+// ColorSet holds cosmetic hex-color strings for sky rendering
 // The frontend will interpret these as CSS colors; the Go side
-// computes them purely from time-of-day and season.
+// computes them purely from time-of-day and season
 type ColorSet struct {
 	Primary     string
 	Secondary   string
@@ -22,15 +22,15 @@ type ColorSet struct {
 	MeteorBoost int    // meteor-shower multiplier during known shower weeks
 }
 
-// Palette computes a cosmetic color set from wall-clock time.
-// Time-of-day and seasonal layers are independent of brightness stage logic.
+// Palette computes a cosmetic color set from wall-clock time
+// Time-of-day and seasonal layers are independent of brightness stage logic
 func Palette(now time.Time) ColorSet {
 	hour := now.Hour()
 	month := now.Month()
 
 	var primary, secondary, accent string
 
-	// Time-of-day layer.
+	// Time-of-day layer
 	switch {
 	case hour < 12:
 		primary = "#7EB8DA"
@@ -46,7 +46,7 @@ func Palette(now time.Time) ColorSet {
 		accent = "#E8C9A0"
 	}
 
-	// Seasonal layer. Shift palette by calendar month.
+	// Seasonal layer. Shift palette by calendar month
 	sky := "#0B0F19"
 	nebula := ""
 	aurora := false
@@ -75,7 +75,7 @@ func Palette(now time.Time) ColorSet {
 	}
 
 	// Aurora nights: winter, after dark. The northern lights only show
-	// when the sun is down.
+	// when the sun is down
 	if month == time.December || month == time.January || month == time.February {
 		if hour >= 19 || hour < 6 {
 			aurora = true
@@ -83,7 +83,7 @@ func Palette(now time.Time) ColorSet {
 	}
 
 	// Meteor-shower weeks: boost the spawn rate during the big annual
-	// showers so the sky feels alive exactly when it really is.
+	// showers so the sky feels alive exactly when it really is
 	switch {
 	case isShower(now, 1, 1, 5): // Quadrantids
 		meteorBoost = 4
@@ -114,7 +114,7 @@ func Palette(now time.Time) ColorSet {
 }
 
 // isShower reports whether now falls within a meteor-shower window
-// (month m, day d1 through day d2 inclusive, in real-world dates).
+// (month m, day d1 through day d2 inclusive, in real-world dates)
 func isShower(now time.Time, m time.Month, d1, d2 int) bool {
 	if now.Month() != m {
 		return false
@@ -122,7 +122,7 @@ func isShower(now time.Time, m time.Month, d1, d2 int) bool {
 	return now.Day() >= d1 && now.Day() <= d2
 }
 
-// blend mixes two hex colors by averaging channels (cosmetic only).
+// blend mixes two hex colors by averaging channels (cosmetic only)
 func blend(a, b string) string {
 	ar, ag, ab := parseHex(a)
 	br, bg, bb := parseHex(b)

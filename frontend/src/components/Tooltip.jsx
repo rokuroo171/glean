@@ -1,10 +1,10 @@
 /*
  * Portal tooltip layer. Renders one fixed-position tooltip above the app
  * via createPortal(document.body), so it can never be clipped by
- * overflow:auto/hidden containers the way CSS ::after tooltips were.
+ * overflow:auto/hidden containers the way CSS ::after tooltips were
  *
  * Usage: <button data-tip="label">...</button>  (optionally data-tip-side="below")
- * Mount <TooltipLayer /> once at the app root.
+ * Mount <TooltipLayer /> once at the app root
  */
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -35,7 +35,7 @@ export default function TooltipLayer() {
           side = 'below'
         }
       }
-      // Keep the popover inside the viewport; short labels are ~6px/char.
+      // Keep the popover inside the viewport; short labels are ~6px/char
       const estW = Math.min(Math.max(text.length * 6 + 20, 40), 320)
       const left = Math.min(Math.max(anchorX, estW / 2 + 8), window.innerWidth - estW / 2 - 8)
       return { text, left, top, anchorX, side }

@@ -14,21 +14,21 @@ const (
 	NearYSpacing   = 220
 )
 
-// Point is a stable coordinate in the sky.
+// Point is a stable coordinate in the sky
 type Point struct {
 	X int
 	Y int
 }
 
-// Trail is a render-only path between two note IDs.
-// Kept as a data type; rendering moves to the frontend.
+// Trail is a render-only path between two note IDs
+// Kept as a data type; rendering moves to the frontend
 type Trail struct {
 	NoteA  string
 	NoteB  string
 	Dimmed bool
 }
 
-// PositionForNew returns the locked position for a note created now.
+// PositionForNew returns the locked position for a note created now
 func PositionForNew(notes []note.Note, contextID, newID string) Point {
 	occupied := occupiedPositions(notes)
 	if contextID != "" {
@@ -41,7 +41,7 @@ func PositionForNew(notes []note.Note, contextID, newID string) Point {
 	return NextSpiralPosition(notes, newID)
 }
 
-// NextSpiralPosition returns the next unoccupied default spiral position.
+// NextSpiralPosition returns the next unoccupied default spiral position
 func NextSpiralPosition(notes []note.Note, seed string) Point {
 	occupied := occupiedPositions(notes)
 	for i := 0; ; i++ {
@@ -52,7 +52,7 @@ func NextSpiralPosition(notes []note.Note, seed string) Point {
 	}
 }
 
-// LockMissingPositions assigns stable positions to legacy notes with no position.
+// LockMissingPositions assigns stable positions to legacy notes with no position
 func LockMissingPositions(notes []note.Note) ([]note.Note, bool) {
 	out := make([]note.Note, len(notes))
 	copy(out, notes)
@@ -71,7 +71,7 @@ func LockMissingPositions(notes []note.Note) ([]note.Note, bool) {
 	return out, changed
 }
 
-// NoteAt returns the note whose locked base position is p.
+// NoteAt returns the note whose locked base position is p
 func NoteAt(notes []note.Note, p Point) (note.Note, bool) {
 	for _, n := range notes {
 		if n.Positioned && n.WorldX == p.X && n.WorldY == p.Y {
@@ -81,7 +81,7 @@ func NoteAt(notes []note.Note, p Point) (note.Note, bool) {
 	return note.Note{}, false
 }
 
-// NearestNote returns the closest positioned note to p.
+// NearestNote returns the closest positioned note to p
 func NearestNote(notes []note.Note, p Point) (note.Note, bool) {
 	var best note.Note
 	bestDist := 0
@@ -100,7 +100,7 @@ func NearestNote(notes []note.Note, p Point) (note.Note, bool) {
 	return best, found
 }
 
-// Line returns all integer grid points between a and b (for future path rendering).
+// Line returns all integer grid points between a and b (for future path rendering)
 func Line(a, b Point) []Point {
 	return line(a, b)
 }
@@ -198,10 +198,10 @@ func scaleSpiral(p Point) Point {
 	return Point{X: p.X * SpiralXSpacing, Y: p.Y * SpiralYSpacing}
 }
 
-// seedJitter applies a deterministic offset to p, seeded from id.
+// seedJitter applies a deterministic offset to p, seeded from id
 // Range is ±35% of spacing in each axis (~77px for 220px spacing),
 // enough to break the grid while keeping min gap ≥ 68px between
-// adjacent candidates (well above any star glow radius ~25px).
+// adjacent candidates (well above any star glow radius ~25px)
 func seedJitter(p Point, id string) Point {
 	if id == "" {
 		return p

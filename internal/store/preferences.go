@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-// Preferences holds all user customization settings.
+// Preferences holds all user customization settings
 type Preferences struct {
 	Theme  ThemePrefs  `json:"theme"`
 	Layout LayoutPrefs `json:"layout"`
@@ -15,20 +15,20 @@ type Preferences struct {
 	Sky    SkyPrefs    `json:"sky"`
 }
 
-// ThemePrefs controls colors and visual appearance.
+// ThemePrefs controls colors and visual appearance
 type ThemePrefs struct {
 	Preset    string `json:"preset"`     // "midnight", "aurora", "ember", "ocean", "lavender"
 	AccentHex string `json:"accent_hex"` // e.g. "#5b9fd4"
 }
 
-// LayoutPrefs controls panel positions and density.
+// LayoutPrefs controls panel positions and density
 type LayoutPrefs struct {
 	SidebarPosition string `json:"sidebar_position"` // "left" (default), "right"
 	Density         string `json:"density"`          // "comfortable" (default), "compact", "dense"
 	ShowStatusBar   *bool  `json:"show_status_bar"`  // nil = true (default)
 }
 
-// SkyPrefs controls the starfield appearance in the Sky view.
+// SkyPrefs controls the starfield appearance in the Sky view
 type SkyPrefs struct {
 	Density        string `json:"density"`         // "sparse", "normal" (default), "dense"
 	TwinkleSpeed   string `json:"twinkle_speed"`   // "slow", "normal" (default), "fast"
@@ -41,7 +41,7 @@ type SkyPrefs struct {
 	Season         string `json:"season"`          // "" (auto, default), "winter", "spring", "summer", "autumn" (preview)
 }
 
-// EditorPrefs controls editor behavior and appearance.
+// EditorPrefs controls editor behavior and appearance
 type EditorPrefs struct {
 	FontFamily                string  `json:"font_family"`                  // CSS font-family value
 	FontSize                  int     `json:"font_size"`                    // px
@@ -63,7 +63,7 @@ type EditorPrefs struct {
 	LineNumbers               *bool   `json:"line_numbers"`                 // nil = false (default)
 }
 
-// DefaultPreferences returns the built-in defaults.
+// DefaultPreferences returns the built-in defaults
 func DefaultPreferences() Preferences {
 	showStatus := true
 	spell := true
@@ -112,7 +112,7 @@ func DefaultPreferences() Preferences {
 	}
 }
 
-// PreferencesPath returns the path to preferences.json.
+// PreferencesPath returns the path to preferences.json
 func PreferencesPath() (string, error) {
 	dir, err := AppConfigDir()
 	if err != nil {
@@ -122,7 +122,7 @@ func PreferencesPath() (string, error) {
 }
 
 // LoadPreferences reads preferences from disk, returning defaults when
-// the file is missing or corrupt.
+// the file is missing or corrupt
 func LoadPreferences() Preferences {
 	path, err := PreferencesPath()
 	if err != nil {
@@ -141,7 +141,7 @@ func LoadPreferences() Preferences {
 			return DefaultPreferences()
 		}
 	}
-	// Merge nil fields with defaults.
+	// Merge nil fields with defaults
 	def := DefaultPreferences()
 	if p.Sky.Density == "" {
 		p.Sky.Density = def.Sky.Density
@@ -212,7 +212,7 @@ func LoadPreferences() Preferences {
 	return p
 }
 
-// SavePreferences writes preferences to disk atomically.
+// SavePreferences writes preferences to disk atomically
 func SavePreferences(p Preferences) error {
 	dir, err := AppConfigDir()
 	if err != nil {

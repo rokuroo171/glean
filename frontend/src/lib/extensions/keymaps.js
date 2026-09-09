@@ -31,7 +31,7 @@ function cellStarts(lineText) {
   return starts
 }
 
-/** Move to the next table cell, or insert a new row at the end. */
+/** Move to the next table cell, or insert a new row at the end */
 function tableNextCell(view) {
   const { state } = view
   const { from, to } = state.selection.main
@@ -52,7 +52,7 @@ function tableNextCell(view) {
     view.dispatch({ selection: EditorSelection.cursor(target) })
     return true
   }
-  // Last cell: next row's first cell, or a new row with same columns.
+  // Last cell: next row's first cell, or a new row with same columns
   const lineEnd = line.to
   const nextStart = lineEnd + 1
   if (nextStart < state.doc.length) {
@@ -74,7 +74,7 @@ function tableNextCell(view) {
   return true
 }
 
-/** Move to the previous table cell, or the previous row's last cell. */
+/** Move to the previous table cell, or the previous row's last cell */
 function tablePrevCell(view) {
   const { state } = view
   const { from, to } = state.selection.main
@@ -94,7 +94,7 @@ function tablePrevCell(view) {
     view.dispatch({ selection: EditorSelection.cursor(line.from + pp + 1 + (sp ? sp[0].length : 0)) })
     return true
   }
-  // First cell: previous row's last cell.
+  // First cell: previous row's last cell
   const prevEnd = line.from - 1
   if (prevEnd <= 0) return false
   const prev = state.doc.lineAt(prevEnd)
@@ -111,7 +111,7 @@ function tablePrevCell(view) {
   return false
 }
 
-/** Enter in a table row inserts a new row with the same column count. */
+/** Enter in a table row inserts a new row with the same column count */
 function tableEnter(view) {
   const { state } = view
   const { from, to } = state.selection.main
@@ -130,7 +130,7 @@ function tableEnter(view) {
   return true
 }
 
-/** Backspace removes a full tab-width of trailing spaces at once. */
+/** Backspace removes a full tab-width of trailing spaces at once */
 function smartBackspace(view, prefsRef) {
   const { state } = view
   const { from, to } = state.selection.main
@@ -141,7 +141,7 @@ function smartBackspace(view, prefsRef) {
   const lineStart = before.lastIndexOf('\n') + 1
   const lineIndent = from - lineStart
   if (lineIndent === 0) return false
-  // Only when the chars immediately before the cursor are spaces.
+  // Only when the chars immediately before the cursor are spaces
   const line = state.doc.sliceString(lineStart, from)
   const trail = line.length - line.trimEnd().length
   if (trail <= 0) return false
@@ -154,13 +154,13 @@ function smartBackspace(view, prefsRef) {
   return true
 }
 
-/** Tab: table navigation first, then indent. */
+/** Tab: table navigation first, then indent */
 function tabAction(view, prefsRef) {
   if (tableNextCell(view)) return true
   return indentMore(view)
 }
 
-/** Shift+Tab: previous table cell, then outdent. */
+/** Shift+Tab: previous table cell, then outdent */
 function shiftTabAction(view, prefsRef) {
   if (tablePrevCell(view)) return true
   return indentLess(view)
@@ -219,7 +219,7 @@ function link(view) {
 
 /**
  * Build the glean keymap. callbacks.openImage is invoked for Ctrl+Shift+I
- * so the shell can open its hidden file picker.
+ * so the shell can open its hidden file picker
  */
 export function gleanKeymaps(prefsRef, callbacks) {
   return keymap.of([

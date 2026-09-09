@@ -19,17 +19,17 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
-// vaultAssets serves images the user imported into .glean/assets.
+// vaultAssets serves images the user imported into .glean/assets
 // Wails calls the AssetServer Handler only when the embedded bundle
 // misses (see assethandler.go), so frontend/Vite paths can never land
-// here; only /@assets/ requests do.
+// here; only /@assets/ requests do
 type vaultAssets struct {
-	// root returns the active vault path, or "" when no sky is open.
+	// root returns the active vault path, or "" when no sky is open
 	root func() string
 }
 
 // ServeHTTP is the asset fallback for Wails: it resolves the path
-// against the vaults .glean/assets dir and serves the file.
+// against the vaults .glean/assets dir and serves the file
 func (h vaultAssets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	root := h.root()
 	if root == "" {
@@ -42,7 +42,7 @@ func (h vaultAssets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	full := filepath.Join(root, filepath.FromSlash(rel))
-	// Only under .glean/assets, and never outside the vault.
+	// Only under .glean/assets, and never outside the vault
 	allowed := filepath.Join(root, ".glean", "assets")
 	dir := filepath.Dir(full)
 	if dir != allowed && !strings.HasPrefix(dir, allowed+string(os.PathSeparator)) {
@@ -92,7 +92,7 @@ func logError(msg string) {
 }
 
 func main() {
-	// CLI subcommands bypass the GUI entirely.
+	// CLI subcommands bypass the GUI entirely
 	if len(os.Args) > 1 {
 		os.Exit(cli.Run(os.Args[1:]))
 	}
@@ -112,7 +112,7 @@ func main() {
 		Frameless: true,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
-			// Fallback: serve user-imported vault images under /@assets/.
+			// Fallback: serve user-imported vault images under /@assets/
 			Handler: vaultAssets{root: func() string {
 				if app == nil {
 					return ""

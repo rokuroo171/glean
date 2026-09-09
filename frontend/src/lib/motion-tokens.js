@@ -1,6 +1,6 @@
 /**
- * Motion tokens. Durations, easings, distances, scales.
- * All component animation values must come from here.
+ * Motion tokens. Durations, easings, distances, scales
+ * All component animation values must come from here
  */
 export const motionTokens = {
   duration: {
@@ -31,7 +31,7 @@ export const motionTokens = {
 }
 
 /**
- * Named spring presets. Use these everywhere, no inline stiffness/damping.
+ * Named spring presets. Use these everywhere, no inline stiffness/damping
  */
 export const springs = {
   snappy:  { type: 'spring', stiffness: 300, damping: 30 },

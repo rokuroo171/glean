@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 
 /**
- * Hook that returns true when the user prefers reduced motion.
- * Wraps matchMedia safely for SSR/client hydration.
+ * Hook that returns true when the user prefers reduced motion
+ * Wraps matchMedia safely for SSR/client hydration
  */
 export function useReducedMotion() {
   const [reduced, setReduced] = useState(() => {
@@ -21,9 +21,9 @@ export function useReducedMotion() {
 }
 
 /**
- * Returns initial/animate/exit props that respect reduced motion.
- * When reduced: opacity-only fade, no transforms.
- * When normal: subtle slide-up + fade.
+ * Returns initial/animate/exit props that respect reduced motion
+ * When reduced: opacity-only fade, no transforms
+ * When normal: subtle slide-up + fade
  */
 export function useSafeMotion(distance = 16) {
   const reduce = useReducedMotion()

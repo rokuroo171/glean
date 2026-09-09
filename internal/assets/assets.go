@@ -1,10 +1,10 @@
-// Package assets manages images imported into a sky (vault).
+// Package assets manages images imported into a sky (vault)
 //
 // Imported files live in <sky>/.glean/assets/ so the note scanner
-// (which skips the .glean sidecar dir) never treats them as notes.
+// (which skips the .glean sidecar dir) never treats them as notes
 // Notes reference them with vault-relative paths, keeping the .md
 // files portable: the same note renders on any machine that has the
-// sky folder.
+// sky folder
 package assets
 
 import (
@@ -21,10 +21,10 @@ import (
 )
 
 // MaxImageBytes caps a single imported image. 20 MB is generous for
-// screenshots and photos while keeping the sidecar from ballooning.
+// screenshots and photos while keeping the sidecar from ballooning
 const MaxImageBytes = 20 << 20
 
-// Extensions glean accepts for imported images, keyed by lowercase ext.
+// Extensions glean accepts for imported images, keyed by lowercase ext
 var Extensions = map[string]bool{
 	".png":  true,
 	".jpg":  true,
@@ -34,19 +34,19 @@ var Extensions = map[string]bool{
 	".svg":  true,
 }
 
-// ErrTooLarge is returned when an image exceeds MaxImageBytes.
+// ErrTooLarge is returned when an image exceeds MaxImageBytes
 var ErrTooLarge = errors.New("image exceeds the 20 MB size limit")
 
-// ErrUnsupported is returned when the filename has no accepted extension.
+// ErrUnsupported is returned when the filename has no accepted extension
 var ErrUnsupported = errors.New("unsupported image format")
 
-// AssetsDir returns the sidecar assets folder for a sky.
+// AssetsDir returns the sidecar assets folder for a sky
 func AssetsDir(skyDir string) string {
 	return filepath.Join(store.SidecarDir(skyDir), "assets")
 }
 
-// uniqueName picks a safe filename inside dir that does not exist yet.
-// The original extension is preserved; duplicates get a numeric suffix.
+// uniqueName picks a safe filename inside dir that does not exist yet
+// The original extension is preserved; duplicates get a numeric suffix
 func uniqueName(dir, name string) (string, error) {
 	clean := filepath.Base(name)
 	if clean == "." || clean == string(filepath.Separator) {
@@ -58,7 +58,7 @@ func uniqueName(dir, name string) (string, error) {
 		return "", ErrUnsupported
 	}
 	// Reuse the title sanitizer the rest of the app uses for filenames,
-	// then re-append the real extension.
+	// then re-append the real extension
 	stem = store.SanitizeTitle(stem)
 	if stem == "" {
 		stem = "image"
@@ -78,7 +78,7 @@ func uniqueName(dir, name string) (string, error) {
 // ".glean/assets/sunset.png"). The file is written to a random temp
 // name first, then renamed into place once it has been read back and
 // hash-verified, so a failed copy never leaves a half-written image
-// behind.
+// behind
 func ImportImage(skyDir, name string, data []byte) (string, error) {
 	if len(data) == 0 {
 		return "", errors.New("empty image")
@@ -96,7 +96,7 @@ func ImportImage(skyDir, name string, data []byte) (string, error) {
 	}
 	full := filepath.Join(dir, rel)
 
-	// Write to a random temp file in the same dir, verify, then rename.
+	// Write to a random temp file in the same dir, verify, then rename
 	tmp := full + ".tmp-" + randHex(6)
 	if err := os.WriteFile(tmp, data, 0o644); err != nil {
 		return "", fmt.Errorf("write image: %w", err)
@@ -115,11 +115,11 @@ func ImportImage(skyDir, name string, data []byte) (string, error) {
 		return "", fmt.Errorf("finalize image: %w", err)
 	}
 	// The note embeds the vault-relative path with forward slashes so
-	// the same markdown reads the same on every OS.
+	// the same markdown reads the same on every OS
 	return filepath.ToSlash(filepath.Join(".glean", "assets", rel)), nil
 }
 
-// randHex returns n random bytes hex-encoded, for temp filenames.
+// randHex returns n random bytes hex-encoded, for temp filenames
 func randHex(n int) string {
 	b := make([]byte, n)
 	_, _ = rand.Read(b)

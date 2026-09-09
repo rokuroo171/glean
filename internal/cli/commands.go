@@ -15,7 +15,7 @@ import (
 	"github.com/glean/glean/internal/world"
 )
 
-// stageLabel returns a human-readable stage name for CLI output.
+// stageLabel returns a human-readable stage name for CLI output
 func stageLabel(s growth.Stage) string {
 	switch s {
 	case growth.FaintSpeck:
@@ -35,7 +35,7 @@ func stageLabel(s growth.Stage) string {
 
 const titleMaxLen = 60
 
-// printUsage prints the top-level help text to stdout.
+// printUsage prints the top-level help text to stdout
 func printUsage() {
 	fmt.Fprintln(os.Stdout, "glean - a notes app with lots of customization")
 	fmt.Fprintln(os.Stdout)
@@ -48,7 +48,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stdout, "  glean -h, --help          show this help")
 }
 
-// Run dispatches a CLI subcommand. Returns exit code.
+// Run dispatches a CLI subcommand. Returns exit code
 func Run(args []string) int {
 	if len(args) == 0 || args[0] == "-h" || args[0] == "--help" || args[0] == "help" {
 		printUsage()
@@ -82,7 +82,7 @@ func Run(args []string) int {
 }
 
 // resolveSkyDir returns the configured sky, bootstrapping a default one
-// when no pointer exists. Mirrors the app's transitional bootstrap.
+// when no pointer exists. Mirrors the app's transitional bootstrap
 func resolveSkyDir() (string, error) {
 	skyDir, ok, err := store.ResolveSky()
 	if err != nil {

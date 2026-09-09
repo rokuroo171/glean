@@ -27,7 +27,7 @@ export default function SkyPanel({ notes, trails, activeId, onOpenNote, onExpand
     ? notes.filter(n => n.title.toLowerCase().includes(q))
     : notes
 
-  // Fit all stars into the stage.
+  // Fit all stars into the stage
   const layout = useMemo(() => {
     if (visible.length === 0) return { points: [], scale: 1, ox: 0, oy: 0 }
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity

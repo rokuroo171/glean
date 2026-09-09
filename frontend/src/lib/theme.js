@@ -1,4 +1,4 @@
-/** Shared visual tokens. 8px grid, ref-aligned palette. */
+/** Shared visual tokens. 8px grid, ref-aligned palette */
 
 export const colors = {
   bg: '#0B0F19',

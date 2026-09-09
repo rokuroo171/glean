@@ -36,14 +36,14 @@ const iconBtn = {
   transition: 'background 160ms ease-out, transform 160ms ease-out',
 }
 
-/* New note prompt. Visible Create/Cancel buttons. */
+/* New note prompt. Visible Create/Cancel buttons */
 
 export default function NewNotePrompt({ title, onTitleChange, onSubmit, onCancel }) {
   const safeMotion = useSafeMotion(motionTokens.distance.md)
   const reducedMotion = useReducedMotion()
   const tapScale = reducedMotion ? 1 : motionTokens.scale.press
 
-  // Detect a path-style title: "Ideas/Deep/work" -> folder "Ideas/Deep", name "work".
+  // Detect a path-style title: "Ideas/Deep/work" -> folder "Ideas/Deep", name "work"
   const pathParts = (title || '').split(/[/\\]/).filter(Boolean)
   const pathFolder = pathParts.length > 1 ? pathParts.slice(0, -1).join('/') : ''
 
@@ -87,7 +87,7 @@ export default function NewNotePrompt({ title, onTitleChange, onSubmit, onCancel
           onFocus={(e) => { e.target.style.borderColor = colors.borderStrong }}
           onBlur={(e) => { e.target.style.borderColor = colors.border }}
         />
-        {/* Visible Create / Cancel buttons. Section 16 click-first. */}
+        {/* Visible Create / Cancel buttons. Section 16 click-first */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: space[2] }}>
           <motion.button
             whileHover={{ scale: motionTokens.scale.pop }}

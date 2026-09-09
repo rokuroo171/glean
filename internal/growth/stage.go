@@ -5,7 +5,7 @@ import (
 )
 
 // Stage represents the visual brightness phase of a note,
-// from a faint speck (FaintSpeck) to a brilliant star (BrilliantStar).
+// from a faint speck (FaintSpeck) to a brilliant star (BrilliantStar)
 type Stage int
 
 const (
@@ -16,7 +16,7 @@ const (
 	BrilliantStar             // visit_count 20+
 )
 
-// BrightnessStage returns the brightness stage for a note based solely on visit count.
+// BrightnessStage returns the brightness stage for a note based solely on visit count
 func BrightnessStage(n note.Note) Stage {
 	switch {
 	case n.VisitCount >= 20:

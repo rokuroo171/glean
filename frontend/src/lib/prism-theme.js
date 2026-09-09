@@ -1,7 +1,7 @@
 /**
  * Prism token theme mapped onto glean's CSS custom properties so code
- * highlighting adapts to every theme preset (midnight, paper, catppuccin, ...).
- * Injected once in main.jsx.
+ * highlighting adapts to every theme preset (midnight, paper, catppuccin, ...)
+ * Injected once in main.jsx
  */
 export const prismThemeCss = `
 code[class*="language-"],

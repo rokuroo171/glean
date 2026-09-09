@@ -18,7 +18,7 @@ export default function ManageSky({ currentSky, onSwitch, onClose }) {
   useEffect(() => {
     loadKnownSkies()
     // Auto-refresh while the modal is open: poll every 5s and refresh on
-    // window focus, so skies added/removed externally stay in sync.
+    // window focus, so skies added/removed externally stay in sync
     const id = setInterval(loadKnownSkies, 5000)
     const onFocus = () => loadKnownSkies()
     window.addEventListener('focus', onFocus)
@@ -52,7 +52,7 @@ export default function ManageSky({ currentSky, onSwitch, onClose }) {
     const path = await wails.App.PickFolder()
     if (!path) return
     // Adopt the picked folder as a sky: writes sky.json with the folder's
-    // name and registers it in KnownSkies (SwitchSky only repoints).
+    // name and registers it in KnownSkies (SwitchSky only repoints)
     try {
       const view = await wails.App.OpenSky(path)
       if (onSwitch) onSwitch(path, view?.sky_name)

@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-// ValidateInsideDir checks that target resolves to a path within root.
-// Returns an error if the path escapes the root via symlink or .. traversal.
+// ValidateInsideDir checks that target resolves to a path within root
+// Returns an error if the path escapes the root via symlink or .. traversal
 func ValidateInsideDir(root, target string) error {
 	absRoot, err := filepath.Abs(root)
 	if err != nil {
@@ -19,7 +19,7 @@ func ValidateInsideDir(root, target string) error {
 		return fmt.Errorf("resolve target: %w", err)
 	}
 	// Check prefix. filepath.Rel gives us the relative path; if it
-	// starts with ".." the target is outside root.
+	// starts with ".." the target is outside root
 	rel, err := filepath.Rel(absRoot, absTarget)
 	if err != nil {
 		return fmt.Errorf("path check: %w", err)
@@ -47,7 +47,7 @@ func isReserved(name string) bool {
 	return false
 }
 
-// SanitizeTitle makes a title safe as a Windows filename stem.
+// SanitizeTitle makes a title safe as a Windows filename stem
 func SanitizeTitle(title string) string {
 	replacer := strings.NewReplacer(
 		"<", "", ">", "", ":", "", `"`, "", "/", "",
@@ -65,7 +65,7 @@ func SanitizeTitle(title string) string {
 
 // FileNameFor returns a deduped .md path for a title inside a subfolder
 // of the sky directory. folder is the relative path from skyDir (empty for
-// root). It checks disk case-insensitively.
+// root). It checks disk case-insensitively
 func FileNameFor(skyDir, folder, title string) (string, error) {
 	stem := SanitizeTitle(title)
 	if stem == "" {
@@ -100,7 +100,7 @@ func FileNameFor(skyDir, folder, title string) (string, error) {
 
 // WriteNoteFile writes a note body in-place, preserving the existing
 // file handle so the Created timestamp is not reset on Windows (where
-// os.Rename over an existing file creates a new handle).
+// os.Rename over an existing file creates a new handle)
 func WriteNoteFile(path, body string) error {
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0o644)
 	if err != nil {
@@ -113,7 +113,7 @@ func WriteNoteFile(path, body string) error {
 	return nil
 }
 
-// ReadNoteFile reads a note body.
+// ReadNoteFile reads a note body
 func ReadNoteFile(path string) (string, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -122,7 +122,7 @@ func ReadNoteFile(path string) (string, error) {
 	return string(raw), nil
 }
 
-// DeleteNoteFile removes a note file.
+// DeleteNoteFile removes a note file
 func DeleteNoteFile(path string) error {
 	if err := os.Remove(path); err != nil {
 		return fmt.Errorf("delete note file: %w", err)
@@ -130,8 +130,8 @@ func DeleteNoteFile(path string) error {
 	return nil
 }
 
-// FolderOf returns the directory portion of a note's relative File path.
-// "glean/arch" -> "glean", "note" -> "".
+// FolderOf returns the directory portion of a note's relative File path
+// "glean/arch" -> "glean", "note" -> ""
 func FolderOf(file string) string {
 	dir := filepath.Dir(file)
 	if dir == "." {
@@ -141,7 +141,7 @@ func FolderOf(file string) string {
 }
 
 // CreateFolder is deprecated; use App.CreateFolder which creates a real
-// directory on disk.
+// directory on disk
 func CreateFolder(skyDir, folder, name string) (string, error) {
 	return FileNameFor(skyDir, folder, name)
 }

@@ -16,7 +16,7 @@ func setTestConfigDir(t *testing.T) string {
 		t.Setenv("APPDATA", dir)
 	case "darwin":
 		// macOS uses ~/Library/Application Support. Create the subdirs so
-		// AppConfigDir resolves into our temp tree.
+		// AppConfigDir resolves into our temp tree
 		libDir := filepath.Join(dir, "Library", "Application Support")
 		os.MkdirAll(libDir, 0o755)
 		t.Setenv("HOME", dir)
@@ -24,7 +24,7 @@ func setTestConfigDir(t *testing.T) string {
 		t.Setenv("XDG_CONFIG_HOME", dir)
 	}
 	// Return the actual config dir that AppConfigDir will resolve to,
-	// so callers can write files where the code expects them.
+	// so callers can write files where the code expects them
 	cfgDir, err := AppConfigDir()
 	if err != nil {
 		t.Fatal(err)

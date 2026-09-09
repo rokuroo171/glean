@@ -339,7 +339,7 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
   const [refreshing, setRefreshing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null) // folder path awaiting delete confirmation
   const [dropTarget, setDropTarget] = useState(null) // { id, position } for insertion line
-  // Prefer the folder list passed from the parent; fall back to our own scan.
+  // Prefer the folder list passed from the parent; fall back to our own scan
   const folderList = folders || localFolders
 
   // F2 key to rename selected note
@@ -407,7 +407,7 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
     setTimeout(fetchFolders, 100)
   }
 
-  // Move-to targets for a note: every folder except its current one.
+  // Move-to targets for a note: every folder except its current one
   function moveItemsFor(note) {
     if (!wails) return []
     const current = (note.folder || '').replace(/\\/g, '/')
@@ -420,7 +420,7 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
       } }))
   }
 
-  /** Drag-drop: move a note into the target folder. */
+  /** Drag-drop: move a note into the target folder */
   function handleDropNote(noteId, targetFolder) {
     if (!wails) return
     setDropTarget(null)
@@ -429,7 +429,7 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
       .catch(err => { if (window.alert) window.alert(String(err)) })
   }
 
-  /** Note-level drag-over: show insertion line between notes. */
+  /** Note-level drag-over: show insertion line between notes */
   function handleDragOverNote(noteId, position) {
     setDropTarget({ id: noteId, position })
   }

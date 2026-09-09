@@ -21,7 +21,7 @@ function makeView(doc, cursor, prefs = {}) {
 
 // CM6 scans bindings in order and runs the first whose key matches and
 // whose run returns true. Mirror that so markdownKeymap's Backspace
-// (deleteMarkupBackward) falls through to glean's smart backspace.
+// (deleteMarkupBackward) falls through to glean's smart backspace
 function runKey(view, key) {
   for (const map of view.state.facet(keymapFacet)) {
     for (const binding of map) {

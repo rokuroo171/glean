@@ -18,14 +18,14 @@ function measure(items) {
 }
 
 /**
- * Right-click context menu.
+ * Right-click context menu
  *
  * items: array of
  *   { id, type: 'separator' }                     -> divider
  *   { id, label, icon?, shortcut?, disabled?, onSelect? } -> item
  *
  * Children are wrapped; right-clicking them (or pressing the menu key /
- * Shift+F10 while they are focused) opens the menu at the cursor.
+ * Shift+F10 while they are focused) opens the menu at the cursor
  */
 export default function ContextMenu({ items, onSelect, width = 220, triggerStyle, children }) {
   const [pos, setPos] = useState(null)
@@ -70,7 +70,7 @@ export default function ContextMenu({ items, onSelect, width = 220, triggerStyle
     setPos({ left, top, width: w, height: h, origin: `${clamp(x - left, 0, w)}px ${clamp(y - top, 0, h)}px` })
     setActive(-1)
     setShown(false)
-    // Mount invisible, then flip to visible next frame so the transition plays.
+    // Mount invisible, then flip to visible next frame so the transition plays
     requestAnimationFrame(() => requestAnimationFrame(() => setShown(true)))
   }, [items, width, height])
 
@@ -78,7 +78,7 @@ export default function ContextMenu({ items, onSelect, width = 220, triggerStyle
     const it = listRef.current[index]
     if (!it || it.type === 'separator' || it.disabled) return
     // A submenu parent opens its nested menu instead of closing the whole
-    // menu (clicking the parent shouldn't dismiss everything).
+    // menu (clicking the parent shouldn't dismiss everything)
     if (it.submenu) {
       setOpenSubmenu(it.id)
       return
@@ -119,7 +119,7 @@ export default function ContextMenu({ items, onSelect, width = 220, triggerStyle
     }
   }, [steps])
 
-  // Focus the active item (or the menu) and keep it visible.
+  // Focus the active item (or the menu) and keep it visible
   useEffect(() => {
     if (!pos) return
     const node = active >= 0 ? itemRefs.current[active] : menuRef.current
@@ -129,11 +129,11 @@ export default function ContextMenu({ items, onSelect, width = 220, triggerStyle
     }
   }, [pos, active])
 
-  // Close on outside pointer down, scroll, resize, blur, or Escape.
+  // Close on outside pointer down, scroll, resize, blur, or Escape
   useEffect(() => {
     if (!pos) return
     // The nested submenu renders in its own portal; treat it as part of
-    // the menu so clicking its entries never counts as an outside click.
+    // the menu so clicking its entries never counts as an outside click
     const inside = (t) =>
       (menuRef.current && menuRef.current.contains(t)) ||
       (nestedRef.current && nestedRef.current.contains(t))
@@ -239,7 +239,7 @@ export default function ContextMenu({ items, onSelect, width = 220, triggerStyle
               onMouseEnter={() => {
                 if (it.disabled) return
                 // Hovering a submenu parent opens it; hovering any other
-                // item closes the open submenu so it never lingers.
+                // item closes the open submenu so it never lingers
                 if (it.submenu) setOpenSubmenu(it.id)
                 else setOpenSubmenu(null)
               }}
@@ -307,7 +307,7 @@ export default function ContextMenu({ items, onSelect, width = 220, triggerStyle
 function NestedMenu({ parent, anchor, onClose, innerRef }) {
   const ref = useRef(null)
   // Expose this popover's root node so the parent menu can treat it as
-  // inside the menu (clicks on nested entries must not close everything).
+  // inside the menu (clicks on nested entries must not close everything)
   useEffect(() => {
     if (innerRef) innerRef.current = ref.current
   }, [innerRef])
@@ -324,7 +324,7 @@ function NestedMenu({ parent, anchor, onClose, innerRef }) {
     let top = r.top
     if (top + h > document.documentElement.clientHeight - 8) top = Math.max(8, document.documentElement.clientHeight - h - 8)
     setPos({ left, top, width: 200, height: h })
-    // Mount invisible, flip visible next frame so the transition plays.
+    // Mount invisible, flip visible next frame so the transition plays
     requestAnimationFrame(() => requestAnimationFrame(() => setShown(true)))
   }, [anchor, parent])
 

@@ -2,7 +2,7 @@ package note
 
 import "time"
 
-// Note is a single markdown note with visit-tracking metadata.
+// Note is a single markdown note with visit-tracking metadata
 type Note struct {
 	ID              string    `json:"id"`
 	Title           string    `json:"title"`

@@ -27,7 +27,7 @@ const (
 )
 
 // EnableSnapLayouts adds WS_MAXIMIZEBOX to the window style so
-// Windows 11 shows the snap layout popup on maximize hover.
+// Windows 11 shows the snap layout popup on maximize hover
 func EnableSnapLayouts(hwnd uintptr) {
 	style, _, _ := procGetWindowLongW.Call(hwnd, GWL_STYLE)
 	if style&WS_MAXIMIZEBOX == 0 {
@@ -35,7 +35,7 @@ func EnableSnapLayouts(hwnd uintptr) {
 	}
 }
 
-// FindWindowByPID finds the first top-level window owned by the given process.
+// FindWindowByPID finds the first top-level window owned by the given process
 func FindWindowByPID(pid uint32) uintptr {
 	var found uintptr
 	procEnumWindows.Call(windows.NewCallback(func(hwnd uintptr, _ uintptr) bool {
