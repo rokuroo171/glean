@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { colors, space, typography } from '../lib/theme'
 import { usePreferences } from '../lib/preferences-context'
-import { createGleanView } from '../lib/editor'
-import { EditorView } from '@codemirror/view'
-import { undo, redo, undoDepth, redoDepth } from '@codemirror/commands'
+import MilkdownEditor, { useMilkdownCommands } from './MilkdownEditor'
+import { editorViewCtx } from '@milkdown/core'
+import { toggleStrongCommand, toggleEmphasisCommand, toggleInlineCodeCommand, wrapInBlockquoteCommand, wrapInBulletListCommand, createCodeBlockCommand } from '@milkdown/kit/preset/commonmark'
+import { toggleStrikethroughCommand } from '@milkdown/kit/preset/gfm'
+import { undoCommand, redoCommand } from '@milkdown/kit/plugin/history'
 import StarIcon from './StarIcon'
 import Icon from './Icon'
-import CursorTrail from './CursorTrail'
 import ContextMenu from './ContextMenu'
 import FindReplace from './FindReplace'
 
@@ -74,33 +75,47 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   }
   const { prefs } = usePreferences()
   const editorContainerRef = useRef(null)
-  const editorMountRef = useRef(null)
-  const viewRef = useRef(null)
+  const editorInstanceRef = useRef(null)
   const fileInputRef = useRef(null)
   const [currentHeading, setCurrentHeading] = useState(0)
   const [showFind, setShowFind] = useState(false)
   const [showReplace, setShowReplace] = useState(false)
   const [hist, setHist] = useState({ canUndo: false, canRedo: false })
-  const [viewState, setViewState] = useState(null)
   const animatedEnabled = prefs.editor.animated_text_enabled === true
   const [animItems, setAnimItems] = useState([])
-  const animTimerRef = useRef(null)
-  const lastSparkleRef = useRef(0)
-  const editorFont = prefs.editor.font_family || 'monospace'
-  const editorFontSize = prefs.editor.font_size || 14
-  const editorLineHeight = prefs.editor.line_height || 1.6
   const [linkPopup, setLinkPopup] = useState(null)
   const headings = useMemo(() => parseHeadings(body), [body])
   const debounceRef = useRef(null)
   const flushRef = useRef(null)
+  const { dispatchCommand, getView } = useMilkdownCommands(editorInstanceRef)
+
   flushRef.current = () => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     setDirty(false)
     onSaveNow()
   }
 
-  function updateLinkPopup(view, cursor) {
-    const text = view.state.doc.toString()
+  function insertWikilink(title) {
+    const view = getView()
+    if (!view) return
+    const head = view.state.selection.head
+    const text = view.state.doc.textBetween(0, head)
+    const openBracket = text.lastIndexOf('[[')
+    if (openBracket < 0) return
+    const link = `[[${title}]]`
+    view.dispatch(view.state.tr.insertText(link, openBracket, head))
+    setLinkPopup(null)
+    view.focus()
+  }
+
+  function handleSelectionChange(ctx, selection) {
+    const view = ctx.get(editorViewCtx)
+    const cursor = selection.head
+    const text = view.state.doc.textContent
+    if (onCursorChange) {
+      const before = text.slice(0, cursor)
+      onCursorChange({ line: before.split('\n').length, col: before.slice(before.lastIndexOf('\n') + 1).length + 1 })
+    }
     if (!noteNames || Object.keys(noteNames).length === 0) { setLinkPopup(null); return }
     const before = text.slice(0, cursor)
     const openBracket = before.lastIndexOf('[[')
@@ -108,131 +123,33 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     const afterOpen = before.slice(openBracket + 2)
     if (afterOpen.includes(']]') || afterOpen.includes('\n')) { setLinkPopup(null); return }
     const query = afterOpen.toLowerCase()
-    const matches = Object.keys(noteNames)
-      .filter(t => t.toLowerCase().includes(query) && t.toLowerCase() !== text.slice(openBracket + 2, cursor).toLowerCase())
-      .slice(0, 8)
+    const typed = text.slice(openBracket + 2, cursor).toLowerCase()
+    const matches = Object.keys(noteNames).filter(t => t.toLowerCase().includes(query) && t.toLowerCase() !== typed).slice(0, 8)
     if (matches.length === 0) { setLinkPopup(null); return }
     const coords = view.coordsAtPos(cursor)
     if (!coords) { setLinkPopup(null); return }
     setLinkPopup({ query, index: 0, pos: { top: coords.bottom + 4, left: coords.left } })
   }
 
-  function insertWikilink(title) {
-    const view = viewRef.current
-    if (!view) return
-    const cursor = view.state.selection.main.head
-    const text = view.state.doc.toString()
-    const openBracket = text.lastIndexOf('[[')
-    if (openBracket < 0) return
-    const link = `[[${title}]]`
-    view.dispatch({ changes: { from: openBracket, to: cursor, insert: link }, selection: { anchor: openBracket + link.length } })
-    setLinkPopup(null)
-    view.focus()
-  }
-
-  useEffect(() => {
-    const container = editorMountRef.current
-    if (!container) return
-    const view = createGleanView({
-      parent: container,
-      doc: body,
-      prefs,
-      callbacks: {
-        onBodyChange: (newBody) => {
-          onBodyChange(newBody)
-          setDirty(true)
-          if (debounceRef.current) clearTimeout(debounceRef.current)
-          debounceRef.current = setTimeout(() => flushRef.current(), (prefs.editor.autosave_interval || 3) * 1000)
-        },
-        onCursorChange: ({ line, col }) => {
-          if (onCursorChange) onCursorChange({ line, col })
-          const v = viewRef.current
-          if (v) updateLinkPopup(v, v.state.selection.main.head)
-        },
-        save: () => flushRef.current(),
-        openFind: () => { setShowFind(true); setShowReplace(false) },
-        openReplace: () => { setShowFind(true); setShowReplace(true) },
-        openImage: () => fileInputRef.current?.click(),
-        onPasteImage: () => {},
-        onDropImage: () => {},
-        onHistoryChange: () => {
-          const v = viewRef.current
-          if (v) setHist({ canUndo: undoDepth(v.state) > 0, canRedo: redoDepth(v.state) > 0 })
-        },
-      },
-    })
-    viewRef.current = view
-    setViewState(view)
-    setHist({ canUndo: undoDepth(view.state) > 0, canRedo: redoDepth(view.state) > 0 })
-    return () => { view.destroy(); viewRef.current = null; setViewState(null) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [note?.id])
-
-  useEffect(() => {
-    const view = viewRef.current
-    if (!view) return
-    const current = view.state.doc.toString()
-    if (current !== body) {
-      view.dispatch({ changes: { from: 0, to: current.length, insert: body } })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [body])
-
-  function jumpTo(offset, index) {
-    setCurrentHeading(index)
-    const view = viewRef.current
-    if (!view) return
-    const pos = Math.min(offset, view.state.doc.length)
-    view.dispatch({ selection: { anchor: pos }, effects: EditorView.scrollIntoView(pos, { y: 'start' }) })
-    view.focus()
+  function handleBodyChange(newBody) {
+    onBodyChange(newBody)
+    setDirty(true)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => flushRef.current(), (prefs.editor.autosave_interval || 3) * 1000)
   }
 
   const showOutline = headings.length >= 3
 
   const toolbarBtn = { background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', padding: '4px 6px', borderRadius: 4, fontSize: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }
 
-  function dispatchWrap(before, after) {
-    const view = viewRef.current
-    if (!view) return
-    const { from, to } = view.state.selection.main
-    view.dispatch({ changes: { from, to, insert: before + view.state.sliceDoc(from, to) + after } })
-    view.focus()
-  }
-
-  function insertQuote() {
-    const view = viewRef.current
-    if (!view) return
-    const { from } = view.state.selection.main
-    const line = view.state.doc.lineAt(from)
-    view.dispatch({ changes: { from: line.from, insert: '> ' } })
-    view.focus()
-  }
-
-  function insertBulletList() {
-    const view = viewRef.current
-    if (!view) return
-    const { from } = view.state.selection.main
-    const line = view.state.doc.lineAt(from)
-    view.dispatch({ changes: { from: line.from, insert: '- ' } })
-    view.focus()
-  }
-
-  function insertCodeFence() {
-    const view = viewRef.current
-    if (!view) return
-    const { from } = view.state.selection.main
-    view.dispatch({ changes: { from, insert: '```\n\n```' }, selection: { anchor: from + 4 } })
-    view.focus()
-  }
-
   const editorMenuItems = [
-    { label: 'Bold', action: () => dispatchWrap('**', '**') },
-    { label: 'Italic', action: () => dispatchWrap('*', '*') },
-    { label: 'Strikethrough', action: () => dispatchWrap('~~', '~~') },
-    { label: 'Inline code', action: () => dispatchWrap('`', '`') },
-    { label: 'Blockquote', action: insertQuote },
-    { label: 'Bullet list', action: insertBulletList },
-    { label: 'Code fence', action: insertCodeFence },
+    { label: 'Bold', action: () => dispatchCommand(toggleStrongCommand.key) },
+    { label: 'Italic', action: () => dispatchCommand(toggleEmphasisCommand.key) },
+    { label: 'Strikethrough', action: () => dispatchCommand(toggleStrikethroughCommand.key) },
+    { label: 'Inline code', action: () => dispatchCommand(toggleInlineCodeCommand.key) },
+    { label: 'Blockquote', action: () => dispatchCommand(wrapInBlockquoteCommand.key) },
+    { label: 'Bullet list', action: () => dispatchCommand(wrapInBulletListCommand.key) },
+    { label: 'Code fence', action: () => dispatchCommand(createCodeBlockCommand.key) },
   ]
 
   const breadcrumbParts = []
@@ -255,20 +172,20 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
           ))}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
-          <button type="button" style={{ ...toolbarBtn, opacity: hist.canUndo ? 1 : 0.3 }} onClick={() => { if (viewRef.current) { undo(viewRef.current); viewRef.current.focus() } }} title="Undo (Ctrl+Z)">
+          <button type="button" style={{ ...toolbarBtn, opacity: hist.canUndo ? 1 : 0.3 }} onClick={() => dispatchCommand(undoCommand.key)} title="Undo (Ctrl+Z)">
             <Icon name="undo" size={14} />
           </button>
-          <button type="button" style={{ ...toolbarBtn, opacity: hist.canRedo ? 1 : 0.3 }} onClick={() => { if (viewRef.current) { redo(viewRef.current); viewRef.current.focus() } }} title="Redo (Ctrl+Shift+Z)">
+          <button type="button" style={{ ...toolbarBtn, opacity: hist.canRedo ? 1 : 0.3 }} onClick={() => dispatchCommand(redoCommand.key)} title="Redo (Ctrl+Shift+Z)">
             <Icon name="redo" size={14} />
           </button>
           <div style={{ width: 1, height: 16, background: colors.border, margin: '0 4px' }} />
-          <button type="button" data-tip="Bold (Ctrl+B)" onClick={() => dispatchWrap('**', '**')} style={toolbarBtn}><Icon name="bold" size={14} /></button>
-          <button type="button" data-tip="Italic (Ctrl+I)" onClick={() => dispatchWrap('*', '*')} style={toolbarBtn}><Icon name="italic" size={14} /></button>
-          <button type="button" data-tip="Strikethrough" onClick={() => dispatchWrap('~~', '~~')} style={toolbarBtn}><Icon name="strikethrough" size={14} /></button>
-          <button type="button" data-tip="Inline code" onClick={() => dispatchWrap('`', '`')} style={toolbarBtn}><Icon name="code" size={14} /></button>
-          <button type="button" data-tip="Blockquote" onClick={insertQuote} style={toolbarBtn}><Icon name="quote" size={14} /></button>
-          <button type="button" data-tip="Bullet list" onClick={insertBulletList} style={toolbarBtn}><Icon name="list" size={14} /></button>
-          <button type="button" data-tip="Code fence" onClick={insertCodeFence} style={toolbarBtn}><Icon name="braces" size={14} /></button>
+          <button type="button" data-tip="Bold (Ctrl+B)" onClick={() => dispatchCommand(toggleStrongCommand.key)} style={toolbarBtn}><Icon name="bold" size={14} /></button>
+          <button type="button" data-tip="Italic (Ctrl+I)" onClick={() => dispatchCommand(toggleEmphasisCommand.key)} style={toolbarBtn}><Icon name="italic" size={14} /></button>
+          <button type="button" data-tip="Strikethrough" onClick={() => dispatchCommand(toggleStrikethroughCommand.key)} style={toolbarBtn}><Icon name="strikethrough" size={14} /></button>
+          <button type="button" data-tip="Inline code" onClick={() => dispatchCommand(toggleInlineCodeCommand.key)} style={toolbarBtn}><Icon name="code" size={14} /></button>
+          <button type="button" data-tip="Blockquote" onClick={() => dispatchCommand(wrapInBlockquoteCommand.key)} style={toolbarBtn}><Icon name="quote" size={14} /></button>
+          <button type="button" data-tip="Bullet list" onClick={() => dispatchCommand(wrapInBulletListCommand.key)} style={toolbarBtn}><Icon name="list" size={14} /></button>
+          <button type="button" data-tip="Code fence" onClick={() => dispatchCommand(createCodeBlockCommand.key)} style={toolbarBtn}><Icon name="braces" size={14} /></button>
         </div>
       </div>
       <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} />
@@ -283,23 +200,28 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
           ))}
         </div>
       )}
-      {showFind && <FindReplace viewRef={viewRef} showReplace={showReplace} onClose={() => { setShowFind(false); setShowReplace(false) }} />}
+      {showFind && <FindReplace viewRef={{ current: getView() }} showReplace={showReplace} onClose={() => { setShowFind(false); setShowReplace(false) }} />}
       <div style={{ flex: 1, minHeight: 0, minWidth: 0, display: 'flex' }}>
         {showOutline && (
           <div style={{ width: 180, borderRight: `1px solid ${colors.border}`, overflow: 'auto', padding: space[2], flexShrink: 0, background: 'rgba(11, 15, 25, 0.5)', backdropFilter: 'blur(8px)' }}>
             <div style={{ ...typography.sectionLabel, color: colors.textMuted, marginBottom: 6 }}>Outline</div>
             {headings.map((h, i) => (
-              <button key={i} type="button" onClick={() => jumpTo(h.offset, i)}
+              <button key={i} type="button" onClick={() => setCurrentHeading(i)}
                 style={{ display: 'block', width: '100%', textAlign: 'left', background: i === currentHeading ? 'rgba(180, 140, 80, 0.12)' : 'none', border: 'none', color: i === currentHeading ? colors.accent : colors.textMuted, fontSize: h.level === 1 ? 13 : h.level === 2 ? 12 : 11, fontWeight: h.level === 1 ? 600 : h.level === 2 ? 500 : 400, padding: '3px 6px', cursor: 'pointer', paddingLeft: 6 + (h.level - 1) * 10, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{h.text}</button>
             ))}
           </div>
         )}
         <div ref={editorContainerRef} style={{ flex: 1, minWidth: 0, minHeight: 0, position: 'relative', display: 'flex', flexDirection: 'column' }}>
-          {viewState && prefs.editor.cursor_trail_enabled !== false && prefs.editor.cursor_trail_mode !== 'off' && (
-            <CursorTrail key={note?.id} view={viewState} containerRef={editorContainerRef} />
-          )}
           <ContextMenu items={editorMenuItems} triggerStyle={{ display: 'contents' }}>
-            <div ref={editorMountRef} style={{ flex: 1, minHeight: 0 }} />
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <MilkdownEditor
+                key={note?.id}
+                markdown={body}
+                onMarkdownChange={handleBodyChange}
+                onSelectionChange={handleSelectionChange}
+                editorInstanceRef={editorInstanceRef}
+              />
+            </div>
           </ContextMenu>
           {linkPopup && (() => {
             const matches = Object.keys(noteNames).filter(t => t.toLowerCase().includes(linkPopup.query)).slice(0, 8)
