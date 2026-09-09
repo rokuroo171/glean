@@ -28,14 +28,16 @@ is something you set up; it's something that accumulates.
 - **Constellation** - notes rendered as stars you can pan and zoom, drag
   into place with spring physics, and open from a full-sky view; linked
   notes form lines and hubs
-- **Markdown** - GFM alerts, syntax-highlighted code blocks, clickable
-  task checkboxes, wikilinks
-- **Animated typing** - optional per-character entrance styles (fade,
-  drop, pop) and a sparkle on backspace
-- **Customization pane** - theme presets, accent colors, editor settings
-  (spelling squiggles, cursor trail with beam/sparkle/ink styles and
-  physics knobs), starfield knobs, star species colors, season preview
-- **Tabs** - notes open in tabs with a smooth close animation
+- **Editor** - WYSIWYG markdown editing (Milkdown on ProseMirror):
+  headings, lists, tables, task checkboxes, code blocks, quotes, and
+  links render as you write
+- **Note overlay** - rendered preview of a note with GFM alerts,
+  syntax-highlighted code, KaTeX math, and mermaid diagrams
+- **Customization pane** - theme presets, accent colors, layout density,
+  editor font/size/line height/tab width/autosave, starfield knobs,
+  star species colors, season preview
+- **Tabs** - notes open in tabs with a smooth close animation; open
+  tabs persist across restarts
 - **Ctrl+K** - command center: search, new note, replay the onboarding
   tour, and more
 - **Custom tooltips** - a portal-based tooltip layer replaces native
@@ -122,6 +124,7 @@ so the folder stays portable, syncable, and inspectable:
 - note bodies as `.md` files
 - `stats.json` - visits, streaks, activity
 - `trails.json` - pair-visit counts, what constellation lines are drawn from
+- `workspace.json` - open tabs and the active note
 - `sky.json` - the sky's name
 
 App-wide settings (preferences, known skies) live in the platform config

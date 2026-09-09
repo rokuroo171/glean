@@ -44,7 +44,12 @@ frontend/src/
   App.jsx        root: tabs, provider wiring, command center
   components/    every view: Home, Constellation, EditorPane,
                  FileExplorer, CustomizationPane, OnboardingTour, ...
+  components/    MilkdownEditor.jsx: the markdown editor (Milkdown on
+                 ProseMirror); EditorPane wraps it with toolbar, outline,
+                 and autosave
   lib/           theme.js (color tokens), apply-theme.js (presets),
+                 markdown.jsx (react-markdown pipeline for the note
+                 overlay: alerts, KaTeX, mermaid, prism),
                  preferences-context.jsx (prefs store contract)
   hooks/         useReducedMotion, etc.
   wailsjs/       generated bindings, do not hand-edit
@@ -129,7 +134,8 @@ We follow semver: minor for features, patch for fixes.
 
 - `go build ./...` must pass.
 - `cd frontend && npm run build` must pass.
-- The repo uses `go test` for pure functions if applicable.
+- `go test ./...` covers the store, wikilink, and other pure packages;
+  `npx vitest run` covers markdown parsing.
 - For visual features, run `wails build` and check the binary; the
   frontend dev server mocks the Go backend, so most UI can be tested in a
   browser first.
