@@ -159,7 +159,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, height: '100%', overflow: 'hidden' }}>
       {/* Title bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '6px 12px', borderBottom: `1px solid ${colors.border}`, flexShrink: 0, background: colors.bgElevated }}>
