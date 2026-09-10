@@ -132,8 +132,7 @@ directory: `%APPDATA%\glean` on Windows, `~/.config/glean` elsewhere.
 
 ## Contributing
 
-See `CONTRIBUTING.md` for the build workflow, architecture map, and code
-style conventions.
+See `CONTRIBUTING.md` for more
 
 ## License
 
