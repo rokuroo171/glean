@@ -1,29 +1,27 @@
 //go:build windows
 
+// Package winapi holds the small Windows-only shell tweaks glean needs on
+// top of what Wails exposes, e.g. the Win11 snap layouts flyout on the
+// frameless maximize button
 package winapi
 
 import (
-	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
 
 var (
-	user32                = windows.NewLazySystemDLL("user32.dll")
-	dwmapi                = windows.NewLazySystemDLL("dwmapi.dll")
-	procGetWindowLongW    = user32.NewProc("GetWindowLongW")
-	procSetWindowLongW    = user32.NewProc("SetWindowLongW")
-	procDwmSetWindowAttribute = dwmapi.NewProc("DwmSetWindowAttribute")
-	procEnumWindows       = user32.NewProc("EnumWindows")
+	user32                       = windows.NewLazySystemDLL("user32.dll")
+	procGetWindowLongW           = user32.NewProc("GetWindowLongW")
+	procSetWindowLongW           = user32.NewProc("SetWindowLongW")
+	procEnumWindows              = user32.NewProc("EnumWindows")
 	procGetWindowThreadProcessId = user32.NewProc("GetWindowThreadProcessId")
 )
 
 const (
-	GWL_STYLE                       = -16
-	WS_MAXIMIZEBOX                  = 0x00010000
-	DWMWA_USE_IMMERSIVE_DARK_MODE   = 20
-	DWMWA_WINDOW_CORNER_PREFERENCE  = 33
+	GWL_STYLE      = uintptr(0xFFFFFFFFFFFFFFF0) // GWL_STYLE is -16; two's complement keeps Call() happy
+	WS_MAXIMIZEBOX = 0x00010000
 )
 
 // EnableSnapLayouts adds WS_MAXIMIZEBOX to the window style so
@@ -38,14 +36,15 @@ func EnableSnapLayouts(hwnd uintptr) {
 // FindWindowByPID finds the first top-level window owned by the given process
 func FindWindowByPID(pid uint32) uintptr {
 	var found uintptr
-	procEnumWindows.Call(windows.NewCallback(func(hwnd uintptr, _ uintptr) bool {
+	cb := windows.NewCallback(func(hwnd, _ uintptr) uintptr {
 		var wpid uint32
 		procGetWindowThreadProcessId.Call(hwnd, uintptr(unsafe.Pointer(&wpid)))
 		if wpid == pid {
 			found = hwnd
-			return false
+			return 0
 		}
-		return true
-	}), 0)
+		return 1
+	})
+	procEnumWindows.Call(cb, 0)
 	return found
 }
