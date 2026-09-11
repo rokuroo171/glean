@@ -56,7 +56,9 @@ function blockPrefix(node) {
 }
 
 function decorationsFor(state) {
-  const head = state.selection.main.head
+  const sel = state.selection
+  const head = sel ? (sel.head ?? sel.from) : null
+  if (head == null) return DecorationSet.empty
   const $pos = state.doc.resolve(head)
   const decos = []
 
