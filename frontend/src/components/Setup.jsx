@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { colors, space, typography } from '../lib/theme'
 import { motionTokens } from '../lib/motion-tokens'
 import { useSafeMotion } from '../hooks/useReducedMotion'
-import { NightShell, primaryButton, ghostButton, WELCOME_SIZE, FORM_SIZE, resizeSetupWindow, unlockWindow } from './SetupChrome'
+import { NightShell, primaryButton, ghostButton, WELCOME_SIZE, FORM_SIZE, resizeSetupWindow } from './SetupChrome'
 import Icon from './Icon'
 
 const wails = window.go?.main
@@ -29,7 +29,6 @@ export default function Setup({ onComplete }) {
 
   useEffect(() => {
     resizeSetupWindow(WELCOME_SIZE)
-    return () => unlockWindow()
   }, [])
 
   function handleBrandNext() {

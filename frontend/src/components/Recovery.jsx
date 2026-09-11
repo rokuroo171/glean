@@ -3,7 +3,7 @@ import { motion } from 'motion/react'
 import { colors, space, typography } from '../lib/theme'
 import { motionTokens } from '../lib/motion-tokens'
 import { useSafeMotion } from '../hooks/useReducedMotion'
-import { NightShell, primaryButton, ghostButton, FORM_SIZE, resizeSetupWindow, unlockWindow } from './SetupChrome'
+import { NightShell, primaryButton, ghostButton, FORM_SIZE, resizeSetupWindow } from './SetupChrome'
 import Icon from './Icon'
 
 const wails = window.go?.main
@@ -14,10 +14,12 @@ export default function Recovery({ onCreateNew, onComplete }) {
   const [error, setError] = useState(null)
 
   // Recovery can be the boot gate when a configured sky vanished, so it
-  // owns the window pin the same way Setup does
+  // owns the window pin the same way Setup does. The pin is released by
+  // WorkspaceBoot when the workspace mounts, not on unmount: a cleanup
+  // here would also fire on the recovery-to-setup transition where the
+  // next gate pins the window again anyway
   useEffect(() => {
     resizeSetupWindow(FORM_SIZE)
-    return () => unlockWindow()
   }, [])
 
   async function locate() {

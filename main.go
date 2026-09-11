@@ -8,12 +8,14 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/glean/glean/internal/cli"
 	"github.com/glean/glean/internal/store"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	wailsrt "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 //go:embed all:frontend/dist
@@ -105,23 +107,30 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Boot the window at the gate's size: setup and recovery pin a smaller
-	// fixed window, and starting there avoids the big-window flash before
-	// the frontend resizes. Setup and recovery are told apart by the
-	// pointer: a configured sky whose folder vanished boots into recovery
+	// Boot gate screens (setup, recovery) at their fixed size and hidden:
+	// the frontend calls SetWindowSize on mount, which pins min=max and only
+	// then shows the window, so the window maps with size hints already in
+	// place. Tiling window managers on X11 and Wayland both read those hints
+	// at map time and float the window from the first frame; showing first
+	// and pinning later (the old order) gets tiled for a frame or two.
+	// Setup and recovery are told apart by the pointer: a configured sky
+	// whose folder vanished boots into recovery
 	width, height := 1200, 800
+	gate := false
 	if app.skyDir == "" {
 		width, height = 460, 340
+		gate = true
 		if p, ok, err := store.LoadPointer(); err == nil && ok && p.SkyPath != "" {
 			width, height = 760, 500
 		}
 	}
 
-	err = wails.Run(&options.App{
-		Title:     "glean",
-		Width:     width,
-		Height:    height,
-		Frameless: true,
+	runOptions := &options.App{
+		Title:       "glean",
+		Width:       width,
+		Height:      height,
+		StartHidden: gate,
+		Frameless:   true,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 			// Fallback: serve user-imported vault images under /@assets/
@@ -137,7 +146,18 @@ func main() {
 		Bind: []interface{}{
 			app,
 		},
-	})
+	}
+	if gate {
+		// Failsafe: the gates show the window through SetWindowSize. If the
+		// webview never loads, nothing would ever unhide the process
+		time.AfterFunc(10*time.Second, func() {
+			if app.ctx != nil {
+				wailsrt.WindowShow(app.ctx)
+			}
+		})
+	}
+
+	err = wails.Run(runOptions)
 	if err != nil {
 		msg := "glean: wails.Run failed: " + err.Error()
 		logError(msg)

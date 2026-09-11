@@ -81,8 +81,3 @@ export function NightShell({ children }) {
 export function resizeSetupWindow(size) {
   if (window.go?.main?.App?.SetWindowSize) window.go.main.App.SetWindowSize(size.w, size.h)
 }
-
-// Release the fixed-size pin so the workspace resizes normally again
-export function unlockWindow() {
-  if (window.go?.main?.App?.UnlockWindowSize) window.go.main.App.UnlockWindowSize()
-}

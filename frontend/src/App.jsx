@@ -10,6 +10,18 @@ import { colors } from './lib/theme'
 
 const wails = window.go?.main
 
+// Entering the workspace releases the gate's fixed-size pin. Hiding and
+// showing the window remaps it, so the window manager re-evaluates the
+// size hints (now unlocked) and tiles the workspace window; window
+// managers only read those hints at map time, so releasing the pin alone
+// would leave the workspace stuck floating in the gate's size
+function WorkspaceBoot() {
+  useEffect(() => {
+    if (wails?.App?.UnlockWindowSize) wails.App.UnlockWindowSize()
+  }, [])
+  return null
+}
+
 const ONBOARDING_STEPS = [
   { title: 'Your Sky is ready', body: 'A few quick pointers before you make it yours. You can skip this anytime.' },
   { title: 'Create your first note', body: 'Click the file icon with a plus to write your first thought. Notes live inside your Sky folder as markdown files.', target: '[data-tour="new-file"]' },
@@ -270,6 +282,7 @@ export default function App() {
   return (
     <PreferencesProvider>
     <div style={{ width: '100vw', height: '100vh', background: colors.bg, position: 'relative', overflow: 'hidden' }}>
+      <WorkspaceBoot />
       <TooltipLayer />
       <Workspace
         notes={notes}
