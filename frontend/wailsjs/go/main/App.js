@@ -162,6 +162,10 @@ export function SwitchSky(arg1) {
   return window['go']['main']['App']['SwitchSky'](arg1);
 }
 
+export function UnlockWindowSize() {
+  return window['go']['main']['App']['UnlockWindowSize']();
+}
+
 export function WaterNote(arg1) {
   return window['go']['main']['App']['WaterNote'](arg1);
 }
