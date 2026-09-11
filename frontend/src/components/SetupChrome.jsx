@@ -6,11 +6,24 @@ import { colors } from '../lib/theme'
 export const WELCOME_SIZE = { w: 460, h: 340 }
 export const FORM_SIZE = { w: 760, h: 500 }
 
-export const setupCard = {
-  background: colors.bgElevated,
-  border: `1px solid ${colors.border}`,
-  borderRadius: 10,
-  boxShadow: colors.shadow,
+export const primaryButton = {
+  background: colors.accent,
+  color: colors.bg,
+  border: 'none',
+  borderRadius: 6,
+  padding: '10px 24px',
+  fontSize: 14,
+  cursor: 'pointer',
+}
+
+export const ghostButton = {
+  background: 'none',
+  border: 'none',
+  color: colors.textMuted,
+  borderRadius: 6,
+  padding: '10px 24px',
+  fontSize: 14,
+  cursor: 'pointer',
 }
 
 // One sparse static starfield behind the pre-workspace gates. Static on

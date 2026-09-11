@@ -3,7 +3,7 @@ import { motion } from 'motion/react'
 import { colors, space, typography } from '../lib/theme'
 import { motionTokens } from '../lib/motion-tokens'
 import { useSafeMotion } from '../hooks/useReducedMotion'
-import { NightShell, setupCard, FORM_SIZE, resizeSetupWindow, unlockWindow } from './SetupChrome'
+import { NightShell, primaryButton, ghostButton, FORM_SIZE, resizeSetupWindow, unlockWindow } from './SetupChrome'
 import Icon from './Icon'
 
 const wails = window.go?.main
@@ -46,31 +46,28 @@ export default function Recovery({ onCreateNew, onComplete }) {
         transition={{ duration: motionTokens.duration.normal, ease: motionTokens.easing.smooth }}
         style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ ...setupCard, width: 460, padding: space[4], textAlign: 'center' }}>
+        <div style={{ width: 460, textAlign: 'center' }}>
           <motion.div style={{ ...typography.greeting, fontWeight: 300, color: colors.text, margin: 0, marginBottom: space[1] }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
             Your Sky is missing.
           </motion.div>
-          <motion.p style={{ ...typography.tagline, color: colors.textMuted, margin: 0 }}
+          <motion.p style={{ ...typography.tagline, color: colors.textMuted, margin: 0, marginBottom: space[4] }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
             The folder was moved or deleted. Locate it, or start a fresh sky.
           </motion.p>
 
-          {error && <motion.div role="alert" style={{ marginTop: space[2], fontSize: 12, color: '#b06060' }}
+          {error && <motion.div role="alert" style={{ marginBottom: space[2], fontSize: 12, color: '#b06060' }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}>{error}</motion.div>}
 
-          <motion.div style={{ display: 'flex', gap: space[2], justifyContent: 'center', marginTop: space[3] }}
+          <motion.div style={{ display: 'flex', gap: space[2], justifyContent: 'center' }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
             <motion.button whileTap={{ scale: 0.97 }} disabled={busy} onClick={locate}
-              style={{ background: colors.accent, color: '#0B0F19', border: 'none',
-                borderRadius: 6, padding: '10px 24px', fontSize: 14, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 6 }}>
+              style={{ ...primaryButton, display: 'flex', alignItems: 'center', gap: 6,
+                opacity: busy ? 0.4 : 1 }}>
               {busy ? 'opening...' : <><Icon name="search" size={14} /> Locate folder</>}
             </motion.button>
             <button type="button" onClick={onCreateNew}
-              style={{ background: 'none', border: `1px solid ${colors.border}`, color: colors.textMuted,
-                borderRadius: 6, padding: '10px 24px', fontSize: 14, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 6 }}>
+              style={{ ...ghostButton, display: 'flex', alignItems: 'center', gap: 6 }}>
               <Icon name="plus" size={14} /> Create a new one
             </button>
           </motion.div>
