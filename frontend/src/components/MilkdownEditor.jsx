@@ -221,11 +221,11 @@ export default function MilkdownEditor({ markdown, onMarkdownChange, onSelection
 export function useMilkdownCommands(editorInstanceRef) {
   const getEditor = () => editorInstanceRef.current?.get?.() || null
 
-  const dispatchCommand = (commandKey) => {
+  const dispatchCommand = (commandKey, ...args) => {
     const editor = getEditor()
     if (!editor) return
     try {
-      editor.action((ctx) => ctx.get(commandsCtx).call(commandKey))
+      editor.action((ctx) => ctx.get(commandsCtx).call(commandKey, ...args))
     } catch (e) {
       console.warn('Milkdown command failed:', commandKey, e)
     }

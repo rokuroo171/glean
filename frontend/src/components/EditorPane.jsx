@@ -3,7 +3,7 @@ import { colors, space, typography } from '../lib/theme'
 import { usePreferences } from '../lib/preferences-context'
 import MilkdownEditor, { useMilkdownCommands } from './MilkdownEditor'
 import { editorViewCtx } from '@milkdown/core'
-import { toggleStrongCommand, toggleEmphasisCommand, toggleInlineCodeCommand, wrapInBlockquoteCommand, wrapInBulletListCommand, createCodeBlockCommand } from '@milkdown/kit/preset/commonmark'
+import { toggleStrongCommand, toggleEmphasisCommand, toggleInlineCodeCommand, wrapInBlockquoteCommand, wrapInBulletListCommand, wrapInOrderedListCommand, createCodeBlockCommand, wrapInHeadingCommand, turnIntoTextCommand, insertHrCommand } from '@milkdown/kit/preset/commonmark'
 import { toggleStrikethroughCommand } from '@milkdown/kit/preset/gfm'
 import { undoCommand, redoCommand } from '@milkdown/kit/plugin/history'
 import StarIcon from './StarIcon'
@@ -13,6 +13,31 @@ import FindReplace from './FindReplace'
 
 const ANIM_SPARKLE_MS = 450
 let _animId = 0
+
+// Dead-space strip between the editor body and the pane edges. Left click
+// toggles centered reading width; right click opens the view menu. Only
+// these strips handle clicks, so the editor body's own context menu never
+// collides with the view menu
+function Gutter({ side, onToggle, menuItems, visible }) {
+  return (
+    <ContextMenu
+      items={menuItems}
+      width={230}
+      triggerStyle={{ display: 'contents' }}
+    >
+      <div
+        onClick={onToggle}
+        title="Click to toggle centered width"
+        style={{
+          width: visible ? 48 : 20,
+          flexShrink: 0,
+          cursor: 'pointer',
+          transition: 'width 0.18s ease',
+        }}
+      />
+    </ContextMenu>
+  )
+}
 
 function AnimItem({ a, accent }) {
   return (
@@ -73,7 +98,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     if (id && onOpenNote) { onOpenNote(id); return }
     if (!id && onNewNote) onNewNote(title)
   }
-  const { prefs } = usePreferences()
+  const { prefs, updatePrefs } = usePreferences()
   const editorContainerRef = useRef(null)
   const editorInstanceRef = useRef(null)
   const fileInputRef = useRef(null)
@@ -82,6 +107,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const [showReplace, setShowReplace] = useState(false)
   const [hist, setHist] = useState({ canUndo: false, canRedo: false })
   const animatedEnabled = prefs.editor.animated_text_enabled === true
+  const narrowWidth = prefs.editor.narrow_width === true
   const [animItems, setAnimItems] = useState([])
   const [linkPopup, setLinkPopup] = useState(null)
   const headings = useMemo(() => parseHeadings(body), [body])
@@ -142,14 +168,101 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
 
   const toolbarBtn = { background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', padding: '4px 6px', borderRadius: 4, fontSize: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }
 
+  // Selection helpers for the editor context menu. Commands need a
+  // non-collapsed selection; the menu itself runs with focus on the menu,
+  // so the ProseMirror selection survives
+  const selectionText = () => {
+    const view = getView()
+    if (!view) return ''
+    return view.state.doc.textBetween(view.state.selection.from, view.state.selection.to, ' ')
+  }
+
+  const copySelection = () => {
+    const text = selectionText()
+    if (text) navigator.clipboard?.writeText(text).catch(() => {})
+  }
+
+  const cutSelection = () => {
+    const view = getView()
+    if (!view) return
+    const text = selectionText()
+    if (!text) return
+    navigator.clipboard?.writeText(text).catch(() => {})
+    view.dispatch(view.state.tr.deleteSelection())
+    view.focus()
+  }
+
+  const pasteIntoSelection = () => {
+    const view = getView()
+    if (!view) return
+    navigator.clipboard?.readText()
+      .then((text) => {
+        if (text) view.dispatch(view.state.tr.insertText(text))
+        view.focus()
+      })
+      .catch(() => view.focus())
+  }
+
+  const selectAllInEditor = () => {
+    const view = getView()
+    if (!view) return
+    const { state } = view
+    view.dispatch(state.tr.setSelection(state.selection.constructor.create(state.doc, 0, state.doc.content.size)))
+    view.focus()
+  }
+
   const editorMenuItems = [
-    { label: 'Bold', action: () => dispatchCommand(toggleStrongCommand.key) },
-    { label: 'Italic', action: () => dispatchCommand(toggleEmphasisCommand.key) },
-    { label: 'Strikethrough', action: () => dispatchCommand(toggleStrikethroughCommand.key) },
-    { label: 'Inline code', action: () => dispatchCommand(toggleInlineCodeCommand.key) },
-    { label: 'Blockquote', action: () => dispatchCommand(wrapInBlockquoteCommand.key) },
-    { label: 'Bullet list', action: () => dispatchCommand(wrapInBulletListCommand.key) },
-    { label: 'Code fence', action: () => dispatchCommand(createCodeBlockCommand.key) },
+    { id: 'copy', label: 'Copy', icon: 'copy', disabled: !selectionText(), onSelect: copySelection },
+    { id: 'cut', label: 'Cut', icon: 'scissors', disabled: !selectionText(), onSelect: cutSelection },
+    { id: 'paste', label: 'Paste', icon: 'paste', onSelect: pasteIntoSelection },
+    { id: 'sep-clip', type: 'separator' },
+    {
+      id: 'format', label: 'Format', icon: 'pencil',
+      submenu: [
+        { id: 'fmt-bold', label: 'Bold', icon: 'bold', shortcut: 'Ctrl+B', onSelect: () => dispatchCommand(toggleStrongCommand.key) },
+        { id: 'fmt-italic', label: 'Italic', icon: 'italic', shortcut: 'Ctrl+I', onSelect: () => dispatchCommand(toggleEmphasisCommand.key) },
+        { id: 'fmt-strike', label: 'Strikethrough', icon: 'strikethrough', onSelect: () => dispatchCommand(toggleStrikethroughCommand.key) },
+        { id: 'fmt-code', label: 'Inline code', icon: 'code', onSelect: () => dispatchCommand(toggleInlineCodeCommand.key) },
+      ],
+    },
+    {
+      id: 'para', label: 'Paragraph', icon: 'layout-list',
+      submenu: [
+        { id: 'para-text', label: 'Body text', onSelect: () => dispatchCommand(turnIntoTextCommand.key) },
+        { id: 'para-h1', label: 'Heading 1', onSelect: () => dispatchCommand(wrapInHeadingCommand.key, 1) },
+        { id: 'para-h2', label: 'Heading 2', onSelect: () => dispatchCommand(wrapInHeadingCommand.key, 2) },
+        { id: 'para-h3', label: 'Heading 3', onSelect: () => dispatchCommand(wrapInHeadingCommand.key, 3) },
+        { id: 'para-quote', label: 'Quote', icon: 'quote', onSelect: () => dispatchCommand(wrapInBlockquoteCommand.key) },
+        { id: 'para-codeblock', label: 'Code block', icon: 'braces', onSelect: () => dispatchCommand(createCodeBlockCommand.key) },
+      ],
+    },
+    {
+      id: 'insert', label: 'Insert', icon: 'plus',
+      submenu: [
+        { id: 'ins-bullet', label: 'Bullet list', icon: 'list', onSelect: () => dispatchCommand(wrapInBulletListCommand.key) },
+        { id: 'ins-ordered', label: 'Numbered list', icon: 'list-ordered', onSelect: () => dispatchCommand(wrapInOrderedListCommand.key) },
+        { id: 'ins-rule', label: 'Divider', onSelect: () => dispatchCommand(insertHrCommand.key) },
+        { id: 'ins-link', label: 'Link to note', icon: 'link', onSelect: () => { const view = getView(); if (view) { view.dispatch(view.state.tr.insertText('[[')); view.focus() } } },
+        { id: 'ins-image', label: 'Image', icon: 'image', onSelect: () => fileInputRef.current?.click() },
+      ],
+    },
+    { id: 'sep-edit', type: 'separator' },
+    { id: 'select-all', label: 'Select all', onSelect: selectAllInEditor },
+  ]
+
+  const viewMenuItems = [
+    {
+      id: 'vw-width', label: narrowWidth ? 'Wide text' : 'Centered width', icon: 'columns',
+      onSelect: () => updatePrefs({ editor: { narrow_width: !narrowWidth } }),
+    },
+    {
+      id: 'vw-wrap', label: 'Word wrap', icon: 'replace',
+      onSelect: () => updatePrefs({ editor: { word_wrap: prefs.editor.word_wrap !== false } }),
+    },
+    {
+      id: 'vw-linenum', label: 'Line numbers', icon: 'layout-list',
+      onSelect: () => updatePrefs({ editor: { line_numbers: prefs.editor.line_numbers !== true } }),
+    },
   ]
 
   const breadcrumbParts = []
@@ -212,17 +325,21 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
           </div>
         )}
         <div ref={editorContainerRef} style={{ flex: 1, minWidth: 0, minHeight: 0, position: 'relative', display: 'flex', flexDirection: 'column' }}>
+          <Gutter side="left" onToggle={() => updatePrefs({ editor: { narrow_width: !narrowWidth } })} menuItems={viewMenuItems} visible={narrowWidth} />
           <ContextMenu items={editorMenuItems} triggerStyle={{ display: 'contents' }}>
-            <div style={{ flex: 1, minHeight: 0 }}>
-              <MilkdownEditor
-                key={note?.id}
-                markdown={body}
-                onMarkdownChange={handleBodyChange}
-                onSelectionChange={handleSelectionChange}
-                editorInstanceRef={editorInstanceRef}
-              />
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', justifyContent: narrowWidth ? 'center' : 'stretch' }}>
+              <div style={narrowWidth ? { width: '100%', maxWidth: 720, minWidth: 0 } : { flex: 1, minWidth: 0, minHeight: 0 }}>
+                <MilkdownEditor
+                  key={note?.id}
+                  markdown={body}
+                  onMarkdownChange={handleBodyChange}
+                  onSelectionChange={handleSelectionChange}
+                  editorInstanceRef={editorInstanceRef}
+                />
+              </div>
             </div>
           </ContextMenu>
+          <Gutter side="right" onToggle={() => updatePrefs({ editor: { narrow_width: !narrowWidth } })} menuItems={viewMenuItems} visible={narrowWidth} />
           {linkPopup && (() => {
             const matches = Object.keys(noteNames).filter(t => t.toLowerCase().includes(linkPopup.query)).slice(0, 8)
             if (matches.length === 0) return null

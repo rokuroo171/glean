@@ -1,8 +1,8 @@
 package main
 
 import (
-	"context"
 	"archive/zip"
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -1042,6 +1042,7 @@ type EditorPrefsView struct {
 	AutosaveInterval          int     `json:"autosave_interval"`
 	WordWrap                  bool    `json:"word_wrap"`
 	LineNumbers               bool    `json:"line_numbers"`
+	NarrowWidth               bool    `json:"narrow_width"`
 }
 
 type SkyPrefsView struct {
@@ -1092,6 +1093,7 @@ func (a *App) GetPreferences() PreferencesView {
 			AutosaveInterval:          p.Editor.AutosaveInterval,
 			WordWrap:                  p.Editor.WordWrap == nil || *p.Editor.WordWrap,
 			LineNumbers:               p.Editor.LineNumbers != nil && *p.Editor.LineNumbers,
+			NarrowWidth:               p.Editor.NarrowWidth != nil && *p.Editor.NarrowWidth,
 		},
 		Sky: SkyPrefsView{
 			Density:        p.Sky.Density,
@@ -1214,6 +1216,7 @@ func (a *App) SavePreferences(p PreferencesView) error {
 			AutosaveInterval:          p.Editor.AutosaveInterval,
 			WordWrap:                  &p.Editor.WordWrap,
 			LineNumbers:               &p.Editor.LineNumbers,
+			NarrowWidth:               &p.Editor.NarrowWidth,
 		},
 		Sky: store.SkyPrefs{
 			Density:        p.Sky.Density,
