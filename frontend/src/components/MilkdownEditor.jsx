@@ -5,6 +5,7 @@ import { commonmark } from '@milkdown/kit/preset/commonmark'
 import { gfm } from '@milkdown/kit/preset/gfm'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
 import { history } from '@milkdown/kit/plugin/history'
+import { $prose } from '@milkdown/kit/utils'
 import { syntaxReveal } from '../lib/extensions/syntaxReveal'
 
 const editorStyles = `
@@ -169,13 +170,15 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       .use(gfm)
       .use(listener)
       .use(history)
-      .use(syntaxReveal())
+      .use($prose(syntaxReveal))
   }, [])
 
   useEffect(() => {
-    if (get && !loading) {
-      editorInstanceRef.current = { get }
-    }
+    if (!get || loading) return
+    const ed = get()
+    if (!ed) return
+    editorInstanceRef.current = { get }
+    if (import.meta.env.DEV) window.__glean_view = ed.action((ctx) => ctx.get(editorViewCtx))
   }, [get, loading, editorInstanceRef])
 
   // Push external markdown (async body load, note switch) into the editor
