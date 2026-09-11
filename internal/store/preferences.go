@@ -61,6 +61,7 @@ type EditorPrefs struct {
 	AutosaveInterval          int     `json:"autosave_interval"`            // seconds, default 3
 	WordWrap                  *bool   `json:"word_wrap"`                    // nil = true (default)
 	LineNumbers               *bool   `json:"line_numbers"`                 // nil = false (default)
+	NarrowWidth               *bool   `json:"narrow_width"`                 // nil = false (default); center the text column for reading
 }
 
 // DefaultPreferences returns the built-in defaults
@@ -70,6 +71,7 @@ func DefaultPreferences() Preferences {
 	nebula := true
 	wrap := true
 	lineNums := false
+	narrowOff := false
 	return Preferences{
 		Theme: ThemePrefs{
 			Preset:    "midnight",
@@ -108,6 +110,7 @@ func DefaultPreferences() Preferences {
 			AutosaveInterval:          3,
 			WordWrap:                  &wrap,
 			LineNumbers:               &lineNums,
+			NarrowWidth:               &narrowOff,
 		},
 	}
 }

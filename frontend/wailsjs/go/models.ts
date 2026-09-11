@@ -19,6 +19,7 @@ export namespace main {
 	    autosave_interval: number;
 	    word_wrap: boolean;
 	    line_numbers: boolean;
+	    narrow_width: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new EditorPrefsView(source);
@@ -44,6 +45,7 @@ export namespace main {
 	        this.autosave_interval = source["autosave_interval"];
 	        this.word_wrap = source["word_wrap"];
 	        this.line_numbers = source["line_numbers"];
+	        this.narrow_width = source["narrow_width"];
 	    }
 	}
 	export class KnownSkyView {
