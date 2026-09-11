@@ -5,6 +5,7 @@ import { commonmark } from '@milkdown/kit/preset/commonmark'
 import { gfm } from '@milkdown/kit/preset/gfm'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
 import { history } from '@milkdown/kit/plugin/history'
+import { syntaxReveal } from '../lib/extensions/syntaxReveal'
 
 const editorStyles = `
   [data-milkdown-root] {
@@ -135,6 +136,13 @@ const editorStyles = `
   .milkdown strong { font-weight: 700; }
   .milkdown em { font-style: italic; }
   .milkdown del { text-decoration: line-through; opacity: 0.75; }
+  .glean-syntax-mark {
+    color: rgba(139, 148, 158, 0.6);
+    font-weight: 400;
+    font-style: normal;
+    text-decoration: none;
+    user-select: none;
+  }
 `
 
 function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInstanceRef }) {
@@ -161,6 +169,7 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       .use(gfm)
       .use(listener)
       .use(history)
+      .use(syntaxReveal())
   }, [])
 
   useEffect(() => {
