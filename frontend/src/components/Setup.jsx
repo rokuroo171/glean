@@ -1,16 +1,12 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { colors, space, typography } from '../lib/theme'
 import { motionTokens } from '../lib/motion-tokens'
 import { useSafeMotion } from '../hooks/useReducedMotion'
+import { NightShell, setupCard, WELCOME_SIZE, FORM_SIZE, resizeSetupWindow, unlockWindow } from './SetupChrome'
 import Icon from './Icon'
 
 const wails = window.go?.main
-
-// Fixed setup window sizes. Both ends are pinned by the backend, so every
-// window manager floats the window like a dialog instead of tiling it
-const WELCOME_SIZE = { w: 460, h: 340 }
-const FORM_SIZE = { w: 760, h: 500 }
 
 const RESERVED = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i
 
@@ -20,55 +16,7 @@ function validSkyName(name) {
   return clean
 }
 
-const card = {
-  background: colors.bgElevated,
-  border: `1px solid ${colors.border}`,
-  borderRadius: 10,
-  boxShadow: colors.shadow,
-}
-
-// One sparse static starfield behind every setup screen. Static on purpose:
-// nothing in the setup may loop (DESIGN.md motion dial), the constellation
-// view is where stars come alive later
-function Starfield() {
-  const stars = useMemo(() => {
-    // Seeded so the sky is the same sky on every launch of the setup
-    let seed = 20260910
-    const rand = () => {
-      seed = (seed * 1103515245 + 12345) % 2147483648
-      return seed / 2147483648
-    }
-    return Array.from({ length: 56 }, (_, i) => ({
-      id: i,
-      x: rand() * 100,
-      y: rand() * 100,
-      size: rand() < 0.85 ? 1 : 2,
-      opacity: 0.12 + rand() * 0.5,
-    }))
-  }, [])
-  return (
-    <div aria-hidden="true" style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-      {stars.map(s => (
-        <div key={s.id} style={{
-          position: 'absolute', left: `${s.x}%`, top: `${s.y}%`,
-          width: s.size, height: s.size, borderRadius: '50%',
-          background: colors.text, opacity: s.opacity,
-        }} />
-      ))}
-    </div>
-  )
-}
-
-// Invisible strip across the top so the fixed window can still be dragged
-function DragStrip() {
-  if (!window.runtime) return null
-  return <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 28,
-    '--wails-draggable': 'drag', zIndex: 40 }} />
-}
-
-function resize(size) {
-  if (wails?.App?.SetWindowSize) wails.App.SetWindowSize(size.w, size.h)
-}
+const card = setupCard
 
 export default function Setup({ onComplete }) {
   const safeMotion = useSafeMotion(24)
@@ -82,14 +30,12 @@ export default function Setup({ onComplete }) {
   const cleaned = validSkyName(name)
 
   useEffect(() => {
-    resize(WELCOME_SIZE)
-    return () => {
-      if (wails?.App?.UnlockWindowSize) wails.App.UnlockWindowSize()
-    }
+    resizeSetupWindow(WELCOME_SIZE)
+    return () => unlockWindow()
   }, [])
 
   function handleBrandNext() {
-    resize(FORM_SIZE)
+    resizeSetupWindow(FORM_SIZE)
     setMode('choice')
   }
 
@@ -150,13 +96,7 @@ export default function Setup({ onComplete }) {
   const isFolderMode = mode === 'folder'
   const formScreen = mode === 'name' || mode === 'folder'
 
-  const shell = (children) => (
-    <div style={{ position: 'absolute', inset: 0, background: colors.bg, zIndex: 30 }}>
-      <Starfield />
-      <DragStrip />
-      {children}
-    </div>
-  )
+  const shell = (children) => <NightShell>{children}</NightShell>
 
   if (mode === 'brand') {
     return shell(
