@@ -923,8 +923,9 @@ func (a *App) DeleteFolder(folder string) error {
 // SetWindowSize resizes the OS window and pins min and max size to the
 // same value. Fixed-size windows carry a size hint every platform reads:
 // tiling window managers (i3, sway, Hyprland) float them like dialogs, and
-// Windows disables the resize border. The setup screens use this so the
-// first-run window is never tiled, without any per-WM workaround.
+// Windows disables the resize border. The window boots hidden for gate
+// screens, so this is also the first show: by the time the window maps,
+// the pin is already set, and tiled first frames never happen.
 // UnlockWindowSize removes the pin and restores normal resizing.
 func (a *App) SetWindowSize(width, height int) {
 	if a.ctx == nil {
@@ -933,18 +934,25 @@ func (a *App) SetWindowSize(width, height int) {
 	wailsrt.WindowSetMinSize(a.ctx, width, height)
 	wailsrt.WindowSetMaxSize(a.ctx, width, height)
 	wailsrt.WindowSetSize(a.ctx, width, height)
+	wailsrt.WindowShow(a.ctx)
 	wailsrt.WindowCenter(a.ctx)
 }
 
 // UnlockWindowSize removes the fixed-size pin from SetWindowSize so the
-// workspace behaves like a normal resizable window again
+// workspace behaves like a normal resizable window again. The window is
+// hidden and shown in the same breath: window managers only read size
+// hints when the window maps, so a window that mapped while pinned stays
+// floating forever; remapping it unpinned lets the WM tile it like any
+// other resizable window
 func (a *App) UnlockWindowSize() {
 	if a.ctx == nil {
 		return
 	}
+	wailsrt.WindowHide(a.ctx)
 	wailsrt.WindowSetMinSize(a.ctx, 0, 0)
 	wailsrt.WindowSetMaxSize(a.ctx, 0, 0)
 	wailsrt.WindowSetSize(a.ctx, 1200, 800)
+	wailsrt.WindowShow(a.ctx)
 	wailsrt.WindowCenter(a.ctx)
 }
 
