@@ -105,10 +105,22 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Boot the window at the gate's size: setup and recovery pin a smaller
+	// fixed window, and starting there avoids the big-window flash before
+	// the frontend resizes. Setup and recovery are told apart by the
+	// pointer: a configured sky whose folder vanished boots into recovery
+	width, height := 1200, 800
+	if app.skyDir == "" {
+		width, height = 460, 340
+		if p, ok, err := store.LoadPointer(); err == nil && ok && p.SkyPath != "" {
+			width, height = 760, 500
+		}
+	}
+
 	err = wails.Run(&options.App{
 		Title:     "glean",
-		Width:     1200,
-		Height:    800,
+		Width:     width,
+		Height:    height,
 		Frameless: true,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
@@ -120,7 +132,7 @@ func main() {
 				return app.skyDir
 			}},
 		},
-		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
+		BackgroundColour: &options.RGBA{R: 11, G: 15, B: 25, A: 1},
 		OnStartup:        app.startup,
 		Bind: []interface{}{
 			app,
