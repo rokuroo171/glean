@@ -920,13 +920,31 @@ func (a *App) DeleteFolder(folder string) error {
 	return nil
 }
 
-// SetWindowSize resizes the OS window. Used by the setup intro to show a
-// small welcome card, then expand to full size for the setup forms
+// SetWindowSize resizes the OS window and pins min and max size to the
+// same value. Fixed-size windows carry a size hint every platform reads:
+// tiling window managers (i3, sway, Hyprland) float them like dialogs, and
+// Windows disables the resize border. The setup screens use this so the
+// first-run window is never tiled, without any per-WM workaround.
+// UnlockWindowSize removes the pin and restores normal resizing.
 func (a *App) SetWindowSize(width, height int) {
 	if a.ctx == nil {
 		return
 	}
+	wailsrt.WindowSetMinSize(a.ctx, width, height)
+	wailsrt.WindowSetMaxSize(a.ctx, width, height)
 	wailsrt.WindowSetSize(a.ctx, width, height)
+	wailsrt.WindowCenter(a.ctx)
+}
+
+// UnlockWindowSize removes the fixed-size pin from SetWindowSize so the
+// workspace behaves like a normal resizable window again
+func (a *App) UnlockWindowSize() {
+	if a.ctx == nil {
+		return
+	}
+	wailsrt.WindowSetMinSize(a.ctx, 0, 0)
+	wailsrt.WindowSetMaxSize(a.ctx, 0, 0)
+	wailsrt.WindowSetSize(a.ctx, 1200, 800)
 	wailsrt.WindowCenter(a.ctx)
 }
 
