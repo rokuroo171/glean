@@ -66,7 +66,7 @@ export default function NewNotePrompt({ title, onTitleChange, onSubmit, onCancel
         width: 340,
       }}>
         <div style={{ fontSize: 13, color: colors.textMuted, marginBottom: space[2] }}>
-          title{pathFolder && <span style={{ color: colors.accent }}> -> {pathFolder}/</span>}
+          title{pathFolder && <span style={{ color: colors.accent }}>{' -> '}{pathFolder}/</span>}
         </div>
         <input
           autoFocus
