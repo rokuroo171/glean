@@ -8,17 +8,17 @@ import { Decoration, DecorationSet } from 'prosemirror-view'
 export const syntaxRevealKey = new PluginKey('glean-syntax-reveal')
 
 const BLOCK_NODES = ['heading', 'blockquote', 'list_item', 'code_block']
-const INLINE_MARKS = ['strong', 'emphasis', 'inline_code', 'strike_through', 'link']
+const INLINE_MARKS = ['strong', 'emphasis', 'inlineCode', 'strike_through', 'link']
 
 // Inline marks render as a pair around their content
 const INLINE_PAIR = {
   strong: ['**', '**'],
   emphasis: ['*', '*'],
-  inline_code: ['`', '`'],
+  inlineCode: ['`', '`'],
   strike_through: ['~~', '~~'],
 }
 
-function markWidget(text, side) {
+function markWidget(text) {
   return () => {
     const span = document.createElement('span')
     span.className = 'glean-syntax-mark'
@@ -28,26 +28,27 @@ function markWidget(text, side) {
   }
 }
 
-function pushInlineMark(decos, node, mark) {
+function pushInlineMark(decos, from, to, mark) {
   const type = mark.type.name
   if (type === 'link') {
-    decos.push(Decoration.widget(node.from, markWidget('['), { side: -1 }))
-    decos.push(Decoration.widget(node.to, markWidget(`](${mark.attrs.href ?? ''})`), { side: 1 }))
+    decos.push(Decoration.widget(from, markWidget('['), { side: -1 }))
+    decos.push(Decoration.widget(to, markWidget(`](${mark.attrs.href ?? ''})`), { side: 1 }))
     return
   }
   const [open, close] = INLINE_PAIR[type] || []
   if (!open) return
-  decos.push(Decoration.widget(node.from, markWidget(open), { side: -1 }))
-  decos.push(Decoration.widget(node.to, markWidget(close), { side: 1 }))
+  decos.push(Decoration.widget(from, markWidget(open), { side: -1 }))
+  decos.push(Decoration.widget(to, markWidget(close), { side: 1 }))
 }
 
-function blockPrefix(node) {
+function blockPrefix(node, $pos, depth) {
   switch (node.type.name) {
     case 'heading': return '#'.repeat(node.attrs.level || 1) + ' '
     case 'blockquote': return '> '
     case 'code_block': return '```'
     case 'list_item': {
-      const list = node.parent
+      // ResolvedPos nodes have no parent backlink, walk the resolve path
+      const list = depth > 0 ? $pos.node(depth - 1) : null
       if (list?.type.name === 'ordered_list') return `${list.attrs.order ?? 1}. `
       return '- '
     }
@@ -63,25 +64,29 @@ function decorationsFor(state) {
   const decos = []
 
   // Deepest block ancestor at the caret gets a prefix mark
+  // nodes carry no from/to, derive bounds from the resolved position
   for (let d = $pos.depth; d >= 0; d--) {
     const node = $pos.node(d)
     if (!BLOCK_NODES.includes(node.type.name)) continue
-    const prefix = blockPrefix(node)
+    const from = $pos.start(d) - 1
+    const prefix = blockPrefix(node, $pos, d)
     if (prefix) {
-      decos.push(Decoration.widget(node.from, markWidget(prefix), { side: -1 }))
+      decos.push(Decoration.widget(from, markWidget(prefix), { side: -1 }))
     }
     if (node.type.name === 'code_block') {
-      decos.push(Decoration.widget(node.to, markWidget('```'), { side: 1 }))
+      decos.push(Decoration.widget($pos.end(d) + 1, markWidget('```'), { side: 1 }))
     }
     break
   }
 
   // Inline marks whose range touches the caret get a pair around it
-  state.doc.descendants(node => {
+  // ProseMirror nodes carry no from/to, the callback pos is the node start
+  state.doc.descendants((node, pos) => {
+    const to = pos + node.nodeSize
     for (const mark of node.marks) {
       if (!INLINE_MARKS.includes(mark.type.name)) continue
-      if (head < node.from || head > node.to) continue
-      pushInlineMark(decos, node, mark)
+      if (head < pos || head > to) continue
+      pushInlineMark(decos, pos, to, mark)
     }
   })
 
