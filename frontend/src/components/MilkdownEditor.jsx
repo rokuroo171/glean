@@ -178,7 +178,6 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
     const ed = get()
     if (!ed) return
     editorInstanceRef.current = { get }
-    if (import.meta.env.DEV) window.__glean_view = ed.action((ctx) => ctx.get(editorViewCtx))
   }, [get, loading, editorInstanceRef])
 
   // Push external markdown (async body load, note switch) into the editor
