@@ -9,15 +9,29 @@ import { $nodeSchema } from '@milkdown/kit/utils'
 // normalizes it back to the author's original form, so files stay untouched
 const BR_RE = /<br\s*\/?>/gi
 
-// Fenced blocks and inline code keep their <br> text literal; only prose and
-// table cells get the rescued form
+// Line-based scan: fenced blocks (including inside blockquotes) keep their <br>
+// text literal; prose lines rescue <br> variants except inside inline code
+// spans, which the backreference pattern matches even when the code contains
+// backticks (the `` ```js `` case that breaks naive fence pairing)
+const FENCE_LINE_RE = /^\s{0,3}(?:>\s?)*(```|~~~)/
+const INLINE_CODE_OR_BR_RE = /(`+)[\s\S]*?\1(?!`)|<br\s*\/?>/gi
+
 export function rescueSourceBrs(md) {
   if (!md || md.indexOf('<br') === -1) return md
-  const parts = md.split(/(```[\s\S]*?(?:```|$)|~~~[\s\S]*?(?:~~~|$)|`[^`\n]*`)/g)
-  for (let i = 0; i < parts.length; i += 2) {
-    parts[i] = parts[i].replace(BR_RE, '<br data-glean>')
-  }
-  return parts.join('')
+  let inFence = false
+  return md
+    .split('\n')
+    .map((line) => {
+      if (FENCE_LINE_RE.test(line)) {
+        inFence = !inFence
+        return line
+      }
+      if (inFence) return line
+      return line.replace(INLINE_CODE_OR_BR_RE, (m, fenceRun) =>
+        fenceRun !== undefined ? m : '<br data-glean>'
+      )
+    })
+    .join('\n')
 }
 
 const BR_NODE_RE = /^<br(\s[^>]*)?>$/i
@@ -31,6 +45,8 @@ function tagOf(value) {
   const m = /^<\/?([a-z]+)\s*\/?>$/i.exec((value || '').trim())
   return m ? m[1].toLowerCase() : null
 }
+
+const COMMENT_RE = /^<!--[\s\S]*-->$/
 
 // Stock html schema renders every tag as literal text. Keep that for unknown
 // tags, but give <br> a real break and known pairs their real elements
@@ -48,6 +64,7 @@ export const htmlNodeOverride = $nodeSchema('html', () => ({
       if (trimmed.startsWith('</')) return ['span', { 'data-html-close': tag, contenteditable: 'false' }]
       return ['span', { 'data-html-open': tag, contenteditable: 'false' }]
     }
+    if (COMMENT_RE.test(trimmed)) return ['span', { 'data-value': value, 'data-type': 'html', 'data-comment': '' }, value]
     return ['span', { 'data-value': value, 'data-type': 'html' }, value]
   },
   parseDOM: [
