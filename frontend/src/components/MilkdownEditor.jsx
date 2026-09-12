@@ -78,20 +78,20 @@ const editorStyles = `
   .milkdown .ProseMirror-selectednode {
     outline: none;
   }
-  .milkdown h1 { font-size: 1.7em; font-weight: 700; margin: 0.5em 0 0.3em; color: #e6edf3; }
-  .milkdown h2 { font-size: 1.45em; font-weight: 700; margin: 0.5em 0 0.3em; color: #e6edf3; }
-  .milkdown h3 { font-size: 1.25em; font-weight: 600; margin: 0.5em 0 0.3em; color: #e6edf3; }
-  .milkdown h4 { font-size: 1.1em; font-weight: 600; margin: 0.5em 0 0.3em; color: #e6edf3; }
-  .milkdown h5 { font-size: 1em; font-weight: 600; margin: 0.5em 0 0.3em; color: #e6edf3; }
-  .milkdown h6 { font-size: 0.9em; font-weight: 600; margin: 0.5em 0 0.3em; color: #8b949e; }
-  .milkdown p { margin: 0.3em 0; }
-  .milkdown ul, .milkdown ol { padding-left: 24px; margin: 0.3em 0; }
-  .milkdown li { margin: 0.15em 0; }
+  .milkdown h1 { font-size: 2em; font-weight: 700; margin: 1em 0 0.4em; color: #e6edf3; }
+  .milkdown h2 { font-size: 1.6em; font-weight: 700; margin: 0.9em 0 0.4em; color: #e6edf3; }
+  .milkdown h3 { font-size: 1.35em; font-weight: 600; margin: 0.8em 0 0.4em; color: #e6edf3; }
+  .milkdown h4 { font-size: 1.15em; font-weight: 600; margin: 0.7em 0 0.35em; color: #e6edf3; }
+  .milkdown h5 { font-size: 1em; font-weight: 600; margin: 0.7em 0 0.35em; color: #e6edf3; }
+  .milkdown h6 { font-size: 0.9em; font-weight: 600; margin: 0.7em 0 0.35em; color: #8b949e; }
+  .milkdown p { margin: 0.65em 0; }
+  .milkdown ul, .milkdown ol { padding-left: 24px; margin: 0.4em 0; }
+  .milkdown li { margin: 0.25em 0; }
   .milkdown blockquote {
     border-left: 3px solid #3d4450;
     padding-left: 12px;
     color: #8b949e;
-    margin: 0.3em 0;
+    margin: 0.65em 0;
   }
   .milkdown pre {
     background: rgba(90, 106, 122, 0.1);
@@ -113,7 +113,7 @@ const editorStyles = `
   .milkdown a:hover { text-decoration: underline; }
   .milkdown hr {
     border: none;
-    border-top: 1px solid rgba(90, 106, 122, 0.3);
+    border-top: 1px solid rgba(90, 106, 122, 0.55);
     margin: 0.5em 0;
   }
   .milkdown table {

@@ -13,6 +13,7 @@ import CustomizationPane from './CustomizationPane'
 import FullConstellation from './FullConstellation'
 import CommandCenter from './CommandCenter'
 import Icon from './Icon'
+import { wordCount } from '../lib/format'
 import ManageSky from './ManageSky'
 
 const wails = window.go?.main
@@ -416,7 +417,7 @@ export default function Workspace({
           )}
           {prefs.layout.show_status_bar && (
             <StatusBar
-              words={body.trim() ? body.trim().split(/\s+/).length : 0}
+              words={wordCount(body)}
               chars={body.length}
               line={cursorPos.line}
               col={cursorPos.col}

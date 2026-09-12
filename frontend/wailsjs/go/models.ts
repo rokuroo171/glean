@@ -20,6 +20,7 @@ export namespace main {
 	    word_wrap: boolean;
 	    line_numbers: boolean;
 	    narrow_width: boolean;
+	    show_outline: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new EditorPrefsView(source);
@@ -46,6 +47,7 @@ export namespace main {
 	        this.word_wrap = source["word_wrap"];
 	        this.line_numbers = source["line_numbers"];
 	        this.narrow_width = source["narrow_width"];
+	        this.show_outline = source["show_outline"];
 	    }
 	}
 	export class KnownSkyView {

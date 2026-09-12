@@ -1043,6 +1043,7 @@ type EditorPrefsView struct {
 	WordWrap                  bool    `json:"word_wrap"`
 	LineNumbers               bool    `json:"line_numbers"`
 	NarrowWidth               bool    `json:"narrow_width"`
+	ShowOutline               bool    `json:"show_outline"`
 }
 
 type SkyPrefsView struct {
@@ -1094,6 +1095,7 @@ func (a *App) GetPreferences() PreferencesView {
 			WordWrap:                  p.Editor.WordWrap == nil || *p.Editor.WordWrap,
 			LineNumbers:               p.Editor.LineNumbers != nil && *p.Editor.LineNumbers,
 			NarrowWidth:               p.Editor.NarrowWidth != nil && *p.Editor.NarrowWidth,
+			ShowOutline:               p.Editor.ShowOutline == nil || *p.Editor.ShowOutline,
 		},
 		Sky: SkyPrefsView{
 			Density:        p.Sky.Density,
@@ -1217,6 +1219,7 @@ func (a *App) SavePreferences(p PreferencesView) error {
 			WordWrap:                  &p.Editor.WordWrap,
 			LineNumbers:               &p.Editor.LineNumbers,
 			NarrowWidth:               &p.Editor.NarrowWidth,
+			ShowOutline:               &p.Editor.ShowOutline,
 		},
 		Sky: store.SkyPrefs{
 			Density:        p.Sky.Density,

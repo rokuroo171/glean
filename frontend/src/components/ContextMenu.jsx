@@ -23,6 +23,8 @@ function measure(items) {
  * items: array of
  *   { id, type: 'separator' }                     -> divider
  *   { id, label, icon?, shortcut?, disabled?, onSelect? } -> item
+ *   pass checked: true/false to render a toggle item; the icon column
+ *   then shows a check mark when on and stays empty when off
  *
  * Children are wrapped; right-clicking them (or pressing the menu key /
  * Shift+F10 while they are focused) opens the menu at the cursor
@@ -159,7 +161,7 @@ export default function ContextMenu({ items, onSelect, width = 220, triggerStyle
     if (queryTimer.current) clearTimeout(queryTimer.current)
   }, [])
 
-  const hasIcons = items.some(it => it.type !== 'separator' && it.icon)
+  const hasIcons = items.some(it => it.type !== 'separator' && (it.icon || it.checked != null))
 
   return (
     <>
@@ -258,12 +260,15 @@ export default function ContextMenu({ items, onSelect, width = 220, triggerStyle
                   width: 16, flexShrink: 0,
                   color: it.disabled ? colors.textDim : colors.textMuted,
                 }}>
-                  {it.icon ? <Icon name={it.icon} size={14} /> : null}
+                  {it.checked != null
+                    ? (it.checked ? <Icon name="check" size={14} style={{ color: colors.accent }} /> : null)
+                    : (it.icon ? <Icon name={it.icon} size={14} /> : null)}
                 </span>
               ) : null}
               <span style={{
                 flex: 1, minWidth: 0, overflow: 'hidden',
                 textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                opacity: it.checked === false ? 0.7 : 1,
               }}>
                 {it.label}
               </span>
@@ -385,9 +390,11 @@ function NestedItem({ it, index, onClose }) {
       }}
     >
       <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 16, flexShrink: 0, color: it.disabled ? colors.textDim : colors.textMuted }}>
-        {it.icon ? <Icon name={it.icon} size={14} /> : null}
+        {it.checked != null
+          ? (it.checked ? <Icon name="check" size={14} style={{ color: colors.accent }} /> : null)
+          : (it.icon ? <Icon name={it.icon} size={14} /> : null)}
       </span>
-      <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: it.checked === false ? 0.7 : 1 }}>
         {it.label}
       </span>
       {it.shortcut ? (

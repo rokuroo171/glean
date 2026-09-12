@@ -19,9 +19,23 @@ export function relativeTime(dateStr) {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
+// Strips markdown syntax before counting so headings marks, emphasis
+// delimiters, and link targets do not inflate the number
 export function wordCount(text) {
   if (!text || !text.trim()) return 0
-  return text.trim().split(/\s+/).length
+  const plain = text
+    .replace(/```[\s\S]*?(```|$)/g, ' ')
+    .replace(/`[^`\n]*`/g, ' ')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[\[([^\]|]*)(\|([^\]]*))?\]\]/g, '$1 $3')
+    .replace(/^\s{0,3}(#{1,6})\s+/gm, '')
+    .replace(/^\s{0,3}>\s?/gm, '')
+    .replace(/^\s*[-*+]\s+(\[[ xX]\]\s+)?/gm, '')
+    .replace(/^\s*\d+\.\s+/gm, '')
+    .replace(/(\*\*|\*|__|_|~~)/g, '')
+    .replace(/^\s*([-*_])\s*(?:\1\s*){2,}$/gm, ' ')
+  return plain.trim() ? plain.trim().split(/\s+/).length : 0
 }
 
 export function formatDate(dateStr) {
