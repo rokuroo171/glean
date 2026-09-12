@@ -107,16 +107,22 @@ const editorStyles = `
     position: absolute;
     top: 6px;
     right: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
     border: none;
     background: rgba(11, 15, 25, 0.55);
     color: #8b949e;
     border-radius: 4px;
-    padding: 3px 7px;
-    font-size: 11px;
-    line-height: 1;
+    padding: 0;
     cursor: pointer;
     opacity: 0;
     transition: opacity 0.15s;
+  }
+  .milkdown pre .glean-code-copy svg {
+    display: block;
   }
   .milkdown pre:hover .glean-code-copy,
   .milkdown pre .glean-code-copy:focus-visible {
