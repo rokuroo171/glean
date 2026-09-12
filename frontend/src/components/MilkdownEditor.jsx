@@ -89,6 +89,19 @@ const editorStyles = `
   .milkdown p { margin: 0.65em 0; }
   .milkdown ul, .milkdown ol { padding-left: 24px; margin: 0.4em 0; }
   .milkdown li { margin: 0.25em 0; }
+  /* every nesting level gets the same smooth round dot */
+  .milkdown ul { list-style: none; }
+  .milkdown ul > li { position: relative; }
+  .milkdown ul > li::before {
+    content: '';
+    position: absolute;
+    left: -13px;
+    top: 0.55em;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #8b949e;
+  }
   .milkdown blockquote {
     border-left: 3px solid #3d4450;
     padding-left: 12px;
@@ -198,6 +211,9 @@ const editorStyles = `
   }
   li.glean-list-reveal::marker {
     content: '';
+  }
+  .milkdown li.glean-list-reveal::before {
+    content: none;
   }
 `
 
