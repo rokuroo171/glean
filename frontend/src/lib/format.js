@@ -23,17 +23,15 @@ export function relativeTime(dateStr) {
 // delimiters, and link targets do not inflate the number
 export function wordCount(text) {
   if (!text || !text.trim()) return 0
+  // Strip syntax markers but keep the words they wrap (code, links, images),
+  // matching how other note apps count: code blocks count, link URLs count,
+  // heading hashes and emphasis markers do not
   const plain = text
-    .replace(/```[\s\S]*?(```|$)/g, ' ')
-    .replace(/`[^`\n]*`/g, ' ')
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/\[\[([^\]|]*)(\|([^\]]*))?\]\]/g, '$1 $3')
     .replace(/^\s{0,3}(#{1,6})\s+/gm, '')
     .replace(/^\s{0,3}>\s?/gm, '')
     .replace(/^\s*[-*+]\s+(\[[ xX]\]\s+)?/gm, '')
-    .replace(/^\s*\d+\.\s+/gm, '')
-    .replace(/(\*\*|\*|__|_|~~)/g, '')
+    .replace(/^\s*\d+[.)]\s+/gm, '')
+    .replace(/(\*\*|\*|__|_|~~|==)/g, '')
     .replace(/^\s*([-*_])\s*(?:\1\s*){2,}$/gm, ' ')
   return plain.trim() ? plain.trim().split(/\s+/).length : 0
 }
