@@ -20,7 +20,7 @@ frontend/package.json.md5
 
 # frontend only test
 # testing without wails runtime, it usually for a testing in markdown rendering
-# i hate CM6 >:(
+frontend/scripts/
 frontend/markdown-test-suite.md
 frontend/preview.html
 frontend/src/preview-entry.jsx

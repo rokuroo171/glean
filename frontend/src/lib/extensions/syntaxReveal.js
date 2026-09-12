@@ -63,18 +63,23 @@ function decorationsFor(state) {
   const $pos = state.doc.resolve(head)
   const decos = []
 
-  // Deepest block ancestor at the caret gets a prefix mark
-  // nodes carry no from/to, derive bounds from the resolved position
+  // Deepest block ancestor at the caret gets a prefix mark, rendered
+  // inside the caret's own textblock so the mark shares its line and
+  // font size (heading hashes inherit the heading size, Obsidian style)
+  const markPos = $pos.parent.isTextblock ? $pos.start($pos.depth) : null
   for (let d = $pos.depth; d >= 0; d--) {
     const node = $pos.node(d)
     if (!BLOCK_NODES.includes(node.type.name)) continue
-    const from = $pos.start(d) - 1
     const prefix = blockPrefix(node, $pos, d)
-    if (prefix) {
-      decos.push(Decoration.widget(from, markWidget(prefix), { side: -1 }))
+    if (prefix && markPos != null) {
+      decos.push(Decoration.widget(markPos, markWidget(prefix), { side: -1 }))
+    }
+    if (node.type.name === 'list_item') {
+      // the raw dash becomes the marker, so hide the native bullet meanwhile
+      decos.push(Decoration.node($pos.before(d), $pos.after(d), { class: 'glean-list-reveal' }))
     }
     if (node.type.name === 'code_block') {
-      decos.push(Decoration.widget($pos.end(d) + 1, markWidget('```'), { side: 1 }))
+      decos.push(Decoration.widget($pos.end(d), markWidget('```'), { side: 1 }))
     }
     break
   }
