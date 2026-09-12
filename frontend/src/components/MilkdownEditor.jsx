@@ -13,6 +13,7 @@ import { codeHighlight } from '../lib/extensions/codeHighlight'
 import { linkClick } from '../lib/extensions/linkClick'
 import { rescueSourceBrs, htmlNodeOverride } from '../lib/extensions/hardBrRescue'
 import { footnoteJump } from '../lib/extensions/footnoteJump'
+import { alerts } from '../lib/extensions/alerts'
 
 const editorStyles = `
   [data-milkdown-root] {
@@ -187,6 +188,42 @@ const editorStyles = `
   }
   .milkdown pre .glean-code-copy:hover {
     color: #c8d6e0;
+  }
+  /* alert callouts: blockquote nodes tagged by the alerts plugin get the
+     per-kind tint from data-kind; the raw [!NOTE] marker is hidden while
+     the widget shows icon + category name */
+  .milkdown blockquote.glean-alert {
+    border-left-color: var(--alert-color, #5b9fd4);
+    background: color-mix(in srgb, var(--alert-color, #5b9fd4) 7%, transparent);
+    border-radius: 0 6px 6px 0;
+    color: inherit;
+    font-style: normal;
+    padding: 8px 14px;
+  }
+  .milkdown blockquote.glean-alert[data-kind="note"] { --alert-color: #5b9fd4; }
+  .milkdown blockquote.glean-alert[data-kind="tip"] { --alert-color: #56b87a; }
+  .milkdown blockquote.glean-alert[data-kind="important"] { --alert-color: #8b7cf6; }
+  .milkdown blockquote.glean-alert[data-kind="warning"] { --alert-color: #d99a3d; }
+  .milkdown blockquote.glean-alert[data-kind="caution"] { --alert-color: #db4c40; }
+  .milkdown .glean-alert-marker {
+    display: none;
+  }
+  .milkdown .glean-alert-head {
+    display: block;
+    margin-bottom: 4px;
+  }
+  .milkdown .glean-alert-head > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .milkdown .glean-alert-head svg {
+    display: block;
   }
   .milkdown code {
     font-family: 'Fira Code', 'JetBrains Mono', monospace;
@@ -365,6 +402,7 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       .use($prose(linkClick))
       .use(htmlNodeOverride)
       .use($prose(footnoteJump))
+      .use($prose(alerts))
   }, [])
 
   useEffect(() => {
