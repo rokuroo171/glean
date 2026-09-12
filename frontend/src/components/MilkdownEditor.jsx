@@ -12,6 +12,7 @@ import { codeCopyButton } from '../lib/extensions/codeCopyButton'
 import { codeHighlight } from '../lib/extensions/codeHighlight'
 import { linkClick } from '../lib/extensions/linkClick'
 import { rescueSourceBrs, htmlNodeOverride } from '../lib/extensions/hardBrRescue'
+import { footnoteJump } from '../lib/extensions/footnoteJump'
 
 const editorStyles = `
   [data-milkdown-root] {
@@ -196,6 +197,36 @@ const editorStyles = `
     border-radius: 4px;
     padding: 0.5px 4px;
   }
+  .milkdown dl[data-type="footnote_definition"] {
+    margin: 0.35em 0;
+    padding-left: 0;
+    border-left: 2px solid rgba(90, 106, 122, 0.35);
+    padding-left: 10px;
+  }
+  .milkdown dl[data-type="footnote_definition"] dt {
+    display: inline;
+    font-family: ui-monospace, monospace;
+    font-size: 0.8em;
+    color: #8b949e;
+    margin-right: 0.5em;
+  }
+  .milkdown dl[data-type="footnote_definition"] dd {
+    display: inline;
+    margin-left: 0;
+  }
+  .milkdown dl[data-type="footnote_definition"] dd p {
+    display: inline;
+    margin: 0;
+  }
+  .milkdown sup[data-type="footnote_reference"] {
+    cursor: pointer;
+    color: #58a6ff;
+    font-size: 0.72em;
+    padding: 0 1px;
+  }
+  .milkdown sup[data-type="footnote_reference"]:hover {
+    text-decoration: underline;
+  }
   .milkdown a { color: #58a6ff; text-decoration: none; cursor: pointer; }
   .milkdown a:hover { text-decoration: underline; }
   .milkdown span[data-html-open], .milkdown span[data-html-close] {
@@ -315,6 +346,7 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       .use($prose(codeHighlight))
       .use($prose(linkClick))
       .use(htmlNodeOverride)
+      .use($prose(footnoteJump))
   }, [])
 
   useEffect(() => {
