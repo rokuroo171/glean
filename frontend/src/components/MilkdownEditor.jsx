@@ -11,6 +11,7 @@ import { taskCheckbox } from '../lib/extensions/taskCheckbox'
 import { codeCopyButton } from '../lib/extensions/codeCopyButton'
 import { codeHighlight } from '../lib/extensions/codeHighlight'
 import { linkClick } from '../lib/extensions/linkClick'
+import { rescueSourceBrs, htmlNodeOverride } from '../lib/extensions/hardBrRescue'
 
 const editorStyles = `
   [data-milkdown-root] {
@@ -275,7 +276,7 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
     return Editor.make()
       .config((ctx) => {
         ctx.set(rootCtx, root)
-        ctx.set(defaultValueCtx, markdownRef.current || '')
+        ctx.set(defaultValueCtx, rescueSourceBrs(markdownRef.current || ''))
         // emit the dash bullet the author typed instead of remark's asterisk
         // default, so saves stop rewriting every list in the file
         ctx.update(remarkStringifyOptionsCtx, (opts) => ({ ...opts, bullet: '-' }))
@@ -296,6 +297,7 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       .use($prose(codeCopyButton))
       .use($prose(codeHighlight))
       .use($prose(linkClick))
+      .use(htmlNodeOverride)
   }, [])
 
   useEffect(() => {
@@ -317,7 +319,7 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
     try {
       const view = editor.action((ctx) => ctx.get(editorViewCtx))
       const parse = editor.action((ctx) => ctx.get(parserCtx))
-      const doc = parse(markdown || '')
+      const doc = parse(rescueSourceBrs(markdown || ''))
       // addToHistory false keeps note loading out of the undo stack, so
       // Ctrl+Z after an open reverts the last edit, not the whole note
       view.dispatch(view.state.tr.replaceWith(0, view.state.doc.content.size, doc.content)
