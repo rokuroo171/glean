@@ -10,6 +10,7 @@ import { syntaxReveal } from '../lib/extensions/syntaxReveal'
 import { taskCheckbox } from '../lib/extensions/taskCheckbox'
 import { codeCopyButton } from '../lib/extensions/codeCopyButton'
 import { codeHighlight } from '../lib/extensions/codeHighlight'
+import { linkClick } from '../lib/extensions/linkClick'
 
 const editorStyles = `
   [data-milkdown-root] {
@@ -194,7 +195,7 @@ const editorStyles = `
     border-radius: 4px;
     padding: 0.5px 4px;
   }
-  .milkdown a { color: #58a6ff; text-decoration: none; }
+  .milkdown a { color: #58a6ff; text-decoration: none; cursor: pointer; }
   .milkdown a:hover { text-decoration: underline; }
   .milkdown hr {
     border: none;
@@ -294,6 +295,7 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       .use($prose(taskCheckbox))
       .use($prose(codeCopyButton))
       .use($prose(codeHighlight))
+      .use($prose(linkClick))
   }, [])
 
   useEffect(() => {
