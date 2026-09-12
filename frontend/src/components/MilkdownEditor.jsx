@@ -229,6 +229,20 @@ const editorStyles = `
   }
   .milkdown a { color: #58a6ff; text-decoration: none; cursor: pointer; }
   .milkdown a:hover { text-decoration: underline; }
+  /* html comments collapse to nothing unless the node is selected */
+  .milkdown span[data-comment] {
+    font-size: 0;
+    line-height: 0;
+    font-family: ui-monospace, monospace;
+    color: rgba(139, 148, 158, 0.7);
+  }
+  .milkdown span[data-comment].ProseMirror-selectednode {
+    font-size: 0.75em;
+    line-height: inherit;
+    background: rgba(90, 106, 122, 0.18);
+    border-radius: 3px;
+    padding: 0 3px;
+  }
   .milkdown span[data-html-open], .milkdown span[data-html-close] {
     display: inline-flex;
     align-items: center;
