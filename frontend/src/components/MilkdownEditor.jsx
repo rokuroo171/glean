@@ -1,12 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react'
-import { Editor, rootCtx, defaultValueCtx, editorViewCtx, commandsCtx, parserCtx } from '@milkdown/core'
+import { Editor, rootCtx, defaultValueCtx, editorViewCtx, commandsCtx, parserCtx, remarkStringifyOptionsCtx } from '@milkdown/core'
 import { commonmark } from '@milkdown/kit/preset/commonmark'
 import { gfm } from '@milkdown/kit/preset/gfm'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
 import { history } from '@milkdown/kit/plugin/history'
 import { $prose } from '@milkdown/kit/utils'
 import { syntaxReveal } from '../lib/extensions/syntaxReveal'
+import { taskCheckbox } from '../lib/extensions/taskCheckbox'
 
 const editorStyles = `
   [data-milkdown-root] {
@@ -132,8 +133,26 @@ const editorStyles = `
   }
   .milkdown img { max-width: 100%; border-radius: 4px; }
   .milkdown .footnotes { font-size: 0.9em; color: #8b949e; }
-  .milkdown .task-list-item { list-style: none; margin-left: -1.5em; }
-  .milkdown .task-list-item input[type="checkbox"] { margin-right: 0.5em; accent-color: #58a6ff; }
+  .milkdown li[data-item-type="task"] {
+    list-style: none;
+  }
+  .milkdown .glean-taskbox {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 0.5em;
+    vertical-align: text-bottom;
+  }
+  .milkdown .glean-taskbox input[type="checkbox"] {
+    width: 13px;
+    height: 13px;
+    accent-color: #58a6ff;
+    cursor: pointer;
+  }
+  /* tight lists collapse paragraph gaps, loose lists keep the base margin */
+  .milkdown ol[data-spread="false"] > li > p,
+  .milkdown ul[data-spread="false"] > li > p {
+    margin: 0.15em 0;
+  }
   .milkdown strong { font-weight: 700; }
   .milkdown em { font-style: italic; }
   .milkdown del { text-decoration: line-through; opacity: 0.75; }
@@ -164,6 +183,9 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       .config((ctx) => {
         ctx.set(rootCtx, root)
         ctx.set(defaultValueCtx, markdownRef.current || '')
+        // emit the dash bullet the author typed instead of remark's asterisk
+        // default, so saves stop rewriting every list in the file
+        ctx.update(remarkStringifyOptionsCtx, (opts) => ({ ...opts, bullet: '-' }))
         ctx.get(listenerCtx).markdownUpdated((_, md) => {
           lastEmittedRef.current = md
           onMarkdownChange(md)
@@ -177,6 +199,7 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       .use(listener)
       .use(history)
       .use($prose(syntaxReveal))
+      .use($prose(taskCheckbox))
   }, [])
 
   useEffect(() => {
