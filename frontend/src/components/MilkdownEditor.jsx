@@ -198,6 +198,23 @@ const editorStyles = `
   }
   .milkdown a { color: #58a6ff; text-decoration: none; cursor: pointer; }
   .milkdown a:hover { text-decoration: underline; }
+  .milkdown span[data-html-open], .milkdown span[data-html-close] {
+    display: inline-flex;
+    align-items: center;
+    font-family: ui-monospace, monospace;
+    font-size: 0.75em;
+    color: rgba(139, 148, 158, 0.85);
+    background: rgba(90, 106, 122, 0.18);
+    border-radius: 3px;
+    padding: 0 3px;
+    margin: 0 1px;
+  }
+  .milkdown span[data-html-open]::before { content: attr(data-html-open); }
+  .milkdown span[data-html-close]::before { content: attr(data-html-close); }
+  .milkdown span[data-html-open="sub"] + span[data-html-close="sub"],
+  .milkdown span[data-html-open="sup"] + span[data-html-close="sup"] { display: inline; }
+  .milkdown span[data-html-open="sub"] ~ sub,
+  .milkdown span[data-html-open="sup"] ~ sup { display: none; }
   .milkdown hr {
     border: none;
     border-top: 1px solid rgba(90, 106, 122, 0.55);

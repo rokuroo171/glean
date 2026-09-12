@@ -22,8 +22,18 @@ export function rescueSourceBrs(md) {
 
 const BR_NODE_RE = /^<br(\s[^>]*)?>$/i
 
-// Stock html schema renders every tag as literal text, which stays right for
-// tags like <strong>. Br-shaped values become a real break instead
+// Safe inline tags whose open/close pairs render with real styling, the way
+// Typora and Obsidian do. Values are exact lowercase tag names; anything not
+// listed keeps the raw literal look
+const RENDERED_TAGS = new Set(['strong', 'em', 'sub', 'sup', 'kbd', 'ins', 'u', 'mark'])
+
+function tagOf(value) {
+  const m = /^<\/?([a-z]+)\s*\/?>$/i.exec((value || '').trim())
+  return m ? m[1].toLowerCase() : null
+}
+
+// Stock html schema renders every tag as literal text. Keep that for unknown
+// tags, but give <br> a real break and known pairs their real elements
 export const htmlNodeOverride = $nodeSchema('html', () => ({
   atom: true,
   group: 'inline',
@@ -31,13 +41,27 @@ export const htmlNodeOverride = $nodeSchema('html', () => ({
   attrs: { value: { default: '' } },
   toDOM: (node) => {
     const value = node.attrs.value || ''
-    if (BR_NODE_RE.test(value.trim())) return ['br', { 'data-hardbreak': '' }]
+    const trimmed = value.trim()
+    if (BR_NODE_RE.test(trimmed)) return ['br', { 'data-hardbreak': '' }]
+    const tag = tagOf(trimmed)
+    if (tag && RENDERED_TAGS.has(tag)) {
+      if (trimmed.startsWith('</')) return ['span', { 'data-html-close': tag, contenteditable: 'false' }]
+      return ['span', { 'data-html-open': tag, contenteditable: 'false' }]
+    }
     return ['span', { 'data-value': value, 'data-type': 'html' }, value]
   },
   parseDOM: [
     {
       tag: 'br[data-hardbreak]',
       getAttrs: () => ({ value: '<br data-glean>' })
+    },
+    {
+      tag: 'span[data-html-open], span[data-html-close]',
+      getAttrs: (dom) => {
+        const open = dom.getAttribute('data-html-open')
+        const close = dom.getAttribute('data-html-close')
+        return { value: open ? `<${open}>` : `</${close}>` }
+      }
     },
     {
       tag: 'span[data-type="html"]',
