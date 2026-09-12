@@ -9,6 +9,7 @@ import { $prose } from '@milkdown/kit/utils'
 import { syntaxReveal } from '../lib/extensions/syntaxReveal'
 import { taskCheckbox } from '../lib/extensions/taskCheckbox'
 import { codeCopyButton } from '../lib/extensions/codeCopyButton'
+import { codeHighlight } from '../lib/extensions/codeHighlight'
 
 const editorStyles = `
   [data-milkdown-root] {
@@ -115,7 +116,47 @@ const editorStyles = `
     border-radius: 6px;
     overflow-x: auto;
     margin: 0.3em 0;
+    font-variant-ligatures: none;
   }
+  .milkdown pre[data-language]::after {
+    content: attr(data-language);
+    position: absolute;
+    top: 6px;
+    right: 36px;
+    font-family: ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgba(139, 148, 158, 0.7);
+    pointer-events: none;
+  }
+  .milkdown pre .token.comment { color: #8b949e; font-style: italic; }
+  .milkdown pre .token.keyword { color: #ff7b72; }
+  .milkdown pre .token.string { color: #a5d6ff; }
+  .milkdown pre .token.function { color: #d2a8ff; }
+  .milkdown pre .token.number,
+  .milkdown pre .token.boolean { color: #79c0ff; }
+  .milkdown pre .token.operator { color: #ff7b72; }
+  .milkdown pre .token.punctuation { color: #c8d6e0; }
+  .milkdown pre .token.class-name,
+  .milkdown pre .token.builtin { color: #ffa657; }
+  .milkdown pre .token.property { color: #79c0ff; }
+  .milkdown pre .token.attr-name { color: #ffa657; }
+  .milkdown pre .token.attr-value { color: #a5d6ff; }
+  .milkdown pre .token.deleted { color: #ffa198; }
+  .milkdown pre .token.inserted { color: #7ee787; }
+  .milkdown pre .token.tag { color: #7ee787; }
+  .milkdown pre .token.selector { color: #7ee787; }
+  .milkdown pre .token.regex,
+  .milkdown pre .token.important { color: #ffa657; }
+  .milkdown pre .token.url { color: #a5d6ff; }
+  .milkdown pre .token.entity { color: #ffa657; }
+  .milkdown pre .token.constant,
+  .milkdown pre .token.symbol { color: #79c0ff; }
+  .milkdown pre .token.variable { color: #ffa657; }
+  .milkdown pre .token.prolog,
+  .milkdown pre .token.doctype,
+  .milkdown pre .token.cdata { color: #8b949e; }
   .milkdown pre .glean-code-copy {
     position: absolute;
     top: 6px;
@@ -252,6 +293,7 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       .use($prose(syntaxReveal))
       .use($prose(taskCheckbox))
       .use($prose(codeCopyButton))
+      .use($prose(codeHighlight))
   }, [])
 
   useEffect(() => {
