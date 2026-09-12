@@ -8,6 +8,7 @@ import { history } from '@milkdown/kit/plugin/history'
 import { $prose } from '@milkdown/kit/utils'
 import { syntaxReveal } from '../lib/extensions/syntaxReveal'
 import { taskCheckbox } from '../lib/extensions/taskCheckbox'
+import { codeCopyButton } from '../lib/extensions/codeCopyButton'
 
 const editorStyles = `
   [data-milkdown-root] {
@@ -95,11 +96,34 @@ const editorStyles = `
     margin: 0.65em 0;
   }
   .milkdown pre {
+    position: relative;
     background: rgba(90, 106, 122, 0.1);
     padding: 12px;
     border-radius: 6px;
     overflow-x: auto;
     margin: 0.3em 0;
+  }
+  .milkdown pre .glean-code-copy {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    border: none;
+    background: rgba(11, 15, 25, 0.55);
+    color: #8b949e;
+    border-radius: 4px;
+    padding: 3px 7px;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .milkdown pre:hover .glean-code-copy,
+  .milkdown pre .glean-code-copy:focus-visible {
+    opacity: 1;
+  }
+  .milkdown pre .glean-code-copy:hover {
+    color: #c8d6e0;
   }
   .milkdown code {
     font-family: 'Fira Code', 'JetBrains Mono', monospace;
@@ -200,6 +224,7 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       .use(history)
       .use($prose(syntaxReveal))
       .use($prose(taskCheckbox))
+      .use($prose(codeCopyButton))
   }, [])
 
   useEffect(() => {
