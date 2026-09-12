@@ -144,6 +144,12 @@ const editorStyles = `
     text-decoration: none;
     user-select: none;
   }
+  li.glean-list-reveal {
+    list-style: none;
+  }
+  li.glean-list-reveal::marker {
+    content: '';
+  }
 `
 
 function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInstanceRef }) {

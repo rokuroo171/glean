@@ -3,6 +3,7 @@ import { colors, space, typography } from '../lib/theme'
 import { usePreferences } from '../lib/preferences-context'
 import MilkdownEditor, { useMilkdownCommands } from './MilkdownEditor'
 import { editorViewCtx } from '@milkdown/core'
+import { TextSelection } from '@milkdown/kit/prose/state'
 import { toggleStrongCommand, toggleEmphasisCommand, toggleInlineCodeCommand, wrapInBlockquoteCommand, wrapInBulletListCommand, wrapInOrderedListCommand, createCodeBlockCommand, wrapInHeadingCommand, turnIntoTextCommand, insertHrCommand } from '@milkdown/kit/preset/commonmark'
 import { toggleStrikethroughCommand } from '@milkdown/kit/preset/gfm'
 import { undoCommand, redoCommand } from '@milkdown/kit/plugin/history'
@@ -14,11 +15,11 @@ import FindReplace from './FindReplace'
 const ANIM_SPARKLE_MS = 450
 let _animId = 0
 
-// Dead-space strip between the editor body and the pane edges. Left click
-// toggles centered reading width; right click opens the view menu. Only
-// these strips handle clicks, so the editor body's own context menu never
-// collides with the view menu
-function Gutter({ side, onToggle, menuItems, visible }) {
+// Dead-space strip beside the editor body. Left click toggles centered
+// reading width; right click opens the view menu. The gutters flex-grow
+// so in centered mode they ARE the empty margins around the text column,
+// giving the clicks a visible target at any window size
+function Gutter({ onToggle, menuItems, grow }) {
   return (
     <ContextMenu
       items={menuItems}
@@ -29,10 +30,12 @@ function Gutter({ side, onToggle, menuItems, visible }) {
         onClick={onToggle}
         title="Click to toggle centered width"
         style={{
-          width: visible ? 48 : 20,
+          width: grow ? undefined : 20,
+          flex: grow ? '1 1 0' : '0 0 20px',
+          minWidth: 20,
           flexShrink: 0,
           cursor: 'pointer',
-          transition: 'width 0.18s ease',
+          transition: 'flex 0.18s ease',
         }}
       />
     </ContextMenu>
@@ -134,27 +137,71 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     view.focus()
   }
 
-  function handleSelectionChange(ctx, selection) {
-    const view = ctx.get(editorViewCtx)
-    const cursor = selection.head
-    const text = view.state.doc.textContent
-    if (onCursorChange) {
-      const before = text.slice(0, cursor)
-      onCursorChange({ line: before.split('\n').length, col: before.slice(before.lastIndexOf('\n') + 1).length + 1 })
+  function scrollToHeading(index) {
+    setCurrentHeading(index)
+    const view = getView()
+    if (!view) return
+    // Pick the Nth heading node from the live doc so the jump target can
+    // never drift; mapping markdown char offsets onto PM positions does
+    let count = -1
+    let target = null
+    view.state.doc.descendants((node, pos) => {
+      if (target != null) return false
+      if (node.type.name !== 'heading') return true
+      count++
+      if (count === index) { target = pos + 1; return false }
+      return true
+    })
+    if (target == null) return
+    view.dispatch(view.state.tr.setSelection(TextSelection.near(view.state.doc.resolve(target), 1)))
+    view.focus()
+    // Selection, focus, and ProseMirror each emit their own caret-into-view
+    // passes that race an immediate scroll, so correct from the settled DOM
+    // instead. Two passes keep it idempotent against stragglers
+    const alignHeading = () => {
+      const el = view.dom.querySelectorAll('h1, h2, h3, h4, h5, h6')[index]
+      if (!el || !el.isConnected) return
+      let scroller = null
+      let n = el.parentElement
+      while (n) {
+        const oy = getComputedStyle(n).overflowY
+        if (oy === 'auto' || oy === 'scroll') { scroller = n; break }
+        n = n.parentElement
+      }
+      if (!scroller) return
+      const top = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - 12
+      scroller.scrollTo({ top: Math.max(0, top), behavior: 'auto' })
     }
-    if (!noteNames || Object.keys(noteNames).length === 0) { setLinkPopup(null); return }
-    const before = text.slice(0, cursor)
-    const openBracket = before.lastIndexOf('[[')
-    if (openBracket < 0) { setLinkPopup(null); return }
-    const afterOpen = before.slice(openBracket + 2)
-    if (afterOpen.includes(']]') || afterOpen.includes('\n')) { setLinkPopup(null); return }
-    const query = afterOpen.toLowerCase()
-    const typed = text.slice(openBracket + 2, cursor).toLowerCase()
-    const matches = Object.keys(noteNames).filter(t => t.toLowerCase().includes(query) && t.toLowerCase() !== typed).slice(0, 8)
-    if (matches.length === 0) { setLinkPopup(null); return }
-    const coords = view.coordsAtPos(cursor)
-    if (!coords) { setLinkPopup(null); return }
-    setLinkPopup({ query, index: 0, pos: { top: coords.bottom + 4, left: coords.left } })
+    setTimeout(alignHeading, 16)
+    setTimeout(alignHeading, 90)
+  }
+
+  function handleSelectionChange(_ctx, selection) {
+    // The listener fires mid-transaction where editorViewCtx is not yet
+    // readable; deferring also lets coordsAtPos see the settled DOM
+    setTimeout(() => {
+      const view = getView()
+      if (!view) return
+      const cursor = selection.head
+      const text = view.state.doc.textContent
+      if (onCursorChange) {
+        const before = text.slice(0, cursor)
+        onCursorChange({ line: before.split('\n').length, col: before.slice(before.lastIndexOf('\n') + 1).length + 1 })
+      }
+      if (!noteNames || Object.keys(noteNames).length === 0) { setLinkPopup(null); return }
+      const before = text.slice(0, cursor)
+      const openBracket = before.lastIndexOf('[[')
+      if (openBracket < 0) { setLinkPopup(null); return }
+      const afterOpen = before.slice(openBracket + 2)
+      if (afterOpen.includes(']]') || afterOpen.includes('\n')) { setLinkPopup(null); return }
+      const query = afterOpen.toLowerCase()
+      const typed = text.slice(openBracket + 2, cursor).toLowerCase()
+      const matches = Object.keys(noteNames).filter(t => t.toLowerCase().includes(query) && t.toLowerCase() !== typed).slice(0, 8)
+      if (matches.length === 0) { setLinkPopup(null); return }
+      const coords = view.coordsAtPos(cursor)
+      if (!coords) { setLinkPopup(null); return }
+      setLinkPopup({ query, index: 0, pos: { top: coords.bottom + 4, left: coords.left } })
+    }, 0)
   }
 
   function handleBodyChange(newBody) {
@@ -319,27 +366,25 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
           <div style={{ width: 180, borderRight: `1px solid ${colors.border}`, overflow: 'auto', padding: space[2], flexShrink: 0, background: 'rgba(11, 15, 25, 0.5)', backdropFilter: 'blur(8px)' }}>
             <div style={{ ...typography.sectionLabel, color: colors.textMuted, marginBottom: 6 }}>Outline</div>
             {headings.map((h, i) => (
-              <button key={i} type="button" onClick={() => setCurrentHeading(i)}
+              <button key={i} type="button" onClick={() => scrollToHeading(i)}
                 style={{ display: 'block', width: '100%', textAlign: 'left', background: i === currentHeading ? 'rgba(180, 140, 80, 0.12)' : 'none', border: 'none', color: i === currentHeading ? colors.accent : colors.textMuted, fontSize: h.level === 1 ? 13 : h.level === 2 ? 12 : 11, fontWeight: h.level === 1 ? 600 : h.level === 2 ? 500 : 400, padding: '3px 6px', cursor: 'pointer', paddingLeft: 6 + (h.level - 1) * 10, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{h.text}</button>
             ))}
           </div>
         )}
-        <div ref={editorContainerRef} style={{ flex: 1, minWidth: 0, minHeight: 0, position: 'relative', display: 'flex', flexDirection: 'column' }}>
-          <Gutter side="left" onToggle={() => updatePrefs({ editor: { narrow_width: !narrowWidth } })} menuItems={viewMenuItems} visible={narrowWidth} />
+        <div ref={editorContainerRef} style={{ flex: 1, minWidth: 0, minHeight: 0, position: 'relative', display: 'flex', flexDirection: 'row' }}>
+          <Gutter onToggle={() => updatePrefs({ editor: { narrow_width: !narrowWidth } })} menuItems={viewMenuItems} grow={narrowWidth} />
           <ContextMenu items={editorMenuItems} triggerStyle={{ display: 'contents' }}>
-            <div style={{ flex: 1, minHeight: 0, display: 'flex', justifyContent: narrowWidth ? 'center' : 'stretch' }}>
-              <div style={narrowWidth ? { width: '100%', maxWidth: 720, minWidth: 0 } : { flex: 1, minWidth: 0, minHeight: 0 }}>
-                <MilkdownEditor
-                  key={note?.id}
-                  markdown={body}
-                  onMarkdownChange={handleBodyChange}
-                  onSelectionChange={handleSelectionChange}
-                  editorInstanceRef={editorInstanceRef}
-                />
-              </div>
+            <div style={{ flex: narrowWidth ? '0 0 720px' : '1 1 0', minWidth: 0, minHeight: 0, maxWidth: narrowWidth ? 'min(720px, calc(100% - 80px))' : undefined }}>
+              <MilkdownEditor
+                key={note?.id}
+                markdown={body}
+                onMarkdownChange={handleBodyChange}
+                onSelectionChange={handleSelectionChange}
+                editorInstanceRef={editorInstanceRef}
+              />
             </div>
           </ContextMenu>
-          <Gutter side="right" onToggle={() => updatePrefs({ editor: { narrow_width: !narrowWidth } })} menuItems={viewMenuItems} visible={narrowWidth} />
+          <Gutter onToggle={() => updatePrefs({ editor: { narrow_width: !narrowWidth } })} menuItems={viewMenuItems} grow={narrowWidth} />
           {linkPopup && (() => {
             const matches = Object.keys(noteNames).filter(t => t.toLowerCase().includes(linkPopup.query)).slice(0, 8)
             if (matches.length === 0) return null
