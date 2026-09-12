@@ -7,6 +7,7 @@ import { TextSelection } from '@milkdown/kit/prose/state'
 import { toggleStrongCommand, toggleEmphasisCommand, toggleInlineCodeCommand, wrapInBlockquoteCommand, wrapInBulletListCommand, wrapInOrderedListCommand, createCodeBlockCommand, wrapInHeadingCommand, turnIntoTextCommand, insertHrCommand } from '@milkdown/kit/preset/commonmark'
 import { toggleStrikethroughCommand } from '@milkdown/kit/preset/gfm'
 import { undoCommand, redoCommand } from '@milkdown/kit/plugin/history'
+import { undoDepth, redoDepth } from '@milkdown/kit/prose/history'
 import StarIcon from './StarIcon'
 import Icon from './Icon'
 import ContextMenu from './ContextMenu'
@@ -187,6 +188,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
       if (!view) return
       const cursor = selection.head
       const text = view.state.doc.textContent
+      setHist({ canUndo: undoDepth(view.state) > 0, canRedo: redoDepth(view.state) > 0 })
       if (onCursorChange) {
         const before = text.slice(0, cursor)
         onCursorChange({ line: before.split('\n').length, col: before.slice(before.lastIndexOf('\n') + 1).length + 1 })

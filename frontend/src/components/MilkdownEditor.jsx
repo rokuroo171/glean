@@ -269,7 +269,10 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       const view = editor.action((ctx) => ctx.get(editorViewCtx))
       const parse = editor.action((ctx) => ctx.get(parserCtx))
       const doc = parse(markdown || '')
-      view.dispatch(view.state.tr.replaceWith(0, view.state.doc.content.size, doc.content))
+      // addToHistory false keeps note loading out of the undo stack, so
+      // Ctrl+Z after an open reverts the last edit, not the whole note
+      view.dispatch(view.state.tr.replaceWith(0, view.state.doc.content.size, doc.content)
+        .setMeta('addToHistory', false))
     } catch (e) {
       console.warn('Milkdown sync failed:', e)
     }
