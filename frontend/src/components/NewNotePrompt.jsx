@@ -3,7 +3,7 @@ import { colors, space } from '../lib/theme'
 import { springs, motionTokens } from '../lib/motion-tokens'
 import { useSafeMotion, useReducedMotion } from '../hooks/useReducedMotion'
 
-/* ── Toolbar icons (SVG, 16px) ─────────────────────────── */
+// Toolbar icons (SVG, 16px)
 
 function IconCheck({ size = 16 }) {
   return (
@@ -22,7 +22,7 @@ function IconClose({ size = 16 }) {
   )
 }
 
-/* ── Icon button wrapper ───────────────────────────────── */
+// Icon button wrapper
 
 const iconBtn = {
   background: 'none',

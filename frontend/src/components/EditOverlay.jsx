@@ -7,7 +7,7 @@ import { springs, motionTokens } from '../lib/motion-tokens'
 import { useSafeMotion, useReducedMotion } from '../hooks/useReducedMotion'
 import { usePreferences } from '../lib/preferences-context'
 
-/* ── Toolbar icons (SVG, 16px) ─────────────────────────── */
+// Toolbar icons (SVG, 16px)
 
 function IconEdit({ size = 16, active = false }) {
   const c = active ? colors.accent : colors.textMuted
@@ -46,7 +46,7 @@ function IconClose({ size = 16 }) {
   )
 }
 
-/* ── Icon button wrapper ───────────────────────────────── */
+// Icon button wrapper
 
 const iconBtn = {
   background: 'none',
@@ -84,7 +84,7 @@ export default function EditOverlay({ note, body, onBodyChange, onSave, onAutoSa
   const reducedMotion = useReducedMotion()
   const { prefs } = usePreferences()
 
-  // ─── Debounced autosave ──────────────────────────────────────────────
+  // Debounced autosave
   // 'saved' | 'unsaved' | 'saving'
   const [saveStatus, setSaveStatus] = useState('saved')
   const debounceRef = useRef(null)
