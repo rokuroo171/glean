@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react'
 import { Editor, rootCtx, defaultValueCtx, editorViewCtx, commandsCtx, parserCtx, remarkStringifyOptionsCtx } from '@milkdown/core'
 import { commonmark } from '@milkdown/kit/preset/commonmark'
-import { gfm } from '@milkdown/kit/preset/gfm'
+import { gfm, remarkGFMPlugin } from '@milkdown/kit/preset/gfm'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
 import { history } from '@milkdown/kit/plugin/history'
 import { $prose } from '@milkdown/kit/utils'
@@ -328,6 +328,10 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
         // emit the dash bullet the author typed instead of remark's asterisk
         // default, so saves stop rewriting every list in the file
         ctx.update(remarkStringifyOptionsCtx, (opts) => ({ ...opts, bullet: '-' }))
+        // strict GFM strikethrough: single tildes stay literal like Typora and
+        // Obsidian, so H~2~O renders as typed and saves stop rewriting it to
+        // the nonstandard H~~2~~O
+        ctx.set(remarkGFMPlugin.options.key, { singleTilde: false })
         ctx.get(listenerCtx).markdownUpdated((_, md) => {
           lastEmittedRef.current = md
           onMarkdownChange(md)
