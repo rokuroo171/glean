@@ -191,6 +191,11 @@ const editorStyles = `
     accent-color: #58a6ff;
     cursor: pointer;
   }
+  .milkdown li[data-item-type="task"][data-checked="true"] > p {
+    text-decoration: line-through;
+    text-decoration-color: rgba(139, 148, 158, 0.6);
+    color: #8b949e;
+  }
   /* tight lists collapse paragraph gaps, loose lists keep the base margin */
   .milkdown ol[data-spread="false"] > li > p,
   .milkdown ul[data-spread="false"] > li > p {
