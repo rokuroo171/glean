@@ -63,25 +63,38 @@ function decorationsFor(state) {
   const $pos = state.doc.resolve(head)
   const decos = []
 
-  // Deepest block ancestor at the caret gets a prefix mark, rendered
-  // inside the caret's own textblock so the mark shares its line and
-  // font size (heading hashes inherit the heading size)
+  // Block ancestors at the caret get prefix marks, rendered inside the
+  // caret's own textblock so the marks share its line and font size
+  // (heading hashes inherit the heading size). Nested quotes stack their
+  // markers, so a caret three quotes deep shows '> > > '
   const markPos = $pos.parent.isTextblock ? $pos.start($pos.depth) : null
-  for (let d = $pos.depth; d >= 0; d--) {
+  const prefixes = []
+  let listDepth = null
+  for (let d = 0; d <= $pos.depth; d++) {
     const node = $pos.node(d)
     if (!BLOCK_NODES.includes(node.type.name)) continue
-    const prefix = blockPrefix(node, $pos, d)
-    if (prefix && markPos != null) {
-      decos.push(Decoration.widget(markPos, markWidget(prefix), { side: -1 }))
+    if (node.type.name === 'blockquote') prefixes.push('> ')
+    else if (node.type.name === 'heading') prefixes.push('#'.repeat(node.attrs.level || 1) + ' ')
+    else if (node.type.name === 'code_block') prefixes.push('```')
+    else if (node.type.name === 'list_item') {
+      listDepth = d
+      const list = $pos.node(d - 1)
+      prefixes.push(list?.type.name === 'ordered_list' ? `${list.attrs.order ?? 1}. ` : '- ')
     }
-    if (node.type.name === 'list_item') {
-      // the raw dash becomes the marker, so hide the native bullet meanwhile
-      decos.push(Decoration.node($pos.before(d), $pos.after(d), { class: 'glean-list-reveal' }))
-    }
-    if (node.type.name === 'code_block') {
-      decos.push(Decoration.widget($pos.end(d), markWidget('```'), { side: 1 }))
-    }
-    break
+  }
+  if (prefixes.length && markPos != null) {
+    decos.push(Decoration.widget(markPos, markWidget(prefixes.join('')), { side: -1 }))
+  }
+  if (listDepth != null) {
+    // the raw dash becomes the marker, so hide the native bullet meanwhile
+    decos.push(Decoration.node($pos.before(listDepth), $pos.after(listDepth), { class: 'glean-list-reveal' }))
+  }
+  const codeDepth = (() => {
+    for (let d = $pos.depth; d >= 0; d--) if ($pos.node(d).type.name === 'code_block') return d
+    return null
+  })()
+  if (codeDepth != null) {
+    decos.push(Decoration.widget($pos.end(codeDepth), markWidget('```'), { side: 1 }))
   }
 
   // Inline marks whose range touches the caret get a pair around it
