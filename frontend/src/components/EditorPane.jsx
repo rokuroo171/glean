@@ -142,11 +142,13 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     const view = getView()
     if (!view) return
     // Pick the Nth heading node from the live doc so the jump target can
-    // never drift; mapping markdown char offsets onto PM positions does
+    // never drift. Skip blockquote subtrees: the outline parser only sees
+    // column-0 headings, so quoted headings must not shift the index
     let count = -1
     let target = null
     view.state.doc.descendants((node, pos) => {
       if (target != null) return false
+      if (node.type.name === 'blockquote') return false
       if (node.type.name !== 'heading') return true
       count++
       if (count === index) { target = pos + 1; return false }
@@ -159,7 +161,8 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     // passes that race an immediate scroll, so correct from the settled DOM
     // instead. Two passes keep it idempotent against stragglers
     const alignHeading = () => {
-      const el = view.dom.querySelectorAll('h1, h2, h3, h4, h5, h6')[index]
+      const el = [...view.dom.querySelectorAll('h1, h2, h3, h4, h5, h6')]
+        .filter((h) => !h.closest('blockquote'))[index]
       if (!el || !el.isConnected) return
       let scroller = null
       let n = el.parentElement
