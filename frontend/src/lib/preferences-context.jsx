@@ -26,6 +26,7 @@ const defaultPrefs = {
     word_wrap: true,
     line_numbers: false,
     narrow_width: false,
+    show_outline: true,
   },
   sky: {
     density: 'normal',

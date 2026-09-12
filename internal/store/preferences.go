@@ -62,6 +62,7 @@ type EditorPrefs struct {
 	WordWrap                  *bool   `json:"word_wrap"`                    // nil = true (default)
 	LineNumbers               *bool   `json:"line_numbers"`                 // nil = false (default)
 	NarrowWidth               *bool   `json:"narrow_width"`                 // nil = false (default); center the text column for reading
+	ShowOutline               *bool   `json:"show_outline"`                 // nil = true (default); editor outline panel
 }
 
 // DefaultPreferences returns the built-in defaults
@@ -72,6 +73,7 @@ func DefaultPreferences() Preferences {
 	wrap := true
 	lineNums := false
 	narrowOff := false
+	showOutline := true
 	return Preferences{
 		Theme: ThemePrefs{
 			Preset:    "midnight",
@@ -111,6 +113,7 @@ func DefaultPreferences() Preferences {
 			WordWrap:                  &wrap,
 			LineNumbers:               &lineNums,
 			NarrowWidth:               &narrowOff,
+			ShowOutline:               &showOutline,
 		},
 	}
 }

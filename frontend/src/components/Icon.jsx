@@ -5,7 +5,7 @@ import {
   PanelRight, Pencil, Plus, RefreshCw, Search, Settings, Sparkle, Sparkles,
   Trash, X, Zap, FileText, Scissors, Copy, ClipboardPaste,
   Bold, Italic, Strikethrough, Link, Table, Code, Quote, List, ListOrdered,
-  Undo2, Redo2, ImageIcon, Braces, ExternalLink, ArrowRightLeft,
+  Undo2, Redo2, ImageIcon, Braces, ExternalLink, ArrowRightLeft, Check,
 } from 'lucide-react'
 
 const iconMap = {
@@ -54,6 +54,7 @@ const iconMap = {
   'list-ordered': ListOrdered,
   'braces': Braces,
   'replace': ArrowRightLeft,
+  'check': Check,
 }
 
 export default function Icon({ name, size = 16, className, style, ...rest }) {

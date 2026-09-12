@@ -211,7 +211,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     debounceRef.current = setTimeout(() => flushRef.current(), (prefs.editor.autosave_interval || 3) * 1000)
   }
 
-  const showOutline = headings.length >= 3
+  const showOutline = prefs.editor.show_outline !== false && headings.length >= 3
 
   const toolbarBtn = { background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', padding: '4px 6px', borderRadius: 4, fontSize: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }
 
@@ -299,15 +299,20 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
 
   const viewMenuItems = [
     {
-      id: 'vw-width', label: narrowWidth ? 'Wide text' : 'Centered width', icon: 'columns',
+      id: 'vw-outline', label: 'Outline', checked: prefs.editor.show_outline !== false,
+      onSelect: () => updatePrefs({ editor: { show_outline: prefs.editor.show_outline === false } }),
+    },
+    { id: 'sep-view', type: 'separator' },
+    {
+      id: 'vw-width', label: 'Centered width', checked: narrowWidth,
       onSelect: () => updatePrefs({ editor: { narrow_width: !narrowWidth } }),
     },
     {
-      id: 'vw-wrap', label: 'Word wrap', icon: 'replace',
-      onSelect: () => updatePrefs({ editor: { word_wrap: prefs.editor.word_wrap !== false } }),
+      id: 'vw-wrap', label: 'Word wrap', checked: prefs.editor.word_wrap !== false,
+      onSelect: () => updatePrefs({ editor: { word_wrap: prefs.editor.word_wrap === false } }),
     },
     {
-      id: 'vw-linenum', label: 'Line numbers', icon: 'layout-list',
+      id: 'vw-linenum', label: 'Line numbers', checked: prefs.editor.line_numbers === true,
       onSelect: () => updatePrefs({ editor: { line_numbers: prefs.editor.line_numbers !== true } }),
     },
   ]
