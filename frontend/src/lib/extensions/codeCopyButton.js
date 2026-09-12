@@ -30,7 +30,7 @@ function copyButtonDom() {
   }
 }
 
-// Obsidian-style hover copy button on fenced code blocks
+// Hover copy button on fenced code blocks
 export const codeCopyButton = () => new Plugin({
   key: codeCopyKey,
   state: {

@@ -112,7 +112,7 @@ function auroraBandPoints(b, t, width, height) {
   return pts
 }
 
-// ─── Seeded random for deterministic decoration ───────────────────────
+// Seeded random for deterministic decoration
 function seededRand(seed) {
   let s = seed % 2147483647
   if (s <= 0) s += 2147483646
@@ -130,7 +130,7 @@ function hashMix(x) {
   return x | 0
 }
 
-// ─── Tiling twinkle field ────────────────────────────────────────────
+// Tiling twinkle field
 // Stars are generated per-tile using a seeded PRNG indexed by (tileX, tileY, starIndex)
 // The renderer computes which tiles are visible from camera + scale, then renders stars
 // from each tile with world positions mod-wrapped into [0, TILE_SIZE). This gives an
@@ -181,7 +181,7 @@ function getVisibleTiles(wxMin, wyMin, vpW, vpH, tileSize) {
   return tiles
 }
 
-// ─── Tiling nebula dust clouds (Idea 21) ──────────────────────────
+// Tiling nebula dust clouds (Idea 21)
 // Faint, large color gradients in the deep background. Optimized: no shadowBlur
 // (the #1 perf killer, forces offscreen canvas per circle), reduced count
 const NEBULA_TILE_SIZE = 600
@@ -205,7 +205,7 @@ function makeNebulaCloud(tileX, tileY, index, colors = NEBULA_COLORS) {
   }
 }
 
-// ─── Meteor spawn ─────────────────────────────────────────────────────
+// Meteor spawn
 function spawnMeteor() {
   const side = Math.random() < 0.5 ? 'top' : 'left'
   const vx = 300 + Math.random() * 300
@@ -222,7 +222,7 @@ function spawnMeteor() {
   }
 }
 
-// ─── Comet spawn ──────────────────────────────────────────────────────
+// Comet spawn
 function spawnComet() {
   const side = Math.random() < 0.5 ? 'top' : 'left'
   return {
@@ -237,7 +237,7 @@ function spawnComet() {
   }
 }
 
-// ─── Fuzzy match helper (Idea 18) ───────────────────────────────────
+// Fuzzy match helper (Idea 18)
 // Returns a score (higher = better match) or 0 for no match
 function fuzzyMatch(query, text) {
   const q = query.toLowerCase()
@@ -259,7 +259,7 @@ function fuzzyMatch(query, text) {
   return qi === q.length ? score : 0
 }
 
-// ─── Days since last visit ────────────────────────────────────────────
+// Days since last visit
 function daysSinceVisit(note) {
   if (!note?.last_visited) return 999
   return (Date.now() - new Date(note.last_visited).getTime()) / 86400000
@@ -275,9 +275,9 @@ function dormantDimming(daysSince) {
 }
 
 
-// ─── Fresh constellation layout (Idea 27) ─────────────────────────────
-// Obsidian-style: every open regenerates positions from scratch. Nothing
-// persists; a right-drag move lasts only until the next open
+// Fresh constellation layout (Idea 27)
+// Every open regenerates positions from scratch. Nothing persists; a
+// right-drag move lasts only until the next open
 function generateLayout(notes, links) {
   const n = notes.length
   const area = Math.max(60, Math.sqrt(n) * 300)
@@ -337,7 +337,7 @@ function generateLayout(notes, links) {
   return pos
 }
 
-// ─── Star-drag spring physics (Obsidian graph-view feel) ─────────────
+// Star-drag spring physics
 // The dragged star is pinned to the cursor; every star linked to it is
 // tugged along by a spring (Hooke) with damping, so neighbors lag and
 // wobble instead of moving rigidly. Rest length matches the layout
@@ -396,7 +396,7 @@ function stepStarSprings(r) {
   })
 }
 
-// ─── Component ────────────────────────────────────────────────────────
+// Component
 export default function Constellation({
   notes, links, onNoteClick, selectedNote, onCloseNote,
   onSave, onWish, onDelete, onCreate,
@@ -412,7 +412,7 @@ export default function Constellation({
   const { prefs } = usePreferences()
   const skyPrefs = prefs.sky || {}
 
-  // ─── Session layout (Idea 27) ───────────────────────────────────────
+  // Session layout (Idea 27)
   // Fresh random positions every open, never persisted. Left-drag a star
   // to reposition it (linked stars follow) until the next open
   const layoutDoneRef = useRef(false)
@@ -499,7 +499,7 @@ export default function Constellation({
   // Press feedback for Konva stars (item 1, micro-feedback on click)
   const [pressedStar, setPressedStar] = useState(null)
 
-  // ─── Idle cursor awareness (Idea 8) ─────────────────────────────────
+  // Idle cursor awareness (Idea 8)
   const [idleStar, setIdleStar] = useState(null)       // note id nearest to cursor when idle
   const [idleFade, setIdleFade] = useState(1)          // 1 = full bright, fading to 0 on movement
   const cursorRef = useRef({ x: 0, y: 0 })            // last known cursor screen pos
@@ -523,13 +523,13 @@ export default function Constellation({
   const SESSION_TRAIL_MIN_OPACITY = 0.04
   const SESSION_TRAIL_MAX_OPACITY = 0.18
 
-  // ─── Search and fly-to (Idea 18) ────────────────────────────────────
+  // Search and fly-to (Idea 18)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchIndex, setSearchIndex] = useState(0)
   const searchInputRef = useRef(null)
 
-  // ─── Zoom-to-note flight (Idea 14) ──────────────────────────────────
+  // Zoom-to-note flight (Idea 14)
   const flyToRafRef = useRef(null)
 
   // Stage crossing burst (Idea 2). Localized meteor at star position
@@ -543,7 +543,7 @@ export default function Constellation({
   const departTimerRef = useRef(null)
   const arrivalTimersRef = useRef({})
 
-  // ─── Ambient palette from Go backend (time-of-day + seasonal) ──────
+  // Ambient palette from Go backend (time-of-day + seasonal)
   const [palette, setPalette] = useState(ambientPalette())
   const meteorBoost = palette.meteorBoost || 1
   const auroraActive = !!palette.aurora && !reducedMotion
@@ -577,7 +577,7 @@ export default function Constellation({
     return () => { mounted = false; clearInterval(interval) }
   }, [skyPrefs.season])
 
-  // ─── Initial camera (center on oldest note, with drift-in) ────────────
+  // Initial camera (center on oldest note, with drift-in)
   const driftRafRef = useRef(null)
   const getInitialCamera = useCallback(() => {
     if (!notes || notes.length === 0 || !sessionPos) return { x: 0, y: 0 }
@@ -628,7 +628,7 @@ export default function Constellation({
     return () => { if (driftRafRef.current) cancelAnimationFrame(driftRafRef.current) }
   }, [getInitialCamera, reducedMotion, notes, sessionPos])
 
-  // ─── Pending note from Home ──────────────────────────────────────────
+  // Pending note from Home
   useEffect(() => {
     if (pendingNoteId) {
       onNoteClick(pendingNoteId)
@@ -645,7 +645,7 @@ export default function Constellation({
 
 
 
-  // ─── Trail draw-in detection (item 3) ─────────────────────────────────
+  // Trail draw-in detection (item 3)
   useEffect(() => {
     const prevIds = new Set(
       prevTrailsRef.current.map(t => [t.note_a, t.note_b].sort().join('-'))
@@ -668,7 +668,7 @@ export default function Constellation({
     prevTrailsRef.current = links
   }, [links])
 
-  // ─── Returning pulse auto-clear ──────────────────────────────────────
+  // Returning pulse auto-clear
   useEffect(() => {
     const entries = Object.entries(pulseMap)
     if (entries.length === 0) return
@@ -685,7 +685,7 @@ export default function Constellation({
     return () => clearTimeout(timeout)
   }, [pulseMap])
 
-  // ─── Meteor / comet spawn timers ─────────────────────────────────────
+  // Meteor / comet spawn timers
   useEffect(() => {
     if (reducedMotion) return
 
@@ -712,7 +712,7 @@ export default function Constellation({
     // meteorBoost re-triggers the schedule when a shower palette arrives
   }, [reducedMotion, meteorBoost])
 
-  // ─── Animation loop ──────────────────────────────────────────────────
+  // Animation loop
   useEffect(() => {
     if (reducedMotion) return
 
@@ -814,7 +814,7 @@ export default function Constellation({
     onNoteClick(note.id)
   }, [notes, onNoteClick, reducedMotion, scale, camera, posOf])
 
-  // ─── World → screen coordinate transform ─────────────────────────────
+  // World → screen coordinate transform
   const worldToScreen = useCallback((wx, wy, layer) => {
     if (layer === 'bg') {
       // Background twinkle: zooms at 45% rate + pans at 45% rate (parallax depth)
@@ -830,7 +830,7 @@ export default function Constellation({
     }
   }, [scale, camera])
 
-  // ─── Mouse handlers ──────────────────────────────────────────────────
+  // Mouse handlers
   const handleMouseDown = useCallback((e) => {
     if (selectedNote || showNewPrompt || showStats) return
     if (e.evt.button !== 0) return // left button only
@@ -911,7 +911,7 @@ export default function Constellation({
       })
       return
     }
-    // ── Idle cursor awareness (Idea 8) ──
+    // Idle cursor awareness (Idea 8)
     // Track cursor position and reset idle timer on every move
     cursorRef.current = { x: e.evt.clientX, y: e.evt.clientY }
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
@@ -957,7 +957,7 @@ export default function Constellation({
     }, IDLE_THRESHOLD_MS)
   }, [notes, worldToScreen, reducedMotion, idleStar, idleFade, scale])
 
-  // ─── Star-drag settle + finalize ─────────────────────────────────────
+  // Star-drag settle + finalize
   // After release, let the linked springs keep wobbling for a moment and
   // decay to rest before freezing the session positions
   const cancelStarSettle = () => {
@@ -1012,7 +1012,7 @@ export default function Constellation({
     }
   }
 
-  // ─── Constellation line pulse on hover (Idea 1) ───────────────────────
+  // Constellation line pulse on hover (Idea 1)
   // When hover leaves, trigger a 200ms fade-out pulse on previously connected lines
   const schedulePulseFade = useCallback(() => {
     const starId = prevHoveredRef.current
@@ -1108,10 +1108,10 @@ export default function Constellation({
     return () => window.removeEventListener('mouseup', up)
   }, [])
 
-  // ─── Keyboard ────────────────────────────────────────────────────────
+  // Keyboard
   useEffect(() => {
     const handler = (e) => {
-      // ── Search and fly-to (Idea 18) ──
+      // Search and fly-to (Idea 18)
       // Ctrl+K opens search always; '/' only when not in input and search not already open
       if (e.ctrlKey && e.key === 'k') {
         e.preventDefault()
@@ -1151,7 +1151,7 @@ export default function Constellation({
     return () => window.removeEventListener('keydown', handler)
   }, [selectedNote, showNewPrompt, editingNote, showStats, searchOpen, onCloseNote, onCloseStats])
 
-  // ─── Note actions ────────────────────────────────────────────────────
+  // Note actions
   const handleCreateSubmit = useCallback(async () => {
     if (newNoteTitle.trim()) {
       const note = await onCreate(newNoteTitle.trim(), selectedNote?.id || '')
@@ -1283,7 +1283,7 @@ export default function Constellation({
     onNoteClick(noteId)
   }, [notes, onNoteClick, reducedMotion, scale, camera, posOf])
 
-  // ─── Stage-up flourish trigger (called by parent after wish changes stage) ─
+  // Stage-up flourish trigger (called by parent after wish changes stage)
   useEffect(() => {
     if (onStageUp) {
       onStageUp.current = (noteId) => {
@@ -1328,7 +1328,7 @@ export default function Constellation({
 
 
 
-  // ─── Closing-the-constellation animation (item 14) ──────────────────
+  // Closing-the-constellation animation (item 14)
   const handleCloseConstellation = useCallback(() => {
     if (isClosing || reducedMotion) {
       clearTimeout(closeTimerRef.current)
@@ -1378,7 +1378,7 @@ export default function Constellation({
     return () => clearInterval(timer)
   }, [sessionTrail.length])
 
-  // ─── Render ──────────────────────────────────────────────────────────
+  // Render
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.96 }}
@@ -1401,7 +1401,7 @@ export default function Constellation({
         onContextMenu={(e) => e.evt.preventDefault()}
         style={{ background: palette.sky || colors.bg }}
       >
-        {/* ── Aurora curtains (seasonal). Deepest layer, non-interactive.
+        {/* Aurora curtains (seasonal). Deepest layer, non-interactive.
             Winter nights only: soft green/violet bands, drifted by the
             rAF loop via Konva refs (no React re-render per frame). */}
         {auroraActive && (
@@ -1421,7 +1421,7 @@ export default function Constellation({
           </Layer>
         )}
 
-        {/* ── Far twinkle layer (deepest, non-interactive) ── */}
+        {/* Far twinkle layer (deepest, non-interactive) */}
         <Layer listening={false}>
           {(() => {
             const P = 0.45
@@ -1502,7 +1502,7 @@ export default function Constellation({
           })()}
         </Layer>}
 
-        {/* ── Near twinkle layer (mid-depth, non-interactive) ── */}
+        {/* Near twinkle layer (mid-depth, non-interactive) */}
         <Layer listening={false}>
           {(() => {
             const P = 0.45
@@ -1544,7 +1544,7 @@ export default function Constellation({
           })()}
         </Layer>
 
-        {/* ── Foreground layer (note-stars, constellations, particles) ── */}
+        {/* Foreground layer (note-stars, constellations, particles) */}
         <Layer>
           {/* Constellation lines. Draw-in animation for newly earned connections */}
           {/* Deduplicate by pairId to prevent double-rendering from duplicate backend pairs */}
@@ -1570,7 +1570,7 @@ export default function Constellation({
               // Opacity fades in during the first half of the draw
               lineOpacity = Math.min(lineOpacity, drawProgress * (link.dimmed ? 0.08 : 0.2))
             }
-            // ── Pulse on hover (Idea 1) ──────────────────────────────────
+            // Pulse on hover (Idea 1)
             // Connected lines brighten while hovering; fade back over 200ms on leave
             const isPulseActive = hoveredStar && (
               link.note_a === hoveredStar || link.note_b === hoveredStar
@@ -1731,13 +1731,13 @@ export default function Constellation({
               departOpacity = Math.max(0, 1 - elapsed)
             }
 
-            // ── Hover glow expansion (Idea 4) ─────────────────────────────
+            // Hover glow expansion (Idea 4)
             // Glow radius expands 1.2× on hover; brightness bumps +0.05
             // Clean separation from press-scale: press affects Group scale, hover affects glow paths + opacity
             const hoverBrighten = isHovered ? 0.05 : 0
             const hoverGlowScale = isHovered ? 1.2 : 1
 
-            // ── Idle cursor awareness (Idea 8) ─────────────────────────────
+            // Idle cursor awareness (Idea 8)
             // Nearest star to idle cursor brightens subtly (+0.05 opacity, +10% glow)
             const isIdleTarget = idleStar === note.id && idleFade > 0 && !reducedMotion
             const idleBrighten = isIdleTarget ? 0.05 * idleFade : 0
@@ -2025,7 +2025,7 @@ export default function Constellation({
         </Layer>
       </Stage>
 
-      {/* ── Vignette overlay (item 9) ── */}
+      {/* Vignette overlay (item 9) */}
       <div
         style={{
           position: 'absolute',
@@ -2036,7 +2036,7 @@ export default function Constellation({
         }}
       />
 
-      {/* ── Hover tooltip (item 11) ── */}
+      {/* Hover tooltip (item 11) */}
       {hoveredStar && (() => {
         const note = notes.find(n => n.id === hoveredStar)
         if (!note) return null
@@ -2067,7 +2067,7 @@ export default function Constellation({
         )
       })()}
 
-      {/* ── Search overlay (Idea 18) ── */}
+      {/* Search overlay (Idea 18) */}
       {searchOpen && (
         <div
           style={{
@@ -2172,7 +2172,7 @@ export default function Constellation({
         </div>
       )}
 
-      {/* ── Overlays ── */}
+      {/* Overlays */}
       <AnimatePresence>
         {!editingNote && selectedNote && !showStats && (
           <NoteOverlay

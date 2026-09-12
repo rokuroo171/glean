@@ -65,7 +65,7 @@ function decorationsFor(state) {
 
   // Deepest block ancestor at the caret gets a prefix mark, rendered
   // inside the caret's own textblock so the mark shares its line and
-  // font size (heading hashes inherit the heading size, Obsidian style)
+  // font size (heading hashes inherit the heading size)
   const markPos = $pos.parent.isTextblock ? $pos.start($pos.depth) : null
   for (let d = $pos.depth; d >= 0; d--) {
     const node = $pos.node(d)
