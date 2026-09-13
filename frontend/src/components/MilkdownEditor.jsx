@@ -14,6 +14,8 @@ import { linkClick } from '../lib/extensions/linkClick'
 import { rescueSourceBrs, htmlNodeOverride } from '../lib/extensions/hardBrRescue'
 import { footnoteJump } from '../lib/extensions/footnoteJump'
 import { alerts } from '../lib/extensions/alerts'
+import { math } from '@milkdown/plugin-math'
+import 'katex/dist/katex.min.css'
 
 const editorStyles = `
   [data-milkdown-root] {
@@ -403,6 +405,7 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       .use(htmlNodeOverride)
       .use($prose(footnoteJump))
       .use($prose(alerts))
+      .use(math)
   }, [])
 
   useEffect(() => {
