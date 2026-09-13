@@ -14,6 +14,7 @@ import { linkClick } from '../lib/extensions/linkClick'
 import { rescueSourceBrs, htmlNodeOverride } from '../lib/extensions/hardBrRescue'
 import { footnoteJump } from '../lib/extensions/footnoteJump'
 import { alerts } from '../lib/extensions/alerts'
+import { mermaidView } from '../lib/extensions/mermaidView'
 import { math } from '@milkdown/plugin-math'
 import 'katex/dist/katex.min.css'
 
@@ -227,6 +228,27 @@ const editorStyles = `
   .milkdown .glean-alert-head svg {
     display: block;
   }
+  .milkdown .glean-mermaid {
+    margin: 8px 0;
+    padding: 10px;
+    background: #0d1117;
+    border: 1px solid rgba(180, 140, 80, 0.12);
+    border-radius: 6px;
+    text-align: center;
+  }
+  .milkdown .glean-mermaid svg {
+    max-width: 100%;
+    height: auto;
+  }
+  .milkdown .glean-mermaid.has-error {
+    border: 1px solid rgba(219, 76, 64, 0.35);
+    background: rgba(219, 76, 64, 0.08);
+    color: #8b949e;
+    font-size: 12px;
+    font-family: 'Fira Code', 'JetBrains Mono', monospace;
+    text-align: left;
+    padding: 10px 14px;
+  }
   .milkdown code {
     font-family: 'Fira Code', 'JetBrains Mono', monospace;
     font-size: 0.92em;
@@ -405,6 +427,7 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       .use(htmlNodeOverride)
       .use($prose(footnoteJump))
       .use($prose(alerts))
+      .use($prose(mermaidView))
       .use(math)
   }, [])
 
