@@ -1,4 +1,4 @@
-export namespace main {
+export namespace core {
 	
 	export class EditorPrefsView {
 	    font_family: string;
