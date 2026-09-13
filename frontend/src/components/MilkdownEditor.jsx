@@ -15,6 +15,7 @@ import { rescueSourceBrs, htmlNodeOverride } from '../lib/extensions/hardBrRescu
 import { footnoteJump } from '../lib/extensions/footnoteJump'
 import { alerts } from '../lib/extensions/alerts'
 import { mermaidView } from '../lib/extensions/mermaidView'
+import { remarkHighlight, highlightSchema } from '../lib/extensions/highlightMark'
 import { math } from '@milkdown/plugin-math'
 import 'katex/dist/katex.min.css'
 
@@ -249,6 +250,12 @@ const editorStyles = `
     text-align: left;
     padding: 10px 14px;
   }
+  .milkdown mark {
+    background: rgba(255, 179, 102, 0.28);
+    color: inherit;
+    border-radius: 3px;
+    padding: 0 2px;
+  }
   .milkdown code {
     font-family: 'Fira Code', 'JetBrains Mono', monospace;
     font-size: 0.92em;
@@ -428,6 +435,8 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       .use($prose(footnoteJump))
       .use($prose(alerts))
       .use($prose(mermaidView))
+      .use(remarkHighlight)
+      .use(highlightSchema)
       .use(math)
   }, [])
 
