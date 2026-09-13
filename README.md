@@ -138,7 +138,7 @@ directory: `%APPDATA%\glean` on Windows, `~/.config/glean` elsewhere.
 
 ## Contributing
 
-See `CONTRIBUTING.md` for more
+See [CONTRIBUTING](.github/CONTRIBUTING.md) for more
 
 ## License
 
