@@ -6,6 +6,12 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3" /></a>
+  <a href="https://github.com/rokuroo171/glean/releases/latest"><img src="https://img.shields.io/github/v/release/rokuroo171/glean" alt="Latest release" /></a>
+  <a href="https://github.com/rokuroo171/glean/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/rokuroo171/glean/build.yml" alt="Build status" /></a>
+  <img src="https://img.shields.io/github/repo-size/rokuroo171/glean" alt="Repo size" />
+  <img src="https://img.shields.io/github/go-mod/go-version/rokuroo171/glean" alt="Go version" />
+  <a href="https://github.com/rokuroo171/glean/stargazers"><img src="https://img.shields.io/github/stars/rokuroo171/glean" alt="Stars" /></a>
+  <a href="https://github.com/rokuroo171/glean/issues"><img src="https://img.shields.io/github/issues/rokuroo171/glean" alt="Open issues" /></a>
 </p>
 
 <p align="center">
