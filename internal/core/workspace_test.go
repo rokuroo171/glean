@@ -1,4 +1,4 @@
-package main
+package core
 
 import (
 	"path/filepath"
@@ -16,9 +16,9 @@ func TestWorkspaceStateMethods(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a := &App{workspace: ws}
+	s := &Service{Workspace: ws}
 
-	st, err := a.GetWorkspaceState()
+	st, err := s.GetWorkspaceState()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,10 +27,10 @@ func TestWorkspaceStateMethods(t *testing.T) {
 	}
 
 	want := store.WorkspaceState{OpenIDs: []string{"n1", "n2"}, ActiveID: "n2"}
-	if err := a.SaveWorkspaceState(want); err != nil {
+	if err := s.SaveWorkspaceState(want); err != nil {
 		t.Fatal(err)
 	}
-	got, err := a.GetWorkspaceState()
+	got, err := s.GetWorkspaceState()
 	if err != nil {
 		t.Fatal(err)
 	}

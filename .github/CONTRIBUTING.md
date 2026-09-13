@@ -26,10 +26,14 @@ first (a stale vite dev server can lock it).
 
 ```
 main.go          entry point; wires the App and window size/title
-app.go           wails-bound API: notes, skies, preferences, stats
-setup.go         first-run setup, sky adoption (OpenSky), default paths
-workspace.go     note CRUD, visits, streaks, trails
+app.go           wails-only surface: window sizing, native folder picker
+bindings.go      pass-through bindings to the core service
+setup.go         first-run setup and sky adoption bindings
+workspace.go     tab state bindings
 internal/
+  core/          platform-neutral sky service: notes, links, stats,
+                 folders, preferences, import/export. The desktop app
+                 and future mobile builds share this package
   store/         all persistence (JSON) and config paths
   note/          note model and collection
   wikilink/      [[Title]] and [text](Target.md) link extraction

@@ -117,7 +117,7 @@ func main() {
 	// whose folder vanished boots into recovery
 	width, height := 1200, 800
 	gate := false
-	if app.skyDir == "" {
+	if app.svc.SkyDir == "" {
 		width, height = 460, 340
 		gate = true
 		if p, ok, err := store.LoadPointer(); err == nil && ok && p.SkyPath != "" {
@@ -135,10 +135,10 @@ func main() {
 			Assets: assets,
 			// Fallback: serve user-imported vault images under /@assets/
 			Handler: vaultAssets{root: func() string {
-				if app == nil {
+				if app == nil || app.svc == nil {
 					return ""
 				}
-				return app.skyDir
+				return app.svc.SkyDir
 			}},
 		},
 		BackgroundColour: &options.RGBA{R: 11, G: 15, B: 25, A: 1},
