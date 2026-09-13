@@ -1,4 +1,4 @@
-package main
+package core
 
 import (
 	"encoding/json"
@@ -30,10 +30,10 @@ func setTestEnv(t *testing.T) {
 	}
 }
 
-func testApp(t *testing.T) *App {
+func testService(t *testing.T) *Service {
 	t.Helper()
 	setTestEnv(t)
-	return &App{}
+	return &Service{}
 }
 
 func writeLegacyStore(t *testing.T, notes []note.Note) {
@@ -64,17 +64,17 @@ func writeLegacyStore(t *testing.T, notes []note.Note) {
 }
 
 func TestSkyStateUnconfigured(t *testing.T) {
-	a := testApp(t)
-	st := a.SkyState()
+	s := testService(t)
+	st := s.SkyState()
 	if st.Configured || st.SkyMissing {
 		t.Fatalf("unexpected state: %+v", st)
 	}
 }
 
 func TestSetupSkyConfigures(t *testing.T) {
-	a := testApp(t)
+	s := testService(t)
 	skyDir := filepath.Join(t.TempDir(), "My Sky")
-	st, err := a.SetupSky("My Sky", skyDir)
+	st, err := s.SetupSky("My Sky", skyDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,18 +84,18 @@ func TestSetupSkyConfigures(t *testing.T) {
 	if !st.RegistryEmpty {
 		t.Fatal("fresh sky should have an empty registry")
 	}
-	// A second app sees the same configuration.
-	a2 := &App{}
-	if !a2.SkyState().Configured {
+	// A second service sees the same configuration.
+	s2 := &Service{}
+	if !s2.SkyState().Configured {
 		t.Fatal("pointer not persisted")
 	}
 }
 
 func TestSetupSkyDoesNotScan(t *testing.T) {
-	a := testApp(t)
+	s := testService(t)
 	skyDir := t.TempDir()
 	_ = os.WriteFile(filepath.Join(skyDir, "Fresh.md"), []byte("# hi"), 0o644)
-	st, err := a.SetupSky("Fresh", skyDir)
+	st, err := s.SetupSky("Fresh", skyDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,10 +105,10 @@ func TestSetupSkyDoesNotScan(t *testing.T) {
 }
 
 func TestOpenSkyScansExistingFolder(t *testing.T) {
-	a := testApp(t)
+	s := testService(t)
 	skyDir := t.TempDir()
 	_ = os.WriteFile(filepath.Join(skyDir, "Fresh.md"), []byte("# hi"), 0o644)
-	st, err := a.OpenSky(skyDir)
+	st, err := s.OpenSky(skyDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,13 +118,13 @@ func TestOpenSkyScansExistingFolder(t *testing.T) {
 }
 
 func TestOpenSkyReusesName(t *testing.T) {
-	a := testApp(t)
+	s := testService(t)
 	skyDir := filepath.Join(t.TempDir(), "ThePrism")
-	if _, err := a.SetupSky("ThePrism", skyDir); err != nil {
+	if _, err := s.SetupSky("ThePrism", skyDir); err != nil {
 		t.Fatal(err)
 	}
-	a2 := &App{}
-	st, err := a2.OpenSky(skyDir)
+	s2 := &Service{}
+	st, err := s2.OpenSky(skyDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,33 +134,33 @@ func TestOpenSkyReusesName(t *testing.T) {
 }
 
 func TestMigrateAndSkip(t *testing.T) {
-	a := testApp(t)
+	s := testService(t)
 	writeLegacyStore(t, []note.Note{{
 		ID: "l1", Title: "Old note", Body: "old body", Positioned: true, WorldX: 1, WorldY: 1,
 	}})
 
 	skyDir := filepath.Join(t.TempDir(), "Migrated")
-	if _, err := a.SetupSky("Migrated", skyDir); err != nil {
+	if _, err := s.SetupSky("Migrated", skyDir); err != nil {
 		t.Fatal(err)
 	}
-	if !a.SkyState().HasLegacy {
+	if !s.SkyState().HasLegacy {
 		t.Fatal("HasLegacy should be true")
 	}
-	report, err := a.MigrateSky()
+	report, err := s.MigrateSky()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if report.Imported != 1 {
 		t.Fatalf("imported = %d, want 1", report.Imported)
 	}
-	if err := a.SkipMigration(); err != nil {
+	if err := s.SkipMigration(); err != nil {
 		t.Fatal(err)
 	}
 	p, ok, err := store.LoadPointer()
 	if err != nil || !ok || !p.MigrationSkipped {
 		t.Fatalf("skip flag not persisted: %+v %v %v", p, ok, err)
 	}
-	if !a.SkyState().MigrationSkipped {
+	if !s.SkyState().MigrationSkipped {
 		t.Fatal("SkyState should report the skip flag")
 	}
 }
