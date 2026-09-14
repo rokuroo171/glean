@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { colors, space } from '../lib/theme'
+import { colors, space, typography } from '../lib/theme'
 import Icon from './Icon'
 
 const wails = window.go?.main
@@ -123,7 +123,7 @@ export default function SettingsPane({ skyName, skyPath, version, systemInfo, pr
 
   return (
     <div style={{ maxWidth: 520, margin: '0 auto', padding: space[5], color: colors.text }}>
-      <h2 style={{ margin: '0 0 ' + space[4] + 'px', fontSize: 18, fontWeight: 500 }}>Settings</h2>
+      <h2 style={{ margin: '0 0 ' + space[4] + 'px', ...typography.paneTitle, color: colors.text }}>Settings</h2>
 
       <Section title="About">
         <Row label="Version"><span style={{ color: colors.text }}>{version}</span></Row>

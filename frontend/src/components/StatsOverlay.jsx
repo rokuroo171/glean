@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { motion } from 'motion/react'
 import StarIcon from './StarIcon'
-import { colors, space } from '../lib/theme'
+import { colors, space, typography } from '../lib/theme'
 import { formatDate } from '../lib/format'
 
 const HEAT_COLORS = [
@@ -283,7 +283,7 @@ export default function StatsOverlay({ stats }) {
 
   return (
     <div style={{ maxWidth: 560, margin: '0 auto', padding: space[5], color: colors.text }}>
-      <h2 style={{ margin: 0, fontSize: 18, fontWeight: 500, color: colors.text }}>Sky overview</h2>
+      <h2 style={{ margin: 0, ...typography.paneTitle, color: colors.text }}>Sky overview</h2>
       <p style={{ margin: `${space[1]}px 0 ${space[4]}px`, fontSize: 13, color: colors.textMuted }}>
         A look back at your notes.
       </p>

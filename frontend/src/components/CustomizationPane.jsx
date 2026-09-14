@@ -279,7 +279,7 @@ export default function CustomizationPane() {
 
   return (
     <div style={{ maxWidth: 520, margin: '0 auto', padding: space[5], color: colors.text }}>
-      <div style={{ ...typography.greeting, marginBottom: space[1] }}>Customization</div>
+      <div style={{ ...typography.paneTitle, color: colors.text, marginBottom: space[1] }}>Customization</div>
       <p style={{ fontSize: 13, color: colors.textMuted, marginBottom: space[4], marginTop: 0 }}>
         Make glean yours. Changes apply live.
       </p>

@@ -10,6 +10,8 @@ import '@fontsource/jetbrains-mono/400.css'
 import '@fontsource/jetbrains-mono/500.css'
 import '@fontsource/source-code-pro/400.css'
 import '@fontsource/source-code-pro/500.css'
+// Display face for greetings, pane headers, and setup headings
+import '@fontsource-variable/fraunces'
 
 // Inject the prism token theme once (mapped to glean theme variables)
 const styleEl = document.createElement('style')

@@ -37,7 +37,9 @@ export const radius = {
 }
 
 export const typography = {
-  greeting: { fontSize: 28, fontWeight: 400, lineHeight: 1.3 },
+  display: { fontFamily: "'Fraunces Variable', Georgia, serif" },
+  greeting: { fontFamily: "'Fraunces Variable', Georgia, serif", fontSize: 28, fontWeight: 400, lineHeight: 1.3 },
+  paneTitle: { fontFamily: "'Fraunces Variable', Georgia, serif", fontSize: 18, fontWeight: 500, lineHeight: 1.3 },
   tagline: { fontSize: 14, fontWeight: 400, lineHeight: 1.5 },
   sectionLabel: { fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase' },
   noteTitle: { fontSize: 15, fontWeight: 500, lineHeight: 1.4 },
