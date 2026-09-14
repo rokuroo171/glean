@@ -55,3 +55,7 @@ export const speciesColor = {
   neutral: colors.starNeutral,
   hot: colors.starHot,
 }
+
+// Fixed semantic colors, same across every theme preset
+export const danger = '#c05050'
+export const success = '#7fbf8f'

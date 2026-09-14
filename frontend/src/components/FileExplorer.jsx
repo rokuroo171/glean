@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, useEffect } from 'react'
-import { colors, space, typography } from '../lib/theme'
+import { colors, space, typography, danger } from '../lib/theme'
+import NodeDivider from './NodeDivider'
 import StarIcon from './StarIcon'
 import Icon from './Icon'
 import ContextMenu from './ContextMenu'
@@ -300,13 +301,13 @@ function NoteRow({ note, depth, activeId, onOpenNote, renaming, onRename, onStar
         onDragEnd={() => setDragging(false)}
         style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%',
           padding: `4px ${8 + indent}px`,
-          background: dragging ? 'rgba(180, 140, 80, 0.12)' : active ? 'rgba(91, 159, 212, 0.08)' : 'transparent',
+          background: dragging ? `${colors.accentWarm}1f` : active ? `${colors.accent}14` : 'transparent',
           border: 'none',
           borderLeft: active ? `2px solid ${colors.accent}` : '2px solid transparent',
           cursor: dragging ? 'grabbing' : 'pointer', textAlign: 'left',
           opacity: dragging ? 0.5 : 1,
           transition: 'background 120ms ease-out, opacity 120ms ease-out' }}
-        onMouseEnter={(e) => { if (!active && !dragging) e.currentTarget.style.background = 'rgba(180, 140, 80, 0.06)' }}
+        onMouseEnter={(e) => { if (!active && !dragging) e.currentTarget.style.background = `${colors.accentWarm}0f` }}
         onMouseLeave={(e) => { if (!active && !dragging) e.currentTarget.style.background = 'transparent' }}
       >
         <StarIcon species={note.species} size="sm" />
@@ -482,7 +483,7 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
   const tb = { background: 'none', border: 'none', color: colors.textMuted,
     cursor: 'pointer', padding: 3, display: 'flex', alignItems: 'center',
     justifyContent: 'center', borderRadius: 4 }
-  const tbHover = { background: 'rgba(90, 106, 122, 0.15)' }
+  const tbHover = { background: `${colors.textMuted}26` }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
@@ -624,19 +625,19 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
       </ContextMenu>
 
       {/* Footer */}
-      <div style={{ padding: `${space[1]}px ${space[2]}px`,
-        borderTop: `1px solid ${colors.border}` }}>
+      <NodeDivider />
+      <div style={{ padding: `${space[1]}px ${space[2]}px` }}>
         <div style={{ fontSize: 11, color: colors.textDim, marginBottom: 4 }}>
           {notes.length} {notes.length === 1 ? 'note' : 'notes'}
         </div>
         <button type="button" data-tour="manage-sky" onClick={onManageSky}
           style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%',
-            padding: '4px 6px', background: 'rgba(180, 140, 80, 0.06)',
+            padding: '4px 6px', background: `${colors.accentWarm}0f`,
             border: `1px solid ${colors.border}`, borderRadius: 6,
             cursor: 'pointer', fontSize: 12,
             transition: 'background 160ms ease-out, border-color 160ms ease-out' }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(180, 140, 80, 0.12)'; e.currentTarget.style.borderColor = colors.borderStrong }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(180, 140, 80, 0.06)'; e.currentTarget.style.borderColor = colors.border }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = `${colors.accentWarm}1f`; e.currentTarget.style.borderColor = colors.borderStrong }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = `${colors.accentWarm}0f`; e.currentTarget.style.borderColor = colors.border }}
         >
           <Icon name="sparkles" size={12} style={{ color: colors.accentWarm }} />
           <span style={{ color: colors.text, fontWeight: 500, flex: 1, textAlign: 'left',
@@ -690,7 +691,7 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
                 type="button"
                 onClick={confirmDeleteFolder}
                 style={{
-                  background: '#b05050', border: 'none', color: '#fff',
+                  background: danger, border: 'none', color: '#fff',
                   borderRadius: 6, padding: '6px 14px', fontSize: 12,
                   fontWeight: 600, cursor: 'pointer',
                 }}

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { colors, space, typography } from '../lib/theme'
+import { colors, space, typography, danger, success } from '../lib/theme'
+import NodeDivider from './NodeDivider'
 import StarIcon from './StarIcon'
 import Icon from './Icon'
 
@@ -38,12 +39,13 @@ export default function DetailsPanel({ note, linked, noteBodies, notes, onWish, 
           style={{ background: 'none', border: `1px solid ${colors.border}`, color: colors.textMuted,
             borderRadius: 4, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="sparkle" size={13} /></button>
         <button type="button" onClick={() => onDelete(note.id)} data-tip="Delete note"
-          style={{ background: 'none', border: `1px solid ${colors.border}`, color: '#b06060',
-            borderRadius: 4, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="trash" size={13} /></button>
+          style={{ background: 'none', border: `1px solid ${colors.border}`, color: danger,
+            borderRadius: 6, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="trash" size={13} /></button>
       </div>
-      {wishMsg && <div style={{ fontSize: 12, color: '#80c090', marginBottom: 8 }}>{wishMsg}</div>}
+      {wishMsg && <div style={{ fontSize: 12, color: success, marginBottom: 8 }}>{wishMsg}</div>}
 
-      <div style={{ ...typography.sectionLabel, color: colors.textMuted, margin: `${space[2]}px 0` }}>Linked stars</div>
+      <NodeDivider style={{ margin: `${space[2]}px 0` }} />
+      <div style={{ ...typography.sectionLabel, color: colors.textMuted, margin: '0 0 8px' }}>Linked stars</div>
       {linked.length === 0 ? <div style={{ fontSize: 11, color: colors.textDim }}>No trail lines yet.</div> : (
         linked.map(n => (
           <button key={n.id} type="button" onClick={() => onOpenNote(n.id)}
@@ -56,7 +58,8 @@ export default function DetailsPanel({ note, linked, noteBodies, notes, onWish, 
       )}
 
       {/* Backlinks */}
-      <div style={{ ...typography.sectionLabel, color: colors.textMuted, margin: `${space[2]}px 0` }}>Backlinks</div>
+      <NodeDivider style={{ margin: `${space[2]}px 0` }} />
+      <div style={{ ...typography.sectionLabel, color: colors.textMuted, margin: '0 0 8px' }}>Backlinks</div>
       {(() => {
         if (!noteBodies || !notes) return <div style={{ fontSize: 11, color: colors.textDim }}>No data.</div>
         const title = note.title.toLowerCase()
