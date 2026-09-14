@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { colors } from '../lib/theme'
+import { colors, speciesColor } from '../lib/theme'
 import StarIcon from './StarIcon'
+import StarPoint from './StarPoint'
 import WindowControls from './WindowControls'
 import Icon from './Icon'
 
@@ -84,14 +85,19 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
                 style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 5,
                   boxSizing: 'border-box', padding: '5px 20px 5px 8px', borderRadius: 6,
                   cursor: 'pointer', whiteSpace: 'nowrap', ...tabStyle,
-                  background: active ? colors.bg : 'transparent',
+                  background: active || hovered === t.id ? colors.bg : 'transparent',
                   border: `1px solid ${active ? colors.borderStrong : 'transparent'}`,
-                  boxShadow: active ? `inset 0 -2px 0 ${colors.accentWarm}` : 'none',
+                  boxShadow: active ? `inset 0 -2px 0 ${colors.accent}` : 'none',
                   transition: 'width 0.12s ease, flex-basis 0.12s ease', ...noDrag }}>
                 {t.id === '__night__' ? <Icon name="moon" size={13} style={{ color: colors.accent, flexShrink: 0 }} /> : <StarIcon species={t.species} size="sm" />}
                 <span style={{ color: t.id === '__night__' ? colors.accent : colors.text, fontSize: 12,
                   overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>{t.title}</span>
-                {t.dirty && <span style={{ width: 6, height: 6, borderRadius: 3, background: colors.accentWarm, flexShrink: 0 }} />}
+                {t.dirty && <StarPoint size={8} color={speciesColor[t.species] || colors.starNeutral} />}
+                {active && (
+                  <span style={{ position: 'absolute', bottom: -5, left: '50%', transform: 'translateX(-50%)', lineHeight: 0 }}>
+                    <StarPoint size={7} color={colors.accent} />
+                  </span>
+                )}
                 {showX && (
                   <span role="button" aria-label={`close ${t.title}`}
                     onClick={(e) => { e.stopPropagation(); onClose(t.id) }}
