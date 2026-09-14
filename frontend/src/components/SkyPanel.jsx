@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Stage, Layer, Circle, Line } from 'react-konva'
 import { colors, space, typography } from '../lib/theme'
+import NodeDivider from './NodeDivider'
 import Icon from './Icon'
 import { usePreferences, speciesPalette } from '../lib/preferences-context'
 
@@ -55,9 +56,10 @@ export default function SkyPanel({ notes, trails, activeId, onOpenNote, onExpand
         </div>
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search stars..."
           style={{ width: '100%', background: colors.bg, color: colors.text,
-            border: `1px solid ${colors.border}`, borderRadius: 14, padding: '6px 12px',
+            border: `1px solid ${colors.border}`, borderRadius: 6, padding: '6px 12px',
             fontSize: 12, outline: 'none' }} />
       </div>
+      <NodeDivider />
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}
         ref={(el) => { if (el && (el.offsetWidth !== size.w || el.offsetHeight !== size.h)) setSize({ w: el.offsetWidth, h: el.offsetHeight }) }}>
         {size.h > 0 && (
@@ -68,7 +70,7 @@ export default function SkyPanel({ notes, trails, activeId, onOpenNote, onExpand
                 const b = layout.points.find(p => p.id === t.note_b)
                 if (!a || !b) return null
                 return <Line key={i} points={[a.x, a.y, b.x, b.y]}
-                  stroke={t.dimmed ? 'rgba(90,106,122,0.25)' : 'rgba(90,106,122,0.5)'} strokeWidth={1} />
+                  stroke={t.dimmed ? `${colors.textMuted}40` : `${colors.textMuted}80`} strokeWidth={1} />
               })}
               {layout.points.map(n => {
                 const r = Math.min(4 + (n.visit_count || 0) * 0.15, 9)

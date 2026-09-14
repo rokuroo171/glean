@@ -64,7 +64,7 @@ function ThemeCard({ name, active, onClick }) {
   return (
     <button type="button" onClick={onClick}
       style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-        padding: 8, background: active ? 'rgba(91, 159, 212, 0.1)' : 'transparent',
+        padding: 8, background: active ? `${colors.accent}1a` : 'transparent',
         border: `1px solid ${active ? colors.accent : colors.border}`,
         borderRadius: 8, cursor: 'pointer', transition: 'border-color 0.15s ease',
         minWidth: 80 }}>
@@ -236,7 +236,7 @@ function TrailCard({ mode, active, onClick }) {
     <button type="button" onClick={onClick}
       style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%',
         padding: '10px 12px', borderRadius: 8,
-        background: active ? 'rgba(91, 159, 212, 0.1)' : 'transparent',
+        background: active ? `${colors.accent}1a` : 'transparent',
         border: `1px solid ${active ? colors.accent : colors.border}`,
         cursor: 'pointer', transition: 'all 0.15s ease', textAlign: 'left' }}>
       <div style={{ width: 32, height: 32, borderRadius: 6,

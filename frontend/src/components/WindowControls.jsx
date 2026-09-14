@@ -9,7 +9,7 @@ function Control({ label, onClick, danger }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         color: colors.textMuted, cursor: 'pointer', padding: 0, marginRight: label === 'close' ? -8 : 0 }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = danger ? '#c04040' : 'rgba(90,106,122,0.2)'
+        e.currentTarget.style.background = danger ? '#c05050' : `${colors.textMuted}33`
         e.currentTarget.style.color = danger ? '#fff' : colors.text
       }}
       onMouseLeave={(e) => {
