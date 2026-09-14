@@ -1,13 +1,13 @@
 import { useState, useCallback } from 'react'
 import { motion } from 'motion/react'
-import { colors } from '../lib/theme'
+import { colors, radius, typography, danger, success } from '../lib/theme'
 import { springs, motionTokens } from '../lib/motion-tokens'
 import { useSafeMotion, useReducedMotion } from '../hooks/useReducedMotion'
 import { renderMarkdown } from '../lib/markdown'
 
 const btnStyle = {
   background: 'none', border: `1px solid ${colors.border}`, color: colors.textMuted,
-  padding: '4px 10px', borderRadius: 4, cursor: 'pointer', fontSize: 12,
+  padding: '4px 10px', borderRadius: radius.sm, cursor: 'pointer', fontSize: 12,
   transition: 'background 160ms ease-out, color 160ms ease-out',
 }
 
@@ -37,11 +37,11 @@ export default function NoteOverlay({ note, onEdit, onWish, onDelete, onClose })
       .note-overlay-scroll::-webkit-scrollbar { width: 6px; }
       .note-overlay-scroll::-webkit-scrollbar-track { background: transparent; }
       .note-overlay-scroll::-webkit-scrollbar-thumb {
-        background: rgba(90, 106, 122, 0.25);
+        background: rgba(127, 143, 160, 0.25);
         border-radius: 3px;
       }
       .note-overlay-scroll::-webkit-scrollbar-thumb:hover {
-        background: rgba(90, 106, 122, 0.4);
+        background: rgba(127, 143, 160, 0.4);
       }
     `}</style>
     <motion.div
@@ -51,15 +51,15 @@ export default function NoteOverlay({ note, onEdit, onWish, onDelete, onClose })
       transition={springs.gentle}
       style={{
         position: 'absolute', bottom: 20, left: 20, right: 20,
-        background: '#1a2030', border: `1px solid ${colors.border}`,
-        borderRadius: 8, padding: 20, color: colors.text,
+        background: colors.bgElevated, border: `1px solid ${colors.border}`,
+        borderRadius: radius.lg, padding: 20, color: colors.text,
         maxHeight: '40vh', overflow: 'auto',
         scrollbarWidth: 'thin', scrollbarColor: 'rgba(90, 106, 122, 0.25) transparent',
       }}
       className="note-overlay-scroll"
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <h3 style={{ margin: 0, color: colors.text }}>{note.title}</h3>
+        <h3 style={{ margin: 0, color: colors.text, ...typography.paneTitle }}>{note.title}</h3>
         <div style={{ display: 'flex', gap: 8 }}>
           <motion.button
             whileHover={{ scale: motionTokens.scale.pop }}
@@ -77,7 +77,7 @@ export default function NoteOverlay({ note, onEdit, onWish, onDelete, onClose })
             whileHover={{ scale: motionTokens.scale.pop }}
             whileTap={{ scale: tapScale }}
             onClick={() => onDelete(note.id)}
-            style={{...btnStyle, color: '#b06060'}}
+            style={{...btnStyle, color: danger}}
           >delete</motion.button>
           <motion.button
             whileHover={{ scale: motionTokens.scale.pop }}
@@ -99,8 +99,8 @@ export default function NoteOverlay({ note, onEdit, onWish, onDelete, onClose })
           transition={{ duration: 0.2 }}
           style={{
             marginTop: 8, padding: '6px 10px', borderRadius: 4,
-            background: wishMsg.includes('Already') ? 'rgba(180,120,60,0.15)' : 'rgba(80,160,100,0.15)',
-            color: wishMsg.includes('Already') ? '#c0a060' : '#80c090',
+            background: wishMsg.includes('Already') ? `${colors.accentWarm}26` : `${success}26`,
+            color: wishMsg.includes('Already') ? colors.accentWarm : success,
             fontSize: 12,
           }}
         >

@@ -2051,14 +2051,13 @@ export default function Constellation({
               pointerEvents: 'none',
               zIndex: 20,
               padding: '4px 10px',
-              background: 'rgba(11, 15, 25, 0.85)',
+              background: colors.bgTranslucent,
               border: `1px solid ${colors.border}`,
               borderRadius: 6,
               fontSize: 12,
               fontWeight: 500,
               color: colors.text,
               whiteSpace: 'nowrap',
-              backdropFilter: 'blur(4px)',
               transition: `opacity ${motionTokens.duration.fast}s ${motionTokens.easing.smooth}`,
             }}
           >
@@ -2104,14 +2103,13 @@ export default function Constellation({
             style={{
               width: '100%',
               padding: '10px 14px',
-              background: 'rgba(11, 15, 25, 0.92)',
+              background: colors.bgTranslucent,
               border: `1px solid ${colors.borderStrong}`,
               borderRadius: 10,
               color: colors.text,
               fontSize: 14,
               fontWeight: 500,
               outline: 'none',
-              backdropFilter: 'blur(12px)',
               boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
             }}
           />
@@ -2119,11 +2117,10 @@ export default function Constellation({
             <div
               style={{
                 marginTop: 4,
-                background: 'rgba(11, 15, 25, 0.92)',
+                background: colors.bgTranslucent,
                 border: `1px solid ${colors.border}`,
                 borderRadius: 10,
                 overflow: 'hidden',
-                backdropFilter: 'blur(12px)',
                 boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
               }}
             >
@@ -2137,7 +2134,7 @@ export default function Constellation({
                     display: 'block',
                     width: '100%',
                     padding: '8px 14px',
-                    background: i === searchIndex ? 'rgba(255,255,255,0.08)' : 'transparent',
+                    background: i === searchIndex ? `${colors.textMuted}26` : 'transparent',
                     border: 'none',
                     color: colors.text,
                     fontSize: 13,
@@ -2157,13 +2154,12 @@ export default function Constellation({
               style={{
                 marginTop: 4,
                 padding: '10px 14px',
-                background: 'rgba(11, 15, 25, 0.92)',
+                background: colors.bgTranslucent,
                 border: `1px solid ${colors.border}`,
                 borderRadius: 10,
                 color: colors.textMuted,
                 fontSize: 13,
                 textAlign: 'center',
-                backdropFilter: 'blur(12px)',
               }}
             >
               No notes match "{searchQuery}"
@@ -2225,7 +2221,7 @@ export default function Constellation({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'rgba(11, 15, 25, 0.5)',
+            background: colors.bgTranslucent,
             border: `1px solid ${colors.border}`,
             borderRadius: '50%',
             cursor: 'pointer',
