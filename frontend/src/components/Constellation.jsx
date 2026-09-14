@@ -49,7 +49,6 @@ function blendColors(cold, warm, t) {
 const LOD = {
   constellation: 0.5,  // lines fade in above this scale
   labels: 0.8,         // star titles fade in above this scale
-  preview: 1.2,        // note body excerpt fades in above this scale
 }
 // Smooth step: returns 0 below lo, 1 above hi, smooth ramp between
 function lodFactor(scale, lo, hi) {
@@ -1876,18 +1875,6 @@ export default function Constellation({
                     align="center"
                     offsetX={note.title.length * 2.7 * scale}
                     opacity={0.5 * lodFactor(scale, LOD.labels, LOD.labels + 0.2)}
-                  />
-                )}
-                {/* Note body preview. LOD: shows brief excerpt past zoom 1.2 */}
-                {scale > LOD.preview && note.body && (
-                  <Text
-                    y={radius + 24}
-                    text={note.body.slice(0, 60).replace(/[#*_~`>\-]/g, '').trim() + (note.body.length > 60 ? '…' : '')}
-                    fontSize={9 * scale}
-                    fill={palette.text}
-                    align="center"
-                    opacity={0.3 * lodFactor(scale, LOD.preview, LOD.preview + 0.2)}
-                    width={Math.min(180 * scale, window.innerWidth * 0.4)}
                   />
                 )}
               </Group>
