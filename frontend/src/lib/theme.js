@@ -29,6 +29,13 @@ export const space = {
   6: 48,
 }
 
+export const radius = {
+  sm: 4,
+  md: 6,
+  lg: 10,
+  pill: 999,
+}
+
 export const typography = {
   greeting: { fontSize: 28, fontWeight: 400, lineHeight: 1.3 },
   tagline: { fontSize: 14, fontWeight: 400, lineHeight: 1.5 },
