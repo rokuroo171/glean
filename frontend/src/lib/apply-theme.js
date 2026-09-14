@@ -237,6 +237,7 @@ export function applyTheme(presetName, accentHex) {
   root.style.setProperty('--text-dim', preset.textDim)
   root.style.setProperty('--accent', accent)
   root.style.setProperty('--accent-warm', preset.accentWarm)
+  root.style.setProperty('--focus-ring', `${accent}99`)
   root.style.setProperty('--star-cool', preset.starCool)
   root.style.setProperty('--star-warm', preset.starWarm)
   root.style.setProperty('--star-hot', preset.starHot)
