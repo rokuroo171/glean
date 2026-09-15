@@ -463,15 +463,24 @@ type TrailView struct {
 	NoteA  string `json:"note_a"`
 	NoteB  string `json:"note_b"`
 	Dimmed bool   `json:"dimmed"`
+	Visits int    `json:"visits"`
 }
 
 // GetLinks returns all resolved wikilink edges across the sky's notes
 // Each pair is the IDs of two notes connected by at least one [[Title]]
 // reference (either direction), deduped and sorted. Unresolved links
-// ([[Missing]]) are excluded here; the preview styles them itself
+// ([[Missing]]) are excluded here; the preview styles them itself.
+// Pairs carry their co-visit count from trails.json so the sky can
+// weight trail display by real usage
 func (s *Service) GetLinks() []TrailView {
 	if s.Store == nil {
 		return nil
+	}
+	visits := make(map[string]int)
+	if s.Adjacency != nil {
+		for _, p := range s.Adjacency.Pairs() {
+			visits[linkPairKey(p.NoteA, p.NoteB)] = p.Count
+		}
 	}
 	notes := s.Store.All()
 	byTitle := make(map[string]string, len(notes)) // lowercase title -> id
@@ -499,7 +508,7 @@ func (s *Service) GetLinks() []TrailView {
 				continue
 			}
 			edgeSet[key] = true
-			views = append(views, TrailView{NoteA: n.ID, NoteB: to, Dimmed: false})
+			views = append(views, TrailView{NoteA: n.ID, NoteB: to, Dimmed: false, Visits: visits[key]})
 		}
 	}
 	return views
