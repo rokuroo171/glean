@@ -25,7 +25,7 @@ const defaultPrefs = {
     autosave_interval: 3,
     word_wrap: true,
     line_numbers: false,
-    narrow_width: false,
+    narrow_width: true,
     show_outline: true,
   },
   sky: {
