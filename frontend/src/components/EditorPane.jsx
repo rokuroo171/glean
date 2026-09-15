@@ -255,6 +255,38 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
       .catch(() => view.focus())
   }
 
+  const pastePlain = () => {
+    const view = getView()
+    if (!view) return
+    navigator.clipboard?.readText()
+      .then((text) => {
+        if (text) view.dispatch(view.state.tr.insertText(text))
+        view.focus()
+      })
+      .catch(() => view.focus())
+  }
+
+  const startWikilink = () => {
+    const view = getView()
+    if (!view) return
+    view.dispatch(view.state.tr.insertText('[['))
+    view.focus()
+  }
+
+  const insertExternalLink = () => {
+    const view = getView()
+    if (!view) return
+    navigator.clipboard?.readText()
+      .then((url) => {
+        const sel = view.state.selection
+        const label = view.state.doc.textBetween(sel.from, sel.to, ' ') || 'link'
+        const safe = /^https?:\/\/|^mailto:/i.test(url.trim()) ? url.trim() : ''
+        view.dispatch(view.state.tr.insertText(`[${label}](${safe || 'https://'})`, sel.from, sel.to))
+        view.focus()
+      })
+      .catch(() => view.focus())
+  }
+
   const selectAllInEditor = () => {
     const view = getView()
     if (!view) return
@@ -264,10 +296,9 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   }
 
   const editorMenuItems = [
-    { id: 'copy', label: 'Copy', icon: 'copy', disabled: !selectionText(), onSelect: copySelection },
-    { id: 'cut', label: 'Cut', icon: 'scissors', disabled: !selectionText(), onSelect: cutSelection },
-    { id: 'paste', label: 'Paste', icon: 'paste', onSelect: pasteIntoSelection },
-    { id: 'sep-clip', type: 'separator' },
+    { id: 'add-link', label: 'Add link', icon: 'link', onSelect: startWikilink },
+    { id: 'add-ext-link', label: 'Add external link', icon: 'external-link', onSelect: insertExternalLink },
+    { id: 'sep-link', type: 'separator' },
     {
       id: 'format', label: 'Format', icon: 'pencil',
       submenu: [
@@ -294,10 +325,14 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
         { id: 'ins-bullet', label: 'Bullet list', icon: 'list', onSelect: () => dispatchCommand(wrapInBulletListCommand.key) },
         { id: 'ins-ordered', label: 'Numbered list', icon: 'list-ordered', onSelect: () => dispatchCommand(wrapInOrderedListCommand.key) },
         { id: 'ins-rule', label: 'Divider', onSelect: () => dispatchCommand(insertHrCommand.key) },
-        { id: 'ins-link', label: 'Link to note', icon: 'link', onSelect: () => { const view = getView(); if (view) { view.dispatch(view.state.tr.insertText('[[')); view.focus() } } },
         { id: 'ins-image', label: 'Image', icon: 'image', onSelect: () => fileInputRef.current?.click() },
       ],
     },
+    { id: 'sep-clip', type: 'separator' },
+    { id: 'cut', label: 'Cut', icon: 'scissors', disabled: !selectionText(), onSelect: cutSelection },
+    { id: 'copy', label: 'Copy', icon: 'copy', disabled: !selectionText(), onSelect: copySelection },
+    { id: 'paste', label: 'Paste', icon: 'paste', onSelect: pasteIntoSelection },
+    { id: 'paste-plain', label: 'Paste as plain text', icon: 'paste', disabled: !navigator.clipboard?.readText, onSelect: pastePlain },
     { id: 'sep-edit', type: 'separator' },
     { id: 'select-all', label: 'Select all', onSelect: selectAllInEditor },
   ]
