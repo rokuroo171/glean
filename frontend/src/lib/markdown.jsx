@@ -169,7 +169,7 @@ export function rewriteWikiLinks(body, noteNames) {
 }
 
 /* -- List marker styles -- */
-const listStyles = `
+const listStyles = () => `
   .glean-markdown ul > li::before {
     content: '';
     position: absolute;
@@ -226,7 +226,7 @@ const listStyles = `
     box-shadow: 0 1px 0 ${colors.border};
   }
   .glean-markdown table tbody tr:hover {
-    background: rgba(180, 140, 80, 0.05);
+    background: ${colors.text}0d;
   }
   .glean-markdown table th {
     position: sticky;
@@ -627,7 +627,7 @@ export function renderMarkdown(text, opts = {}) {
   }
   return (
     <div className="glean-markdown">
-      <style>{listStyles}</style>
+      <style>{listStyles()}</style>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath, remarkAlert]}
         rehypePlugins={[rehypeRaw, rehypeKatex]}

@@ -18,8 +18,9 @@ import { mermaidView } from '../lib/extensions/mermaidView'
 import { remarkHighlight, highlightSchema } from '../lib/extensions/highlightMark'
 import { math } from '@milkdown/plugin-math'
 import 'katex/dist/katex.min.css'
+import { colors, danger } from '../lib/theme'
 
-const editorStyles = `
+const editorStyles = () => `
   [data-milkdown-root] {
     height: 100%;
     width: 100%;
@@ -36,7 +37,7 @@ const editorStyles = `
     max-width: 100%;
     overflow-y: auto;
     padding: 12px 24px;
-    color: #c8d6e0;
+    color: ${colors.text};
     font-family: inherit;
     font-size: 14px;
     line-height: 1.6;
@@ -145,7 +146,7 @@ const editorStyles = `
   .milkdown pre .token.number,
   .milkdown pre .token.boolean { color: #79c0ff; }
   .milkdown pre .token.operator { color: #ff7b72; }
-  .milkdown pre .token.punctuation { color: #c8d6e0; }
+  .milkdown pre .token.punctuation { color: ${colors.text}; }
   .milkdown pre .token.class-name,
   .milkdown pre .token.builtin { color: #ffa657; }
   .milkdown pre .token.property { color: #79c0ff; }
@@ -191,7 +192,7 @@ const editorStyles = `
     opacity: 1;
   }
   .milkdown pre .glean-code-copy:hover {
-    color: #c8d6e0;
+    color: ${colors.text};
   }
   /* alert callouts: blockquote nodes tagged by the alerts plugin get the
      per-kind tint from data-kind; the raw [!NOTE] marker is hidden while
@@ -232,8 +233,8 @@ const editorStyles = `
   .milkdown .glean-mermaid {
     margin: 8px 0;
     padding: 10px;
-    background: #0d1117;
-    border: 1px solid rgba(180, 140, 80, 0.12);
+    background: ${colors.bgElevated};
+    border: 1px solid ${colors.border};
     border-radius: 6px;
     text-align: center;
   }
@@ -242,9 +243,9 @@ const editorStyles = `
     height: auto;
   }
   .milkdown .glean-mermaid.has-error {
-    border: 1px solid rgba(219, 76, 64, 0.35);
-    background: rgba(219, 76, 64, 0.08);
-    color: #8b949e;
+    border: 1px solid ${danger}59;
+    background: ${danger}14;
+    color: ${colors.textMuted};
     font-size: 12px;
     font-family: 'Fira Code', 'JetBrains Mono', monospace;
     text-align: left;
@@ -475,7 +476,7 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
 export default function MilkdownEditor({ markdown, onMarkdownChange, onSelectionChange, editorInstanceRef }) {
   return (
     <MilkdownProvider>
-      <style>{editorStyles}</style>
+      <style>{editorStyles()}</style>
       <div style={{ height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <EditorInner
           markdown={markdown}

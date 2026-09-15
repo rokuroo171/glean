@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { motion } from 'motion/react'
 import StarIcon from './StarIcon'
 import Icon from './Icon'
-import { colors, space, typography } from '../lib/theme'
+import { colors, space, typography, radius } from '../lib/theme'
 import { bodyPreview, relativeTime, pickGreeting } from '../lib/format'
 import { springs, motionTokens } from '../lib/motion-tokens'
 import { useSafeMotion, useReducedMotion } from '../hooks/useReducedMotion'
@@ -35,12 +35,12 @@ function HomeBackground() {
           position: 'absolute',
           inset: 0,
           backgroundImage: `
-            radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.35) 50%, transparent 50%),
-            radial-gradient(1px 1px at 30% 65%, rgba(255,255,255,0.25) 50%, transparent 50%),
-            radial-gradient(1px 1px at 55% 15%, rgba(255,255,255,0.2) 50%, transparent 50%),
-            radial-gradient(1px 1px at 70% 85%, rgba(255,255,255,0.3) 50%, transparent 50%),
-            radial-gradient(1px 1px at 85% 40%, rgba(255,255,255,0.25) 50%, transparent 50%),
-            radial-gradient(1px 1px at 95% 10%, rgba(255,255,255,0.2) 50%, transparent 50%)
+            radial-gradient(1px 1px at 10% 20%, ${colors.text}59 50%, transparent 50%),
+            radial-gradient(1px 1px at 30% 65%, ${colors.text}40 50%, transparent 50%),
+            radial-gradient(1px 1px at 55% 15%, ${colors.text}33 50%, transparent 50%),
+            radial-gradient(1px 1px at 70% 85%, ${colors.text}4d 50%, transparent 50%),
+            radial-gradient(1px 1px at 85% 40%, ${colors.text}40 50%, transparent 50%),
+            radial-gradient(1px 1px at 95% 10%, ${colors.text}33 50%, transparent 50%)
           `,
           backgroundSize: '100% 100%',
         }}
@@ -84,7 +84,7 @@ function StreakRing({ streak }) {
   return (
     <div style={{ position: 'relative', width: 56, height: 56, flexShrink: 0 }}>
       <svg width={56} height={56} viewBox="0 0 56 56" aria-hidden style={{ display: 'block' }}>
-        <circle cx={28} cy={28} r={r} fill="none" stroke="rgba(90,106,122,0.2)" strokeWidth={2} />
+        <circle cx={28} cy={28} r={r} fill="none" stroke={colors.borderStrong} strokeWidth={2} />
         <circle
           cx={28}
           cy={28}
@@ -179,7 +179,7 @@ export default function Home({ notes, stats, onNoteClick, onOpenStats, onNewNote
                 gap: 6,
                 background: 'none',
                 border: `1px solid ${colors.border}`,
-                borderRadius: 6,
+                borderRadius: radius.md,
                 padding: '4px 10px',
                 cursor: 'pointer',
                 fontSize: 12,
@@ -265,7 +265,7 @@ export default function Home({ notes, stats, onNoteClick, onOpenStats, onNewNote
             padding: `${space[2]}px ${space[3]}px`,
             background: colors.bgCard,
             border: `1px solid ${colors.border}`,
-            borderRadius: 12,
+            borderRadius: radius.lg,
             cursor: 'pointer',
             pointerEvents: 'auto',
             width: 'fit-content',
@@ -275,18 +275,6 @@ export default function Home({ notes, stats, onNoteClick, onOpenStats, onNewNote
           onMouseLeave={(e) => { e.currentTarget.style.borderColor = colors.border; e.currentTarget.style.transform = 'scale(1)' }}
           onMouseDown={(e) => { e.currentTarget.style.transform = `scale(${tapScale})` }}
           onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
-          animate={streak > 0 && !reducedMotion ? {
-            boxShadow: [
-              '0 0 0px rgba(180,140,80,0)',
-              '0 0 12px rgba(180,140,80,0.15)',
-              '0 0 0px rgba(180,140,80,0)',
-            ],
-          } : {}}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
         >
           <StreakRing streak={streak} />
           <div style={{ textAlign: 'left' }}>
