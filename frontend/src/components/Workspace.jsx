@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { colors, space } from '../lib/theme'
 import { usePreferences } from '../lib/preferences-context'
 import TabBar from './TabBar'
+import HeaderBar from './HeaderBar'
 import StatusBar from './StatusBar'
 import Home from './Home'
 import EditorPane from './EditorPane'
@@ -290,19 +291,19 @@ export default function Workspace({
   return (
     <div style={{ width: '100vw', height: '100vh', background: colors.bg,
       display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <HeaderBar skyName={skyName}
+        onCommand={() => setCommandOpen(true)}
+        onSettings={() => setPseudoTab('settings')}
+        onToggleDetails={() => setDetailsOpen(v => !v)}
+        detailsOpen={detailsOpen} />
       <TabBar tabs={tabs} activeId={activeId}
         onSelect={(id) => id === '__night__' ? openNight() : openNote(id)}
         onClose={(id) => id === '__night__' ? closeNight() : closeTab(id)}
-        onNew={openNight}
-        onSettings={() => setPseudoTab('settings')}
-        onCustomize={() => setPseudoTab('customization')}
-        onCommand={() => setCommandOpen(true)}
-        pseudoTab={pseudoTab} onClosePseudo={() => setPseudoTab(null)}
-        detailsOpen={detailsOpen} onToggleDetails={() => setDetailsOpen(v => !v)} />
+        pseudoTab={pseudoTab} onClosePseudo={() => setPseudoTab(null)} />
       {externalChanged && (
         <div style={{ display: 'flex', alignItems: 'center', gap: space[2], padding: '6px 12px',
-          background: 'rgba(180,140,80,0.15)', borderBottom: `1px solid ${colors.border}`,
-          fontSize: 12, color: '#c0a060' }}>
+          background: colors.border, borderBottom: `1px solid ${colors.border}`,
+          fontSize: 12, color: colors.text }}>
           <span style={{ flex: 1 }}>File changed on disk</span>
           <button type="button" onClick={reloadFromDisk}
             style={{ background: 'none', border: `1px solid ${colors.border}`, color: colors.text,
