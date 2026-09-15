@@ -108,6 +108,13 @@ function decorationsFor(state) {
     }
   })
 
+  // Clicking an hr makes a NodeSelection; reveal its raw mark above the
+  // rule in the same language as the caret-revealed prefixes, and the
+  // mark disappears when the selection moves back into text
+  if (sel?.node?.type?.name === 'hr') {
+    decos.push(Decoration.node(sel.from, sel.to, { class: 'glean-hr-selected' }))
+  }
+
   if (decos.length === 0) return DecorationSet.empty
   return DecorationSet.create(state.doc, decos)
 }
