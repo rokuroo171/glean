@@ -55,6 +55,20 @@ function lodFactor(scale, lo, hi) {
   return Math.max(0, Math.min(1, (scale - lo) / (hi - lo)))
 }
 
+// Trail weighting. Lines with co-visit history draw thicker and brighter,
+// capped so one heavily used trail cannot flatten the rest of the sky
+const TRAIL_WEIGHT_CAP = 10
+const TRAIL_BASE_OPACITY = 0.2
+const TRAIL_BASE_WIDTH = 1
+const TRAIL_WEIGHTED_OPACITY = 0.45
+const TRAIL_WEIGHTED_WIDTH = 2.4
+const TRAIL_HOVER_BOOST = 0.4
+
+// 0 for unvisited pairs, 1 at the cap, linear between
+function trailWeight(visits) {
+  return Math.min(1, visits / TRAIL_WEIGHT_CAP)
+}
+
 // Stage sizes. Scale with visit count, never dominate the canvas
 const STAGE_RADIUS = {
   faintspeck: 4,
@@ -1559,15 +1573,18 @@ export default function Constellation({
             const a = worldToScreen(posOf(noteA).x, posOf(noteA).y, 'fg')
             const b = worldToScreen(posOf(noteB).x, posOf(noteB).y, 'fg')
             const birthTime = trailBirth[pairId]
+            const weight = trailWeight(link.visits || 0)
+            const trailOpacity = link.dimmed ? 0.08 : TRAIL_BASE_OPACITY + (TRAIL_WEIGHTED_OPACITY - TRAIL_BASE_OPACITY) * weight
+            const trailWidth = TRAIL_BASE_WIDTH + (TRAIL_WEIGHTED_WIDTH - TRAIL_BASE_WIDTH) * weight
             let drawProgress = 1
-            let lineOpacity = link.dimmed ? 0.08 : 0.2
+            let lineOpacity = trailOpacity
             if (birthTime && !reducedMotion) {
               const elapsed = (Date.now() - birthTime) / 450 // 450ms draw-in
               drawProgress = Math.min(1, elapsed)
               // Smooth ease-out quad for natural feel
               drawProgress = 1 - (1 - drawProgress) * (1 - drawProgress)
               // Opacity fades in during the first half of the draw
-              lineOpacity = Math.min(lineOpacity, drawProgress * (link.dimmed ? 0.08 : 0.2))
+              lineOpacity = Math.min(lineOpacity, drawProgress * trailOpacity)
             }
             // Pulse on hover (Idea 1)
             // Connected lines brighten while hovering; fade back over 200ms on leave
@@ -1579,12 +1596,12 @@ export default function Constellation({
               link.note_b === pulseFadeRef.current.starId
             )
             if (isPulseActive && !reducedMotion && drawProgress >= 1) {
-              lineOpacity = 0.6
+              lineOpacity = trailOpacity + TRAIL_HOVER_BOOST
             } else if (isFading && !reducedMotion) {
               const elapsed = Date.now() - pulseFadeRef.current.startTime
               const progress = Math.min(1, elapsed / 200)
               const fadeAmount = 1 - progress
-              lineOpacity = 0.2 + (0.6 - 0.2) * fadeAmount
+              lineOpacity = trailOpacity + TRAIL_HOVER_BOOST * fadeAmount
             }
             // LOD. Constellation lines fade in as user zooms past 0.5
             const lodLine = lodFactor(scale, LOD.constellation, LOD.constellation + 0.2)
@@ -1597,7 +1614,7 @@ export default function Constellation({
                 name="constellation"
                 points={[a.x, a.y, endX, endY]}
                 stroke={palette.line}
-                strokeWidth={1 * scale}
+                strokeWidth={trailWidth * scale}
                 opacity={lineOpacity * lodLine}
                 tension={0.3}
                 listening={false}

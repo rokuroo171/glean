@@ -64,8 +64,9 @@ async function getNotes() {
 async function getLinks() {
   if (wails) return wails.App.GetLinks()
   return [
-    { note_a: '1', note_b: '2', dimmed: false },
-    { note_a: '2', note_b: '3', dimmed: false },
+    { note_a: '1', note_b: '2', dimmed: false, visits: 6 },
+    { note_a: '2', note_b: '3', dimmed: false, visits: 0 },
+    { note_a: '3', note_b: '4', dimmed: false, visits: 2 },
   ]
 }
 

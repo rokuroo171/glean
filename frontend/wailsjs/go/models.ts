@@ -351,6 +351,7 @@ export namespace main {
 	    note_a: string;
 	    note_b: string;
 	    dimmed: boolean;
+	    visits: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new TrailView(source);
@@ -361,6 +362,7 @@ export namespace main {
 	        this.note_a = source["note_a"];
 	        this.note_b = source["note_b"];
 	        this.dimmed = source["dimmed"];
+	        this.visits = source["visits"];
 	    }
 	}
 
