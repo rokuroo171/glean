@@ -79,12 +79,12 @@ const editorStyles = () => `
   .milkdown .ProseMirror-selectednode {
     outline: none;
   }
-  .milkdown h1 { font-size: 2em; font-weight: 700; margin: 1em 0 0.4em; color: #e6edf3; }
-  .milkdown h2 { font-size: 1.6em; font-weight: 700; margin: 0.9em 0 0.4em; color: #e6edf3; }
-  .milkdown h3 { font-size: 1.35em; font-weight: 600; margin: 0.8em 0 0.4em; color: #e6edf3; }
-  .milkdown h4 { font-size: 1.15em; font-weight: 600; margin: 0.7em 0 0.35em; color: #e6edf3; }
-  .milkdown h5 { font-size: 1em; font-weight: 600; margin: 0.7em 0 0.35em; color: #e6edf3; }
-  .milkdown h6 { font-size: 0.9em; font-weight: 600; margin: 0.7em 0 0.35em; color: #8b949e; }
+  .milkdown h1 { font-size: 2em; font-weight: 700; margin: 1em 0 0.4em; color: ${colors.text}; }
+  .milkdown h2 { font-size: 1.6em; font-weight: 700; margin: 0.9em 0 0.4em; color: ${colors.text}; }
+  .milkdown h3 { font-size: 1.35em; font-weight: 600; margin: 0.8em 0 0.4em; color: ${colors.text}; }
+  .milkdown h4 { font-size: 1.15em; font-weight: 600; margin: 0.7em 0 0.35em; color: ${colors.text}; }
+  .milkdown h5 { font-size: 1em; font-weight: 600; margin: 0.7em 0 0.35em; color: ${colors.text}; }
+  .milkdown h6 { font-size: 0.9em; font-weight: 600; margin: 0.7em 0 0.35em; color: ${colors.textMuted}; }
   .milkdown p { margin: 0.65em 0; }
   .milkdown ul, .milkdown ol { padding-left: 24px; margin: 0.4em 0; }
   .milkdown li { margin: 0.25em 0; }
@@ -99,17 +99,17 @@ const editorStyles = () => `
     width: 5px;
     height: 5px;
     border-radius: 50%;
-    background: #8b949e;
+    background: ${colors.textMuted};
   }
   .milkdown blockquote {
-    border-left: 3px solid #3d4450;
+    border-left: 3px solid ${colors.border};
     padding-left: 12px;
-    color: #8b949e;
+    color: ${colors.textMuted};
     margin: 0.65em 0;
   }
   .milkdown pre {
     position: relative;
-    background: rgba(90, 106, 122, 0.1);
+    background: ${colors.textMuted}1a;
     padding: 12px;
     border-radius: 6px;
     overflow-x: auto;
@@ -125,36 +125,11 @@ const editorStyles = () => `
     font-size: 10px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: rgba(139, 148, 158, 0.7);
+    color: ${colors.textDim};
     pointer-events: none;
   }
-  .milkdown pre .token.comment { color: #8b949e; font-style: italic; }
-  .milkdown pre .token.keyword { color: #ff7b72; }
-  .milkdown pre .token.string { color: #a5d6ff; }
-  .milkdown pre .token.function { color: #d2a8ff; }
-  .milkdown pre .token.number,
-  .milkdown pre .token.boolean { color: #79c0ff; }
-  .milkdown pre .token.operator { color: #ff7b72; }
-  .milkdown pre .token.punctuation { color: ${colors.text}; }
-  .milkdown pre .token.class-name,
-  .milkdown pre .token.builtin { color: #ffa657; }
-  .milkdown pre .token.property { color: #79c0ff; }
-  .milkdown pre .token.attr-name { color: #ffa657; }
-  .milkdown pre .token.attr-value { color: #a5d6ff; }
-  .milkdown pre .token.deleted { color: #ffa198; }
-  .milkdown pre .token.inserted { color: #7ee787; }
-  .milkdown pre .token.tag { color: #7ee787; }
-  .milkdown pre .token.selector { color: #7ee787; }
-  .milkdown pre .token.regex,
-  .milkdown pre .token.important { color: #ffa657; }
-  .milkdown pre .token.url { color: #a5d6ff; }
-  .milkdown pre .token.entity { color: #ffa657; }
-  .milkdown pre .token.constant,
-  .milkdown pre .token.symbol { color: #79c0ff; }
-  .milkdown pre .token.variable { color: #ffa657; }
-  .milkdown pre .token.prolog,
-  .milkdown pre .token.doctype,
-  .milkdown pre .token.cdata { color: #8b949e; }
+  /* Syntax colors come from the adaptive prism theme in lib/prism-theme,
+     which maps tokens onto the active preset's CSS variables */
   .milkdown pre .glean-code-copy {
     position: absolute;
     top: 6px;
@@ -165,8 +140,8 @@ const editorStyles = () => `
     width: 24px;
     height: 24px;
     border: none;
-    background: rgba(11, 15, 25, 0.55);
-    color: #8b949e;
+    background: ${colors.bg};
+    color: ${colors.textMuted};
     border-radius: 4px;
     padding: 0;
     cursor: pointer;
@@ -241,7 +216,7 @@ const editorStyles = () => `
     padding: 10px 14px;
   }
   .milkdown mark {
-    background: rgba(255, 179, 102, 0.28);
+    background: ${colors.accentWarm}47;
     color: inherit;
     border-radius: 3px;
     padding: 0 2px;
@@ -251,21 +226,21 @@ const editorStyles = () => `
     font-size: 0.92em;
   }
   .milkdown :not(pre) > code {
-    background: rgba(90, 106, 122, 0.18);
+    background: ${colors.textMuted}2e;
     border-radius: 4px;
     padding: 0.5px 4px;
   }
   .milkdown dl[data-type="footnote_definition"] {
     margin: 0.35em 0;
     padding-left: 0;
-    border-left: 2px solid rgba(90, 106, 122, 0.35);
+    border-left: 2px solid ${colors.border};
     padding-left: 10px;
   }
   .milkdown dl[data-type="footnote_definition"] dt {
     display: inline;
     font-family: ui-monospace, monospace;
     font-size: 0.8em;
-    color: #8b949e;
+    color: ${colors.textMuted};
     margin-right: 0.5em;
   }
   .milkdown dl[data-type="footnote_definition"] dd {
@@ -278,26 +253,26 @@ const editorStyles = () => `
   }
   .milkdown sup[data-type="footnote_reference"] {
     cursor: pointer;
-    color: #58a6ff;
+    color: ${colors.accent};
     font-size: 0.72em;
     padding: 0 1px;
   }
   .milkdown sup[data-type="footnote_reference"]:hover {
     text-decoration: underline;
   }
-  .milkdown a { color: #58a6ff; text-decoration: none; cursor: pointer; }
+  .milkdown a { color: ${colors.accent}; text-decoration: none; cursor: pointer; }
   .milkdown a:hover { text-decoration: underline; }
   /* html comments collapse to nothing unless the node is selected */
   .milkdown span[data-comment] {
     font-size: 0;
     line-height: 0;
     font-family: ui-monospace, monospace;
-    color: rgba(139, 148, 158, 0.7);
+    color: ${colors.textDim};
   }
   .milkdown span[data-comment].ProseMirror-selectednode {
     font-size: 0.75em;
     line-height: inherit;
-    background: rgba(90, 106, 122, 0.18);
+    background: ${colors.textMuted}2e;
     border-radius: 3px;
     padding: 0 3px;
   }
@@ -306,8 +281,8 @@ const editorStyles = () => `
     align-items: center;
     font-family: ui-monospace, monospace;
     font-size: 0.75em;
-    color: rgba(139, 148, 158, 0.85);
-    background: rgba(90, 106, 122, 0.18);
+    color: ${colors.textMuted};
+    background: ${colors.textMuted}2e;
     border-radius: 3px;
     padding: 0 3px;
     margin: 0 1px;
@@ -320,7 +295,7 @@ const editorStyles = () => `
   .milkdown span[data-html-open="sup"] ~ sup { display: none; }
   .milkdown hr {
     border: none;
-    border-top: 1px solid rgba(90, 106, 122, 0.55);
+    border-top: 1px solid ${colors.borderStrong};
     margin: 0.5em 0;
   }
   .milkdown table {
@@ -329,16 +304,16 @@ const editorStyles = () => `
     margin: 0.3em 0;
   }
   .milkdown th, .milkdown td {
-    border: 1px solid #3d4450;
+    border: 1px solid ${colors.border};
     padding: 6px 10px;
     text-align: left;
   }
   .milkdown th {
-    background: rgba(91, 159, 212, 0.12);
+    background: ${colors.accent}1f;
     font-weight: 600;
   }
   .milkdown img { max-width: 100%; border-radius: 4px; }
-  .milkdown .footnotes { font-size: 0.9em; color: #8b949e; }
+  .milkdown .footnotes { font-size: 0.9em; color: ${colors.textMuted}; }
   .milkdown li[data-item-type="task"] {
     list-style: none;
   }
@@ -351,13 +326,13 @@ const editorStyles = () => `
   .milkdown .glean-taskbox input[type="checkbox"] {
     width: 13px;
     height: 13px;
-    accent-color: #58a6ff;
+    accent-color: ${colors.accent};
     cursor: pointer;
   }
   .milkdown li[data-item-type="task"][data-checked="true"] > p {
     text-decoration: line-through;
-    text-decoration-color: rgba(139, 148, 158, 0.6);
-    color: #8b949e;
+    text-decoration-color: ${colors.textDim};
+    color: ${colors.textMuted};
   }
   /* tight lists collapse paragraph gaps, loose lists keep the base margin */
   .milkdown ol[data-spread="false"] > li > p,
@@ -368,7 +343,7 @@ const editorStyles = () => `
   .milkdown em { font-style: italic; }
   .milkdown del { text-decoration: line-through; opacity: 0.75; }
   .glean-syntax-mark {
-    color: rgba(139, 148, 158, 0.6);
+    color: ${colors.textDim};
     font-weight: 400;
     font-style: normal;
     text-decoration: none;
