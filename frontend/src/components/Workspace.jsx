@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { colors, space } from '../lib/theme'
+import { colors, space, radius } from '../lib/theme'
 import { usePreferences } from '../lib/preferences-context'
 import TabBar from './TabBar'
 import HeaderBar from './HeaderBar'
@@ -44,6 +44,23 @@ export default function Workspace({
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 })
   const [sidebarWidth, setSidebarWidth] = useState(264)
   const draggingRef = useRef(false)
+  // Floating cards need room; narrow screens collapse to attached panels
+  const [wide, setWide] = useState(() => window.matchMedia('(min-width: 900px)').matches)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 900px)')
+    const onChange = (e) => setWide(e.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  const floatCard = {
+    borderRadius: radius.lg,
+    border: `1px solid ${colors.border}`,
+    boxShadow: colors.shadow,
+    background: colors.bgCard,
+    backdropFilter: 'blur(12px)',
+    overflow: 'hidden',
+  }
 
   function startResize(e) {
     draggingRef.current = true
@@ -349,8 +366,10 @@ export default function Workspace({
         {/* File explorer panel -- slides in/out next to the icon rail */}
         {!skyCollapsed && (
           <>
-          <div style={{ width: sidebarWidth, borderRight: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', minHeight: 0,
-            background: colors.bgTranslucent, backdropFilter: 'blur(12px)', flexShrink: 0, overflow: 'hidden' }}>
+          <div style={{ width: sidebarWidth, display: 'flex', flexDirection: 'column', minHeight: 0, flexShrink: 0,
+            ...(wide
+              ? { margin: '8px 0 8px 8px', ...floatCard }
+              : { borderRight: `1px solid ${colors.border}`, background: colors.bgTranslucent, backdropFilter: 'blur(12px)', overflow: 'hidden' }) }}>
             {prefs.layout.tab_mode === 'vertical' && (
               <OpenNotesList tabs={tabs} activeId={activeId}
                 onSelect={(id) => id === '__night__' ? openNight() : openNote(id)}
@@ -439,8 +458,10 @@ export default function Workspace({
           )}
         </div>
         {detailsOpen && activeNote && (
-          <div style={{ width: 220, borderLeft: `1px solid ${colors.border}`, overflow: 'auto', flexShrink: 0,
-            background: colors.bgTranslucent, backdropFilter: 'blur(12px)' }}>
+          <div style={{ width: 220, overflow: 'auto', flexShrink: 0,
+            ...(wide
+              ? { margin: '8px 8px 8px 0', ...floatCard }
+              : { borderLeft: `1px solid ${colors.border}`, background: colors.bgTranslucent, backdropFilter: 'blur(12px)' }) }}>
             <DetailsPanel note={activeNote} linked={linked}
               noteBodies={noteBodies} notes={notes}
               onWish={onWish}
