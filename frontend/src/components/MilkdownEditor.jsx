@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react'
+import { usePreferences } from '../lib/preferences-context'
+import { lineGutterState, setLineGutterState } from '../lib/extensions/lineGutterState'
 import { Editor, rootCtx, defaultValueCtx, editorViewCtx, commandsCtx, parserCtx, remarkStringifyOptionsCtx } from '@milkdown/core'
 import { commonmark } from '@milkdown/kit/preset/commonmark'
 import { gfm, remarkGFMPlugin } from '@milkdown/kit/preset/gfm'
@@ -16,6 +18,7 @@ import { footnoteJump } from '../lib/extensions/footnoteJump'
 import { footnoteRename } from '../lib/extensions/footnoteRename'
 import { alerts } from '../lib/extensions/alerts'
 import { mermaidView } from '../lib/extensions/mermaidView'
+import { lineGutter } from '../lib/extensions/lineGutter'
 import { remarkHighlight, highlightSchema } from '../lib/extensions/highlightMark'
 import { math } from '@milkdown/plugin-math'
 import 'katex/dist/katex.min.css'
@@ -37,6 +40,7 @@ const editorStyles = () => `
     width: 100%;
     max-width: 100%;
     overflow-y: auto;
+    position: relative;
     padding: 12px 24px;
     color: ${colors.text};
     font-family: inherit;
@@ -44,6 +48,39 @@ const editorStyles = () => `
     line-height: 1.6;
     background: transparent !important;
     outline: none;
+  }
+  /* word wrap off: content keeps its natural width and the scroller
+     provides horizontal scrolling; wrap on (default) lets it flow */
+  .milkdown.glean-nowrap .editor,
+  .milkdown.glean-nowrap .editor .ProseMirror {
+    white-space: pre !important;
+    overflow-wrap: normal !important;
+    word-wrap: normal !important;
+    word-break: normal !important;
+  }
+  .glean-line-gutter {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 34px;
+    padding-right: 8px;
+    text-align: right;
+    pointer-events: none;
+    user-select: none;
+    z-index: 1;
+    background: transparent;
+  }
+  .glean-line-gutter span {
+    position: absolute;
+    right: 8px;
+    transform: translateY(0);
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    line-height: 1.6;
+    color: ${colors.textDim};
+  }
+  .glean-has-gutter .editor {
+    padding-left: 40px;
   }
   .milkdown .editor {
     width: 100%;
@@ -404,6 +441,15 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
   const onSelectionChangeRef = useRef(onSelectionChange)
   onSelectionChangeRef.current = onSelectionChange
 
+  // Editor-wide prefs: the gutter plugin reads the shared mutable state on
+  // every repaint, so toggles never rebuild the editor
+  const { prefs } = usePreferences()
+  const editor = prefs.editor
+  useEffect(() => {
+    setLineGutterState({ enabled: editor.line_numbers === true, wrap: editor.word_wrap !== false })
+    lineGutterState.api?.refresh()
+  }, [editor.line_numbers, editor.word_wrap])
+
   const { get, loading } = useEditor((root) => {
     return Editor.make()
       .config((ctx) => {
@@ -440,6 +486,7 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       .use($prose(mermaidView))
       .use(remarkHighlight)
       .use(highlightSchema)
+      .use($prose(() => lineGutter({ state: lineGutterState })))
       .use(math)
   }, [])
 

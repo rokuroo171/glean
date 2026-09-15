@@ -466,9 +466,6 @@ export default function CustomizationPane() {
           <Toggle label="Word wrap"
             checked={prefs.editor.word_wrap !== false}
             onChange={(v) => updatePrefs({ editor: { ...prefs.editor, word_wrap: v } })} />
-          <Toggle label="Line numbers"
-            checked={prefs.editor.line_numbers === true}
-            onChange={(v) => updatePrefs({ editor: { ...prefs.editor, line_numbers: v } })} />
         </div>
       </Section>
 
