@@ -199,7 +199,7 @@ export default function App() {
   const handleWish = useCallback(async (id) => {
     if (!wails) return false
     let ok = false
-    try { ok = await wails.App.WaterNote(id) } catch { return false }
+    try { ok = await wails.App.WishNote(id) } catch { return false }
     if (!ok) return false
     loadSky()
     return true

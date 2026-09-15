@@ -11,7 +11,8 @@ type Note struct {
 	CreatedAt       time.Time `json:"created_at"`
 	LastVisited     time.Time `json:"last_visited"`
 	VisitCount      int       `json:"visit_count"`
-	LastManualWater time.Time `json:"last_manual_water"`
+	// json key stays last_manual_water for compatibility with existing skies
+	LastWishAt      time.Time `json:"last_manual_water"`
 	WorldX          int       `json:"world_x"`
 	WorldY          int       `json:"world_y"`
 	Positioned      bool      `json:"positioned"`
