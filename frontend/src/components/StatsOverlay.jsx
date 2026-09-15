@@ -5,7 +5,7 @@ import { colors, space, typography } from '../lib/theme'
 import { formatDate } from '../lib/format'
 
 const HEAT_COLORS = [
-  'rgba(90,106,122,0.08)',
+  colors.border,
   colors.starCool + '44',
   colors.starCool + '88',
   colors.starCool + 'cc',
@@ -268,16 +268,16 @@ function MilestoneTimeline({ milestones }) {
 }
 
 export default function StatsOverlay({ stats }) {
-  if (!stats) return null
-
   const donutData = useMemo(() => {
-    if (!stats.stage_counts) return []
+    if (!stats?.stage_counts) return []
     return STAGE_CONFIG.map(s => ({
       label: s.label,
       value: stats.stage_counts[s.key] || 0,
       color: s.color,
     }))
-  }, [stats.stage_counts])
+  }, [stats])
+
+  if (!stats) return null
 
   const streak = stats.current_streak ?? 0
 
