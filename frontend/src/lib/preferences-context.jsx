@@ -5,7 +5,7 @@ const wails = window.go?.main
 
 const defaultPrefs = {
   theme: { preset: 'midnight', accent_hex: '#5b9fd4' },
-  layout: { sidebar_position: 'left', density: 'comfortable', show_status_bar: true },
+  layout: { sidebar_position: 'left', density: 'comfortable', show_status_bar: true, tab_mode: 'vertical' },
   editor: {
     font_family: 'monospace',
     font_size: 14,
