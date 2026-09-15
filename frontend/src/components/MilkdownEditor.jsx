@@ -298,6 +298,17 @@ const editorStyles = () => `
     border-top: 1px solid ${colors.borderStrong};
     margin: 0.5em 0;
   }
+  /* Clicking a rule reveals its raw --- above it, matching the
+     caret-revealed syntax marks elsewhere; hidden when deselected */
+  .milkdown hr.glean-hr-selected::before {
+    content: '---';
+    display: block;
+    font-family: ui-monospace, monospace;
+    font-size: 0.75em;
+    color: ${colors.textDim};
+    margin-bottom: 2px;
+    user-select: none;
+  }
   .milkdown table {
     border-collapse: collapse;
     width: 100%;
