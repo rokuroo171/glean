@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'motion/react'
 import { colors, speciesColor } from '../lib/theme'
 import StarIcon from './StarIcon'
 import StarPoint from './StarPoint'
-import WindowControls from './WindowControls'
 import Icon from './Icon'
 
 const drag = { '--wails-draggable': 'drag' }
@@ -13,7 +12,7 @@ const TAB_MAX = 220
 const TAB_MIN = 70
 const GAP = 2
 
-export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSettings, onCustomize, onCommand, pseudoTab, onClosePseudo, detailsOpen, onToggleDetails }) {
+export default function TabBar({ tabs, activeId, onSelect, onClose, pseudoTab, onClosePseudo }) {
   const pseudoLabel = pseudoTab === 'stats' ? 'Sky overview' : pseudoTab === 'customization' ? 'Customization' : 'Settings'
   const [hovered, setHovered] = useState(null)
   // While the cursor is in the bar, tab widths are frozen so closing a
@@ -60,12 +59,9 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
     <div
       onMouseEnter={freezeWidth}
       onMouseLeave={scheduleRelease}
-      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 10px', height: 40,
+      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 10px', height: 36,
         borderBottom: `1px solid ${colors.border}`, background: colors.bgElevated,
         flexShrink: 0, WebkitUserSelect: 'none', ...drag }}>
-      <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center', ...noDrag }}>
-        <StarIcon species="warm" size="sm" />
-      </span>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
         <div ref={tabsWrapRef} style={{ display: 'flex', alignItems: 'center', gap: GAP, flex: 1, minWidth: 0, overflow: 'hidden' }}>
@@ -129,36 +125,6 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onNew, onSet
       </div>
 
       <div style={{ flex: 1, minWidth: 0 }} />
-
-      {/* Right controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, ...noDrag }}>
-        <button type="button" onClick={onCommand} aria-label="search the sky"
-          style={{ display: 'flex', alignItems: 'center', gap: 6, height: 26,
-            padding: '0 12px', background: colors.bg, border: `1px solid ${colors.border}`,
-            borderRadius: 13, color: colors.textMuted, fontSize: 12, cursor: 'pointer' }}>
-          <Icon name="search" size={13} />
-        </button>
-        <button type="button" onClick={onCustomize} aria-label="customization"
-          data-tip="Customization"
-          style={{ background: 'none', border: 'none', color: pseudoTab === 'customization' ? colors.accent : colors.textMuted,
-            cursor: 'pointer', padding: 4, borderRadius: 4 }}>
-          <Icon name="palette" size={15} />
-        </button>
-        <button type="button" onClick={onToggleDetails} aria-label="toggle details"
-          data-tip={detailsOpen ? 'Hide details' : 'Show details'}
-          style={{ background: 'none', border: 'none',
-            color: detailsOpen ? colors.accent : colors.textMuted,
-            cursor: 'pointer', padding: 4 }}>
-          <span style={{ display: 'inline-block', transition: 'transform 0.2s ease',
-            transform: detailsOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-            <Icon name="chevron-right" size={15} />
-          </span>
-        </button>
-        <button type="button" onClick={onSettings} aria-label="settings"
-          style={{ background: 'none', border: 'none', color: colors.textMuted,
-            cursor: 'pointer', padding: 4 }}><Icon name="settings" size={15} /></button>
-      </div>
-      <WindowControls />
     </div>
   )
 }
