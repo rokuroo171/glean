@@ -85,4 +85,4 @@ export function SwitchSky(arg1:string):Promise<string>;
 
 export function UnlockWindowSize():Promise<void>;
 
-export function WaterNote(arg1:string):Promise<boolean>;
+export function WishNote(arg1:string):Promise<boolean>;

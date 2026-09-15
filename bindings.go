@@ -26,7 +26,7 @@ func (a *App) ImportImage(name, dataURI string) (string, error) {
 
 func (a *App) DeleteNote(id string) error { return a.svc.DeleteNote(id) }
 
-func (a *App) WaterNote(id string) (bool, error) { return a.svc.WaterNote(id) }
+func (a *App) WishNote(id string) (bool, error) { return a.svc.WishNote(id) }
 
 func (a *App) OpenNote(id string) (core.NoteView, error) { return a.svc.OpenNote(id) }
 

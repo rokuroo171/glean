@@ -71,7 +71,7 @@ type NoteView struct {
 	CreatedAt       time.Time `json:"created_at"`
 	LastVisited     time.Time `json:"last_visited"`
 	VisitCount      int       `json:"visit_count"`
-	LastManualWater time.Time `json:"last_manual_water"`
+	LastWishAt time.Time `json:"last_manual_water"`
 	WorldX          int       `json:"world_x"`
 	WorldY          int       `json:"world_y"`
 	Positioned      bool      `json:"positioned"`
@@ -89,7 +89,7 @@ func noteToView(n note.Note, linkCounts map[string]int) NoteView {
 		CreatedAt:       n.CreatedAt,
 		LastVisited:     n.LastVisited,
 		VisitCount:      n.VisitCount,
-		LastManualWater: n.LastManualWater,
+		LastWishAt: n.LastWishAt,
 		WorldX:          n.WorldX,
 		WorldY:          n.WorldY,
 		Positioned:      n.Positioned,
@@ -394,8 +394,8 @@ func (s *Service) DeleteNote(id string) error {
 	return s.Store.Delete(id)
 }
 
-// WaterNote performs a manual wish on a note (once per day)
-func (s *Service) WaterNote(id string) (bool, error) {
+// WishNote grants a manual wish on a note (once per day)
+func (s *Service) WishNote(id string) (bool, error) {
 	if s.Store == nil {
 		return false, nil
 	}
@@ -407,7 +407,7 @@ func (s *Service) WaterNote(id string) (bool, error) {
 		return false, nil
 	}
 	n.VisitCount++
-	n.LastManualWater = time.Now()
+	n.LastWishAt = time.Now()
 	if err := s.Store.Update(n); err != nil {
 		return false, err
 	}

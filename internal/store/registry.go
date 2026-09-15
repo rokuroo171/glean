@@ -24,7 +24,7 @@ type RegistryEntry struct {
 	CreatedAt       time.Time `json:"created_at"`
 	LastVisited     time.Time `json:"last_visited"`
 	VisitCount      int       `json:"visit_count"`
-	LastManualWater time.Time `json:"last_manual_water"`
+	LastWishAt time.Time `json:"last_manual_water"`
 	WorldX          int       `json:"world_x"`
 	WorldY          int       `json:"world_y"`
 	Positioned      bool      `json:"positioned"`
@@ -34,7 +34,7 @@ func entryFromNote(n note.Note) RegistryEntry {
 	return RegistryEntry{
 		ID: n.ID, Title: n.Title, File: n.File, CreatedAt: n.CreatedAt,
 		LastVisited: n.LastVisited, VisitCount: n.VisitCount,
-		LastManualWater: n.LastManualWater, WorldX: n.WorldX,
+		LastWishAt: n.LastWishAt, WorldX: n.WorldX,
 		WorldY: n.WorldY, Positioned: n.Positioned,
 	}
 }
@@ -43,7 +43,7 @@ func entryToNote(e RegistryEntry) note.Note {
 	return note.Note{
 		ID: e.ID, Title: e.Title, File: e.File, CreatedAt: e.CreatedAt,
 		LastVisited: e.LastVisited, VisitCount: e.VisitCount,
-		LastManualWater: e.LastManualWater, WorldX: e.WorldX,
+		LastWishAt: e.LastWishAt, WorldX: e.WorldX,
 		WorldY: e.WorldY, Positioned: e.Positioned,
 	}
 }

@@ -166,6 +166,6 @@ export function UnlockWindowSize() {
   return window['go']['main']['App']['UnlockWindowSize']();
 }
 
-export function WaterNote(arg1) {
-  return window['go']['main']['App']['WaterNote'](arg1);
+export function WishNote(arg1) {
+  return window['go']['main']['App']['WishNote'](arg1);
 }
