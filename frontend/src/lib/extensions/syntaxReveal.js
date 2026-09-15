@@ -115,6 +115,15 @@ function decorationsFor(state) {
     decos.push(Decoration.node(sel.from, sel.to, { class: 'glean-hr-selected' }))
   }
 
+  // A caret inside a footnote definition reveals its raw [^label]: syntax
+  // around the dt label (the CSS pulls the label from data-label)
+  for (let d = $pos.depth; d > 0; d--) {
+    if ($pos.node(d).type.name === 'footnote_definition') {
+      decos.push(Decoration.node($pos.before(d), $pos.after(d), { class: 'glean-fn-def-active' }))
+      break
+    }
+  }
+
   if (decos.length === 0) return DecorationSet.empty
   return DecorationSet.create(state.doc, decos)
 }

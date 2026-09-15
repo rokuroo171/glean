@@ -272,9 +272,19 @@ const editorStyles = () => `
   .milkdown span[data-comment].ProseMirror-selectednode {
     font-size: 0.75em;
     line-height: inherit;
+    font-family: ui-monospace, monospace;
+    color: ${colors.textMuted};
     background: ${colors.textMuted}2e;
     border-radius: 3px;
     padding: 0 3px;
+  }
+  /* A caret inside a footnote definition wraps the dt label in its raw
+     syntax; the label itself comes from data-label */
+  .milkdown dl[data-type="footnote_definition"].glean-fn-def-active dt::before {
+    content: '[^';
+  }
+  .milkdown dl[data-type="footnote_definition"].glean-fn-def-active dt::after {
+    content: ']: ';
   }
   .milkdown span[data-html-open], .milkdown span[data-html-close] {
     display: inline-flex;
