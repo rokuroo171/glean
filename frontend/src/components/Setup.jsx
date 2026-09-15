@@ -322,7 +322,7 @@ export default function Setup({ onComplete }) {
           </motion.div>
           <motion.p style={{ ...typography.tagline, color: colors.accent, margin: 0 }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-            The first star is yours to place.
+            Welcome is waiting inside.
           </motion.p>
         </motion.div>
       )}

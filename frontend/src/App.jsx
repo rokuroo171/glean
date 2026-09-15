@@ -7,6 +7,7 @@ import OnboardingTour from './components/OnboardingTour'
 import TooltipLayer from './components/Tooltip.jsx'
 import { PreferencesProvider } from './lib/preferences-context'
 import { colors } from './lib/theme'
+import { MOCK_STARTERS, MOCK_STARTER_LINKS } from './lib/starters'
 
 const wails = window.go?.main
 
@@ -24,7 +25,7 @@ function WorkspaceBoot() {
 
 const ONBOARDING_STEPS = [
   { title: 'Your Sky is ready', body: 'A few quick pointers before you make it yours. You can skip this anytime.' },
-  { title: 'Create your first note', body: 'Click the file icon with a plus to write your first thought. Notes live inside your Sky folder as markdown files.', target: '[data-tour="new-file"]' },
+  { title: 'Start with Welcome', body: 'Your sky begins with four starter notes. Welcome is open now; it starlines into the Getting Started folder. Click the file icon with a plus when you want your own.', target: '[data-tour="new-file"]' },
   { title: 'Make it yours', body: 'Glean is built for customization. Themes, accent colors, and more all live in this pane.', target: '[data-tour="customize"]' },
   { title: 'Manage your Sky', body: 'Your Sky is a folder on disk. Open the explorer footer to switch skies or add more.', target: '[data-tour="manage-sky"]' },
   { title: 'The night is yours', body: 'Start writing. The more you visit a note, the brighter its star grows.' },
@@ -46,12 +47,7 @@ function mockSkyState() {
     has_legacy: false, registry_empty: true, migration_skipped: false }
 }
 
-const MOCK_NOTES = [
-  { id: '1', title: 'First spark', body: 'Notes on tools and configs.', created_at: new Date(Date.now() - 120000).toISOString(), last_visited: new Date(Date.now() - 120000).toISOString(), visit_count: 1, last_manual_water: null, world_x: 0, world_y: 0, positioned: true, stage: 'faintspeck', species: 'warm' },
-  { id: '2', title: 'Dim glow', body: 'Ideas for the next session.', created_at: new Date(Date.now() - 3600000).toISOString(), last_visited: new Date(Date.now() - 3600000).toISOString(), visit_count: 3, last_manual_water: null, world_x: 18, world_y: 0, positioned: true, stage: 'dimstar', species: 'cool' },
-  { id: '3', title: 'Steady light', body: 'Daily reflections and observations.', created_at: new Date(Date.now() - 86400000).toISOString(), last_visited: new Date(Date.now() - 86400000).toISOString(), visit_count: 7, last_manual_water: null, world_x: -18, world_y: 8, positioned: true, stage: 'steadystar', species: 'neutral' },
-  { id: '4', title: 'Brilliant beacon', body: 'Roadmap and milestones ahead.', created_at: new Date(Date.now() - 172800000).toISOString(), last_visited: new Date(Date.now() - 172800000).toISOString(), visit_count: 25, last_manual_water: null, world_x: 36, world_y: 8, positioned: true, stage: 'brilliantstar', species: 'hot' },
-]
+const MOCK_NOTES = MOCK_STARTERS
 
 // Mock-created notes survive loadSky refetches
 let mockCreated = []
@@ -63,18 +59,14 @@ async function getNotes() {
 
 async function getLinks() {
   if (wails) return wails.App.GetLinks()
-  return [
-    { note_a: '1', note_b: '2', dimmed: false, visits: 6 },
-    { note_a: '2', note_b: '3', dimmed: false, visits: 0 },
-    { note_a: '3', note_b: '4', dimmed: false, visits: 2 },
-  ]
+  return MOCK_STARTER_LINKS
 }
 
 async function getStats() {
   if (wails) return wails.App.GetStats()
   return {
-    total_notes: 4,
-    stage_counts: { faintspeck: 1, dimstar: 1, steadystar: 1, brilliantstar: 1 },
+    total_notes: MOCK_STARTERS.length,
+    stage_counts: { faintspeck: 1, dimstar: 1, steadystar: 2 },
     current_streak: 6,
     longest_streak: 14,
     last_active_date: '',
