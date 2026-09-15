@@ -166,7 +166,7 @@ func TestMigrateAndSkip(t *testing.T) {
 }
 
 func TestGetLinksMergesVisits(t *testing.T) {
-	a := testApp(t)
+	s := testService(t)
 	skyDir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(skyDir, "Alpha.md"), []byte("# Alpha\n\nSee [[Beta]]."), 0o644); err != nil {
 		t.Fatal(err)
@@ -174,11 +174,11 @@ func TestGetLinksMergesVisits(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(skyDir, "Beta.md"), []byte("# Beta\n\nBack to [[Alpha]]."), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := a.OpenSky(skyDir); err != nil {
+	if _, err := s.OpenSky(skyDir); err != nil {
 		t.Fatal(err)
 	}
 	var alphaID, betaID string
-	for _, n := range a.store.All() {
+	for _, n := range s.Store.All() {
 		switch n.Title {
 		case "Alpha":
 			alphaID = n.ID
@@ -187,17 +187,17 @@ func TestGetLinksMergesVisits(t *testing.T) {
 		}
 	}
 	if alphaID == "" || betaID == "" {
-		t.Fatalf("scan missed notes: %+v", a.store.All())
+		t.Fatalf("scan missed notes: %+v", s.Store.All())
 	}
 	// Reinforce from both directions; the pair is undirected so this is one trail
 	now := time.Now()
-	if err := a.adjacency.Reinforce(alphaID, betaID, now); err != nil {
+	if err := s.Adjacency.Reinforce(alphaID, betaID, now); err != nil {
 		t.Fatal(err)
 	}
-	if err := a.adjacency.Reinforce(betaID, alphaID, now); err != nil {
+	if err := s.Adjacency.Reinforce(betaID, alphaID, now); err != nil {
 		t.Fatal(err)
 	}
-	links := a.GetLinks()
+	links := s.GetLinks()
 	if len(links) != 1 {
 		t.Fatalf("links = %d, want 1", len(links))
 	}
