@@ -5,7 +5,7 @@ import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import rehypeRaw from 'rehype-raw'
 import { visit, SKIP } from 'unist-util-visit'
-import { colors } from './theme'
+import { colors, danger } from './theme'
 import { highlightCode } from './prism-setup'
 import 'katex/dist/katex.min.css'
 
@@ -91,7 +91,7 @@ function getS() {
     padding: '6px 16px',
     color: colors.textMuted,
     fontStyle: 'italic',
-    background: 'rgba(90,106,122,0.06)',
+    background: colors.textMuted + '0f',
     borderRadius: '0 4px 4px 0',
   },
   hr: { border: 'none', borderTop: `1px solid ${colors.border}`, margin: '20px 0' },
@@ -104,7 +104,7 @@ function getS() {
   code: {
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
     fontSize: 13,
-    background: 'rgba(90,106,122,0.15)',
+    background: colors.textMuted + '26',
     padding: '1px 5px',
     borderRadius: 3,
     color: colors.text,
@@ -130,7 +130,7 @@ function getS() {
     borderRadius: 6,
     padding: '8px 12px',
     margin: '8px 0',
-    background: 'rgba(90,106,122,0.04)',
+    background: colors.textMuted + '0a',
   },
   summary: {
     cursor: 'pointer',
@@ -202,7 +202,7 @@ const listStyles = () => `
     counter-increment: glean-counter;
   }
   .glean-markdown mark {
-    background: rgba(217, 154, 61, 0.3);
+    background: ${colors.accentWarm}4d;
     color: inherit;
     padding: 1px 4px;
     border-radius: 3px;
@@ -231,7 +231,7 @@ const listStyles = () => `
   .glean-markdown table th {
     position: sticky;
     top: 0;
-    background: rgba(90, 106, 122, 0.15);
+    background: ${colors.textMuted}26;
   }
   .glean-markdown pre {
     position: relative;
@@ -262,7 +262,7 @@ async function initMermaid() {
       primaryBorderColor: colors.border,
       lineColor: colors.borderStrong,
       secondaryColor: colors.bgElevated,
-      tertiaryColor: 'rgba(90, 106, 122, 0.1)',
+      tertiaryColor: colors.textMuted + '1a',
       fontFamily: 'inherit',
     },
   })
@@ -298,7 +298,7 @@ function MermaidDiagram({ code }) {
         margin: '8px 0',
         border: `1px solid ${colors.border}`,
         borderRadius: 6,
-        background: 'rgba(219, 76, 64, 0.1)',
+        background: `${danger}1a`,
         color: colors.textMuted,
         fontSize: 12,
         fontFamily: 'monospace',
@@ -391,7 +391,7 @@ function CodeBlock({ children, className }) {
           position: 'absolute',
           top: 8,
           right: 8,
-          background: 'rgba(90, 106, 122, 0.2)',
+          background: colors.textMuted + '33',
           border: `1px solid ${colors.border}`,
           color: colors.textMuted,
           cursor: 'pointer',
