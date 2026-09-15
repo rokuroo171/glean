@@ -82,7 +82,7 @@ export default function ManageSky({ currentSky, onSwitch, onClose }) {
     >
       <div style={{
         display: 'flex', width: 640, height: 420,
-        background: '#121824', border: `1px solid ${colors.border}`,
+        background: colors.bgElevated, border: `1px solid ${colors.border}`,
         borderRadius: 12, overflow: 'hidden',
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
       }}>

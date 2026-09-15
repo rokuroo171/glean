@@ -61,7 +61,7 @@ export default function NewNotePrompt({ title, onTitleChange, onSubmit, onCancel
       }}
     >
       <div style={{
-        background: '#1a2030', border: `1px solid ${colors.border}`,
+        background: colors.bgElevated, border: `1px solid ${colors.border}`,
         borderRadius: 12, padding: space[3], color: colors.text,
         width: 340,
       }}>

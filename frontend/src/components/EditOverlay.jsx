@@ -140,7 +140,7 @@ export default function EditOverlay({ note, body, onBodyChange, onSave, onAutoSa
       }}
     >
       <div style={{
-        background: '#1a2030',
+        background: colors.bgElevated,
         border: `1px solid ${colors.border}`,
         borderRadius: 12,
         width: '100%',
@@ -203,8 +203,8 @@ export default function EditOverlay({ note, body, onBodyChange, onSave, onAutoSa
             style={{
               width: '100%',
               minHeight: '50vh',
-              background: '#151a24',
-              color: '#d0e0d0',
+              background: colors.bg,
+              color: colors.text,
               border: `1px solid ${colors.border}`,
               borderRadius: 6,
               padding: space[3],
