@@ -3,6 +3,7 @@ import { colors, space } from '../lib/theme'
 import { usePreferences } from '../lib/preferences-context'
 import TabBar from './TabBar'
 import HeaderBar from './HeaderBar'
+import OpenNotesList from './OpenNotesList'
 import StatusBar from './StatusBar'
 import Home from './Home'
 import EditorPane from './EditorPane'
@@ -296,10 +297,12 @@ export default function Workspace({
         onSettings={() => setPseudoTab('settings')}
         onToggleDetails={() => setDetailsOpen(v => !v)}
         detailsOpen={detailsOpen} />
-      <TabBar tabs={tabs} activeId={activeId}
-        onSelect={(id) => id === '__night__' ? openNight() : openNote(id)}
-        onClose={(id) => id === '__night__' ? closeNight() : closeTab(id)}
-        pseudoTab={pseudoTab} onClosePseudo={() => setPseudoTab(null)} />
+      {prefs.layout.tab_mode === 'vertical' ? null : (
+        <TabBar tabs={tabs} activeId={activeId}
+          onSelect={(id) => id === '__night__' ? openNight() : openNote(id)}
+          onClose={(id) => id === '__night__' ? closeNight() : closeTab(id)}
+          pseudoTab={pseudoTab} onClosePseudo={() => setPseudoTab(null)} />
+      )}
       {externalChanged && (
         <div style={{ display: 'flex', alignItems: 'center', gap: space[2], padding: '6px 12px',
           background: colors.border, borderBottom: `1px solid ${colors.border}`,
@@ -332,12 +335,12 @@ export default function Workspace({
               cursor: 'pointer', padding: 4, borderRadius: 4 }}>
             <Icon name="sparkles" size={16} />
           </button>
-          <button type="button" data-tour="customize" onClick={() => setPseudoTab('customization')} aria-label="customization" data-tip="Customization"
+          <button type="button" data-tour="customize" onClick={() => setPseudoTab(pseudoTab === 'customization' ? null : 'customization')} aria-label="customization" data-tip="Customization"
             style={{ background: 'none', border: 'none', color: pseudoTab === 'customization' ? colors.accent : colors.textMuted,
               cursor: 'pointer', padding: 4, borderRadius: 4 }}>
             <Icon name="palette" size={16} />
           </button>
-          <button type="button" onClick={() => { setPseudoTab('stats'); onOpenStats() }} aria-label="stats" data-tip="Sky overview"
+          <button type="button" onClick={() => { if (pseudoTab === 'stats') setPseudoTab(null); else { setPseudoTab('stats'); onOpenStats() } }} aria-label="stats" data-tip="Sky overview"
             style={{ background: 'none', border: 'none', color: pseudoTab === 'stats' ? colors.accent : colors.textMuted,
               cursor: 'pointer', padding: 4, borderRadius: 4 }}>
             <Icon name="bar-chart" size={16} />
@@ -346,8 +349,14 @@ export default function Workspace({
         {/* File explorer panel -- slides in/out next to the icon rail */}
         {!skyCollapsed && (
           <>
-          <div style={{ width: sidebarWidth, borderRight: `1px solid ${colors.border}`, display: 'flex', minHeight: 0,
+          <div style={{ width: sidebarWidth, borderRight: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', minHeight: 0,
             background: colors.bgTranslucent, backdropFilter: 'blur(12px)', flexShrink: 0, overflow: 'hidden' }}>
+            {prefs.layout.tab_mode === 'vertical' && (
+              <OpenNotesList tabs={tabs} activeId={activeId}
+                onSelect={(id) => id === '__night__' ? openNight() : openNote(id)}
+                onClose={(id) => id === '__night__' ? closeNight() : closeTab(id)} />
+            )}
+            <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
             <FileExplorer notes={notes} activeId={activeId} skyName={skyName}
               onOpenNote={openNote}
               onCreateNote={async (name, folder) => {
@@ -364,6 +373,7 @@ export default function Workspace({
               skyPath={skyPath}
               onManageSky={() => setShowManageSky(true)}
               onDelete={onDelete} />
+            </div>
           </div>
           <div
             onMouseDown={startResize}
