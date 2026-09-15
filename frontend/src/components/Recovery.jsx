@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
-import { colors, space, typography } from '../lib/theme'
+import { colors, space, typography, danger } from '../lib/theme'
 import { motionTokens } from '../lib/motion-tokens'
 import { useSafeMotion } from '../hooks/useReducedMotion'
 import { NightShell, primaryButton, ghostButton, FORM_SIZE, resizeSetupWindow } from './SetupChrome'
@@ -58,7 +58,7 @@ export default function Recovery({ onCreateNew, onComplete }) {
             The folder was moved or deleted. Locate it, or start a fresh sky.
           </motion.p>
 
-          {error && <motion.div role="alert" style={{ marginBottom: space[2], fontSize: 12, color: '#b06060' }}
+          {error && <motion.div role="alert" style={{ marginBottom: space[2], fontSize: 12, color: danger }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}>{error}</motion.div>}
 
           <motion.div style={{ display: 'flex', gap: space[2], justifyContent: 'center' }}

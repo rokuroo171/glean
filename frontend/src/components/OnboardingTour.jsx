@@ -222,7 +222,7 @@ function StepBody({ step, index, count, isFirst, isLast, onPrev, onNext, onSkip 
             style={{
               display: 'flex', alignItems: 'center', gap: 4,
               padding: '6px 14px', borderRadius: 7, cursor: 'pointer',
-              background: colors.accent, color: '#0B0F19', border: 'none',
+              background: colors.accent, color: colors.bg, border: 'none',
               fontSize: 12, fontWeight: 600,
             }}>
             {isLast ? 'Done' : 'Next'}
