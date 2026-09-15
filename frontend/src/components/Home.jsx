@@ -140,6 +140,8 @@ export default function Home({ notes, stats, onNoteClick, onOpenStats, onNewNote
           maxWidth: 420,
           padding: `${space[6]}px ${space[4]}px`,
           pointerEvents: 'none',
+          minHeight: '100%',
+          boxSizing: 'border-box',
         }}
       >
         {/* Greeting */}

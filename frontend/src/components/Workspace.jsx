@@ -417,12 +417,14 @@ export default function Workspace({
               <CustomizationPane />
             </div>
           ) : activeId === '__night__' ? (
-            <div style={{ flex: 1, overflow: 'auto', padding: space[4] }}>
+            // no padding here: Home paints its own full-bleed background, an
+            // inset would leave an unpainted strip at the pane edges
+            <div style={{ flex: 1, overflow: 'auto' }}>
               <Home notes={notes} stats={stats} onNoteClick={(id) => { openNote(id) }}
                 onOpenStats={() => { setPseudoTab('stats'); onOpenStats() }} onNewNote={onNewNote} />
             </div>
           ) : !activeNote ? (
-            <div style={{ flex: 1, overflow: 'auto', padding: space[4] }}>
+            <div style={{ flex: 1, overflow: 'auto' }}>
               <Home notes={notes} stats={stats} onNoteClick={openNote}
                 onOpenStats={() => { setPseudoTab('stats'); onOpenStats() }} onNewNote={onNewNote} />
             </div>
