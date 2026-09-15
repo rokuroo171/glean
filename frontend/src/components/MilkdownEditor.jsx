@@ -43,17 +43,6 @@ const editorStyles = () => `
     line-height: 1.6;
     background: transparent !important;
     outline: none;
-    box-sizing: border-box;
-    border: none !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    margin: 0;
-  }
-  .milkdown .editor {
-    border: none !important;
-    box-shadow: none !important;
-    background: transparent !important;
-    border-radius: 0 !important;
   }
   .milkdown .editor {
     width: 100%;
