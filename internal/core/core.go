@@ -1046,7 +1046,7 @@ func (s *Service) GetPreferences() PreferencesView {
 			AutosaveInterval:          p.Editor.AutosaveInterval,
 			WordWrap:                  p.Editor.WordWrap == nil || *p.Editor.WordWrap,
 			LineNumbers:               p.Editor.LineNumbers != nil && *p.Editor.LineNumbers,
-			NarrowWidth:               p.Editor.NarrowWidth != nil && *p.Editor.NarrowWidth,
+			NarrowWidth:               p.Editor.NarrowWidth == nil || *p.Editor.NarrowWidth,
 			ShowOutline:               p.Editor.ShowOutline == nil || *p.Editor.ShowOutline,
 		},
 		Sky: SkyPrefsView{

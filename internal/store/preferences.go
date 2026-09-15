@@ -61,7 +61,7 @@ type EditorPrefs struct {
 	AutosaveInterval          int     `json:"autosave_interval"`            // seconds, default 3
 	WordWrap                  *bool   `json:"word_wrap"`                    // nil = true (default)
 	LineNumbers               *bool   `json:"line_numbers"`                 // nil = false (default)
-	NarrowWidth               *bool   `json:"narrow_width"`                 // nil = false (default); center the text column for reading
+	NarrowWidth               *bool   `json:"narrow_width"`                 // nil = true (default); center the text column for reading
 	ShowOutline               *bool   `json:"show_outline"`                 // nil = true (default); editor outline panel
 }
 
