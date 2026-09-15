@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/glean/glean/internal/activity"
 	"github.com/glean/glean/internal/adjacency"
@@ -161,5 +162,46 @@ func TestMigrateAndSkip(t *testing.T) {
 	}
 	if !a.SkyState().MigrationSkipped {
 		t.Fatal("SkyState should report the skip flag")
+	}
+}
+
+func TestGetLinksMergesVisits(t *testing.T) {
+	a := testApp(t)
+	skyDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(skyDir, "Alpha.md"), []byte("# Alpha\n\nSee [[Beta]]."), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skyDir, "Beta.md"), []byte("# Beta\n\nBack to [[Alpha]]."), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.OpenSky(skyDir); err != nil {
+		t.Fatal(err)
+	}
+	var alphaID, betaID string
+	for _, n := range a.store.All() {
+		switch n.Title {
+		case "Alpha":
+			alphaID = n.ID
+		case "Beta":
+			betaID = n.ID
+		}
+	}
+	if alphaID == "" || betaID == "" {
+		t.Fatalf("scan missed notes: %+v", a.store.All())
+	}
+	// Reinforce from both directions; the pair is undirected so this is one trail
+	now := time.Now()
+	if err := a.adjacency.Reinforce(alphaID, betaID, now); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.adjacency.Reinforce(betaID, alphaID, now); err != nil {
+		t.Fatal(err)
+	}
+	links := a.GetLinks()
+	if len(links) != 1 {
+		t.Fatalf("links = %d, want 1", len(links))
+	}
+	if links[0].Visits != 2 {
+		t.Fatalf("visits = %d, want 2", links[0].Visits)
 	}
 }
