@@ -13,6 +13,7 @@ import { codeHighlight } from '../lib/extensions/codeHighlight'
 import { linkClick } from '../lib/extensions/linkClick'
 import { rescueSourceBrs, htmlNodeOverride } from '../lib/extensions/hardBrRescue'
 import { footnoteJump } from '../lib/extensions/footnoteJump'
+import { footnoteRename } from '../lib/extensions/footnoteRename'
 import { alerts } from '../lib/extensions/alerts'
 import { mermaidView } from '../lib/extensions/mermaidView'
 import { remarkHighlight, highlightSchema } from '../lib/extensions/highlightMark'
@@ -286,6 +287,21 @@ const editorStyles = () => `
   .milkdown dl[data-type="footnote_definition"].glean-fn-def-active dt::after {
     content: ']: ';
   }
+  .glean-fn-rename {
+    display: inline-flex;
+    margin: 0 4px;
+  }
+  .glean-fn-rename input {
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    color: ${colors.text};
+    background: ${colors.bg};
+    border: 1px solid ${colors.accent};
+    border-radius: 4px;
+    padding: 1px 6px;
+    outline: none;
+    width: 12ch;
+  }
   .milkdown span[data-html-open], .milkdown span[data-html-close] {
     display: inline-flex;
     align-items: center;
@@ -419,6 +435,7 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       .use($prose(linkClick))
       .use(htmlNodeOverride)
       .use($prose(footnoteJump))
+      .use($prose(footnoteRename))
       .use($prose(alerts))
       .use($prose(mermaidView))
       .use(remarkHighlight)
