@@ -1,0 +1,53 @@
+import { Plugin, PluginKey } from 'prosemirror-state'
+
+// Typing ``` into an empty paragraph opens a fenced code block Obsidian-style:
+// the caret lands inside the block ready for a language tag or code, and the
+// closing fence is implicit (markdown serialization always writes one).
+// Escape from the block's end exits to a paragraph after it. A trailing
+// empty paragraph is appended when the block would otherwise be the last
+// node, so there is always somewhere to go after code
+export const fenceAutoPairKey = new PluginKey('glean-fence-autopair')
+
+const FENCE = '```'
+
+function handleTextInput(view, from, to, text) {
+  if (text !== FENCE) return false
+  const { state } = view
+  const $from = state.doc.resolve(from)
+  // Only when the paragraph is exactly empty at the typed spot
+  if (from - $from.start($from.depth) !== 0 || to !== from) return false
+  if (state.doc.nodeAt(from - 1)?.type.name === 'code_block') return false
+
+  const codeBlock = state.schema.nodes.code_block.create({ language: '' })
+  const para = state.schema.nodes.paragraph.create()
+  const blockEnd = $from.after($from.depth)
+  const tr = state.tr.replaceWith($from.before($from.depth), blockEnd, [codeBlock, para])
+  // caret inside the code block, ready for a language tag or code
+  tr.setSelection(state.selection.constructor.near(tr.doc.resolve($from.before($from.depth) + 1), -1))
+  view.dispatch(tr.scrollIntoView())
+  return true
+}
+
+// Escape pressed at a code block's end: exit into the paragraph after it
+function handleKeyDown(view, event) {
+  if (event.key !== 'Escape') return false
+  const { state } = view
+  const { $from } = state.selection
+  for (let d = $from.depth; d > 0; d--) {
+    if ($from.node(d).type.name !== 'code_block') continue
+    const after = $from.after(d)
+    if (after >= state.doc.content.size) return false
+    view.dispatch(state.tr.setSelection(state.selection.constructor.near(state.doc.resolve(after + 1))))
+    view.focus()
+    return true
+  }
+  return false
+}
+
+export const fenceAutoPair = () => new Plugin({
+  key: fenceAutoPairKey,
+  props: {
+    handleTextInput,
+    handleKeyDown,
+  },
+})

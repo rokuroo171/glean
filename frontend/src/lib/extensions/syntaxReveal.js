@@ -35,6 +35,13 @@ function pushInlineMark(decos, from, to, mark) {
     decos.push(Decoration.widget(to, markWidget(`](${mark.attrs.href ?? ''})`), { side: 1 }))
     return
   }
+  if (type === 'emphasis') {
+    // honor the mark's stored * or _ so the raw syntax matches the file
+    const m = mark.attrs.marker === '_' ? '_' : '*'
+    decos.push(Decoration.widget(from, markWidget(m), { side: -1 }))
+    decos.push(Decoration.widget(to, markWidget(m), { side: 1 }))
+    return
+  }
   const [open, close] = INLINE_PAIR[type] || []
   if (!open) return
   decos.push(Decoration.widget(from, markWidget(open), { side: -1 }))

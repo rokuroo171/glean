@@ -19,6 +19,10 @@ import { footnoteRename } from '../lib/extensions/footnoteRename'
 import { alerts } from '../lib/extensions/alerts'
 import { mermaidView } from '../lib/extensions/mermaidView'
 import { lineGutter } from '../lib/extensions/lineGutter'
+import { fenceAutoPair } from '../lib/extensions/fenceAutoPair'
+import { headingEdit } from '../lib/extensions/headingEdit'
+import { wrapSelection } from '../lib/extensions/wrapSelection'
+import { trailing } from '@milkdown/kit/plugin/trailing'
 import { remarkHighlight, highlightSchema } from '../lib/extensions/highlightMark'
 import { math } from '@milkdown/plugin-math'
 import 'katex/dist/katex.min.css'
@@ -470,6 +474,10 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
           if (onSelectionChangeRef.current) onSelectionChangeRef.current(ctx, selection)
         })
       })
+      // headingEdit before commonmark: its Backspace-at-start demote must win
+      // over the stock keymap's joinBackward, which would merge the heading into
+      // the block above instead of stepping its level down
+      .use($prose(headingEdit()))
       .use(commonmark)
       .use(gfm)
       .use(listener)
@@ -487,6 +495,9 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       .use(remarkHighlight)
       .use(highlightSchema)
       .use($prose(() => lineGutter({ state: lineGutterState })))
+      .use($prose(fenceAutoPair()))
+      .use($prose(wrapSelection()))
+      .use(trailing)
       .use(math)
   }, [])
 
