@@ -107,7 +107,7 @@ func (s *Service) SetupSky(name, dir string) (SkyStateView, error) {
 		return SkyStateView{}, err
 	}
 	store.AddKnownSky(clean, dir)
-	// Wire stores without scanning -- a new sky has no files yet
+	// Wire stores without scanning -- a new sky starts from the seed set
 	reg, err := store.OpenRegistry(dir)
 	if err != nil {
 		return SkyStateView{}, err
@@ -123,6 +123,9 @@ func (s *Service) SetupSky(name, dir string) (SkyStateView, error) {
 	s.Activity = act
 	s.Workspace = ws
 	s.SkyDir = dir
+	if err := seedStarterNotes(s); err != nil {
+		return SkyStateView{}, err
+	}
 	return s.SkyState(), nil
 }
 

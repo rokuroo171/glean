@@ -296,7 +296,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   }
 
   const editorMenuItems = [
-    { id: 'add-link', label: 'Add link', icon: 'link', onSelect: startWikilink },
+    { id: 'add-link', label: 'Add starline', icon: 'link', onSelect: startWikilink },
     { id: 'add-ext-link', label: 'Add external link', icon: 'external-link', onSelect: insertExternalLink },
     { id: 'sep-link', type: 'separator' },
     {

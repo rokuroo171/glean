@@ -81,8 +81,8 @@ func TestSetupSkyConfigures(t *testing.T) {
 	if !st.Configured || st.SkyName != "My Sky" || st.SkyPath != skyDir {
 		t.Fatalf("state = %+v", st)
 	}
-	if !st.RegistryEmpty {
-		t.Fatal("fresh sky should have an empty registry")
+	if st.RegistryEmpty {
+		t.Fatal("fresh sky should have the seeded starter notes")
 	}
 	// A second service sees the same configuration.
 	s2 := &Service{}
@@ -99,8 +99,11 @@ func TestSetupSkyDoesNotScan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !st.RegistryEmpty {
-		t.Fatal("SetupSky should not scan -- fresh sky starts empty")
+	if st.RegistryEmpty {
+		t.Fatal("SetupSky should not scan -- registry must hold only the seed set")
+	}
+	if got := len(s.Store.All()); got != 4 {
+		t.Fatalf("expected exactly the 4 starter notes, got %d", got)
 	}
 }
 
