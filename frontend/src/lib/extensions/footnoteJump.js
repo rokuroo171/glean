@@ -1,4 +1,4 @@
-import { Plugin, PluginKey } from 'prosemirror-state'
+import { Plugin, PluginKey, TextSelection } from 'prosemirror-state'
 
 export const footnoteJumpKey = new PluginKey('glean-footnote-jump')
 
@@ -11,6 +11,16 @@ export const footnoteJump = () => new Plugin({
   key: footnoteJumpKey,
   props: {
     handleDOMEvents: {
+      mousedown(view, event) {
+        // Clicking the dt label of a definition places the caret in its
+        // content, which also triggers the raw [^label]: reveal
+        const dl = event.target && event.target.closest ? event.target.closest('dl[data-type="footnote_definition"]') : null
+        if (!dl || !view.dom.contains(dl) || !event.target.closest('dt')) return false
+        event.preventDefault()
+        const pos = view.posAtDOM(dl, 0)
+        view.dispatch(view.state.tr.setSelection(TextSelection.near(view.state.doc.resolve(pos))).scrollIntoView())
+        return true
+      },
       click(view, event) {
         const sup = event.target && event.target.closest ? event.target.closest('sup[data-type="footnote_reference"]') : null
         if (!sup || !view.dom.contains(sup)) return false
