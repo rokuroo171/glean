@@ -427,6 +427,25 @@ const editorStyles = () => `
     text-decoration: none;
     user-select: none;
   }
+  .milkdown .glean-fence-open {
+    font-family: 'Fira Code', 'JetBrains Mono', monospace;
+    font-size: 0.8em;
+    margin-right: 2px;
+  }
+  .milkdown .glean-fence-lang {
+    color: ${colors.accent};
+    outline: none;
+    min-width: 0.5em;
+    min-height: 1em;
+    display: inline-block;
+    margin-left: 2px;
+    margin-right: 6px;
+    padding: 0 2px;
+    border-bottom: 1px dashed ${colors.border};
+  }
+  .milkdown .glean-fence-lang:focus {
+    border-bottom-color: ${colors.accent};
+  }
   li.glean-list-reveal {
     list-style: none;
   }

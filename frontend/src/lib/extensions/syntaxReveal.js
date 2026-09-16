@@ -18,13 +18,44 @@ const INLINE_PAIR = {
   strike_through: ['~~', '~~'],
 }
 
-function markWidget(text) {
+function markWidget(text, className = 'glean-syntax-mark') {
   return () => {
     const span = document.createElement('span')
-    span.className = 'glean-syntax-mark'
+    span.className = className
     span.textContent = text
     span.setAttribute('aria-hidden', 'true')
     return span
+  }
+}
+
+// The open-fence widget for a code block: ``` plus an editable span bound
+// to the language attribute, Obsidian-style. The widget is not editable so
+// the caret never wanders into it, but the language span is; PM ignores
+// events from inside the span (stopEvent) while the browser's own
+// contenteditable machinery types into it. The change commits on blur,
+// matching the leave-to-commit model of every other revealed mark
+function fenceWidget(node, getPos) {
+  return (view) => {
+    const wrap = document.createElement('span')
+    wrap.className = 'glean-syntax-mark glean-fence-open'
+    wrap.setAttribute('aria-hidden', 'true')
+    wrap.append('```')
+    const lang = document.createElement('span')
+    lang.className = 'glean-fence-lang'
+    lang.contentEditable = 'true'
+    lang.spellcheck = false
+    lang.textContent = node.attrs.language ?? ''
+    lang.addEventListener('blur', () => {
+      const pos = getPos()
+      if (pos == null) return
+      const cur = view.state.doc.nodeAt(pos)
+      if (!cur || cur.type.name !== 'code_block') return
+      const next = lang.textContent.replace(/[\s`]/g, '')
+      if (next === (cur.attrs.language ?? '')) return
+      view.dispatch(view.state.tr.setNodeAttribute(pos, 'language', next))
+    })
+    wrap.append(lang)
+    return wrap
   }
 }
 
@@ -82,7 +113,6 @@ function decorationsFor(state) {
     if (!BLOCK_NODES.includes(node.type.name)) continue
     if (node.type.name === 'blockquote') prefixes.push('> ')
     else if (node.type.name === 'heading') prefixes.push('#'.repeat(node.attrs.level || 1) + ' ')
-    else if (node.type.name === 'code_block') prefixes.push('```')
     else if (node.type.name === 'list_item') {
       listDepth = d
       const list = $pos.node(d - 1)
@@ -101,6 +131,18 @@ function decorationsFor(state) {
     return null
   })()
   if (codeDepth != null) {
+    // the fence chip renders inside the pre, before the code text, where
+    // the plain ``` prefix used to render; getPos still resolves the node's
+    // document position for setNodeAttribute
+    const nodePos = $pos.before(codeDepth)
+    const block = $pos.node(codeDepth)
+    decos.push(Decoration.widget($pos.start(codeDepth), fenceWidget(block, () => {
+      const found = state.doc.resolve(head)
+      for (let d = found.depth; d >= 0; d--) {
+        if (found.node(d).type.name === 'code_block') return found.before(d)
+      }
+      return null
+    }), { side: -1, stopEvent: (event) => event.target.closest?.('.glean-fence-lang') != null, key: `fence-${nodePos}-${block.attrs.language}` }))
     decos.push(Decoration.widget($pos.end(codeDepth), markWidget('```'), { side: 1 }))
   }
 
