@@ -19,7 +19,7 @@ import { footnoteRename } from '../lib/extensions/footnoteRename'
 import { alerts } from '../lib/extensions/alerts'
 import { mermaidView } from '../lib/extensions/mermaidView'
 import { lineGutter } from '../lib/extensions/lineGutter'
-import { fenceAutoPair } from '../lib/extensions/fenceAutoPair'
+import { autoPair } from '../lib/extensions/autoPair'
 import { headingEdit } from '../lib/extensions/headingEdit'
 import { wrapSelection } from '../lib/extensions/wrapSelection'
 import { trailing } from '@milkdown/kit/plugin/trailing'
@@ -516,7 +516,7 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       .use(remarkHighlight)
       .use(highlightSchema)
       .use($prose(() => lineGutter({ state: lineGutterState })))
-      .use($prose(fenceAutoPair()))
+      .use($prose(autoPair()))
       .use($prose(wrapSelection()))
       .use(trailing)
       .use(math)
