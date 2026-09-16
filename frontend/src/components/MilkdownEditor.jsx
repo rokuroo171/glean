@@ -398,14 +398,16 @@ const editorStyles = () => `
   .milkdown .glean-taskbox {
     display: inline-flex;
     align-items: center;
-    margin-right: 0.5em;
+    margin-right: 0.4em;
     vertical-align: text-bottom;
   }
-  .milkdown .glean-taskbox input[type="checkbox"] {
-    width: 13px;
-    height: 13px;
-    accent-color: ${colors.accent};
+  .milkdown .glean-taskbox [role="checkbox"] {
     cursor: pointer;
+    border-radius: 6px;
+    outline: none;
+  }
+  .milkdown .glean-taskbox [role="checkbox"]:focus-visible {
+    box-shadow: 0 0 0 2px ${colors.accent}40;
   }
   .milkdown li[data-item-type="task"][data-checked="true"] > p {
     text-decoration: line-through;

@@ -343,30 +343,36 @@ function Checkbox({ checked, index }) {
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: 16,
-        height: 16,
-        borderRadius: 4,
-        border: `2px solid ${checked ? colors.accent : colors.borderStrong}`,
-        background: checked ? colors.accent : 'transparent',
+        width: 18,
+        height: 18,
         flexShrink: 0,
-        marginTop: 4,
+        marginTop: 3,
         cursor: 'pointer',
         outline: 'none',
-        transition: 'all 150ms ease',
-        boxShadow: checked ? `0 0 0 1px ${colors.accent}40` : 'none',
+        borderRadius: 6,
       }}
     >
-      {checked && (
-        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" style={{ display: 'block' }}>
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{ display: 'block' }}>
+        <rect
+          x="1.5"
+          y="1.5"
+          width="15"
+          height="15"
+          rx="5"
+          stroke={checked ? colors.accent : colors.borderStrong}
+          strokeWidth="1.75"
+          fill={checked ? colors.accent : 'none'}
+        />
+        {checked && (
           <path
-            d="M2.5 6.5l2.5 2.5 4.5-5.5"
-            stroke="#fff"
-            strokeWidth="2"
+            d="M5.5 9.2l2.4 2.4 4.6-5.4"
+            stroke={colors.bg}
+            strokeWidth="1.75"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-        </svg>
-      )}
+        )}
+      </svg>
     </span>
   )
 }
