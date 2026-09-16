@@ -3,9 +3,7 @@ import { Plugin, PluginKey } from 'prosemirror-state'
 // Typing ``` into an empty paragraph opens a fenced code block Obsidian-style:
 // the caret lands inside the block ready for a language tag or code, and the
 // closing fence is implicit (markdown serialization always writes one).
-// Escape from the block's end exits to a paragraph after it. A trailing
-// empty paragraph is appended when the block would otherwise be the last
-// node, so there is always somewhere to go after code
+// Escape from the block's end exits to a paragraph after it
 export const fenceAutoPairKey = new PluginKey('glean-fence-autopair')
 
 const FENCE = '```'
@@ -52,8 +50,24 @@ function handleKeyDown(view, event) {
   return false
 }
 
+// A leaf block at the end of the document is a caret dead end: ArrowDown
+// and Escape have no destination below it and the closing fence is not real
+// text to click. Milkdown's own fence input rule creates the block without
+// a trailing node, so keep the invariant here: the doc never ends on one.
+// The autopair path below still adds its own paragraph so its behavior is
+// testable without appendTransaction
+const DEAD_ENDS = ['code_block', 'horizontal_rule']
+
+function appendExitNode(transactions, _oldState, newState) {
+  if (!transactions.some((tr) => tr.docChanged)) return null
+  const last = newState.doc.lastChild
+  if (!last || !DEAD_ENDS.includes(last.type.name)) return null
+  return newState.tr.insert(newState.doc.content.size, newState.schema.nodes.paragraph.create())
+}
+
 export const fenceAutoPair = () => new Plugin({
   key: fenceAutoPairKey,
+  appendTransaction: appendExitNode,
   props: {
     handleTextInput,
     handleKeyDown,
