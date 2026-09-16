@@ -11,12 +11,20 @@ export const fenceAutoPairKey = new PluginKey('glean-fence-autopair')
 const FENCE = '```'
 
 function handleTextInput(view, from, to, text) {
-  if (text !== FENCE) return false
   const { state } = view
   const $from = state.doc.resolve(from)
-  // Only when the paragraph is exactly empty at the typed spot
-  if (from - $from.start($from.depth) !== 0 || to !== from) return false
+  if (to !== from || $from.parent.type.spec.code) return false
   if (state.doc.nodeAt(from - 1)?.type.name === 'code_block') return false
+  // Browsers deliver one char per input event and may batch fast typing, so
+  // the fence is matched by the text ending at the caret, never by the
+  // event text alone
+  const fenceStart = $from.parentOffset - (FENCE.length - text.length)
+  if (fenceStart !== 0) return false
+  const tail = $from.parent.textBetween(Math.max(0, fenceStart), $from.parentOffset) + text
+  if (tail !== FENCE) return false
+  // caret must end the paragraph, so the block replacement cannot swallow
+  // trailing text; fenceStart === 0 above pins the fence to the start
+  if ($from.parentOffset !== $from.parent.content.size) return false
 
   const codeBlock = state.schema.nodes.code_block.create({ language: '' })
   const para = state.schema.nodes.paragraph.create()

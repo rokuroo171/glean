@@ -64,6 +64,25 @@ describe('fenceAutoPair', () => {
     expect(view.state.doc.firstChild.textContent).toBe('code here')
   })
 
+  it('typing ``` one keystroke at a time creates a code block, like a real browser', () => {
+    const view = makeView(schema.node('doc', null, [schema.node('paragraph')]))
+    view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1)))
+    for (const ch of '```') typeText(view, ch)
+    const children = []
+    view.state.doc.forEach((n) => children.push(n.type.name))
+    expect(children).toEqual(['code_block', 'paragraph'])
+    expect(view.state.selection.$from.parent.type.name).toBe('code_block')
+  })
+
+  it('a fence with text before the caret does not convert the paragraph', () => {
+    const view = makeView(schema.node('doc', null, [schema.node('paragraph')]))
+    view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1)))
+    typeText(view, 'no')
+    for (const ch of '```') typeText(view, ch)
+    expect(view.state.doc.firstChild.type.name).toBe('paragraph')
+    expect(view.state.doc.textContent).toBe('no```')
+  })
+
   it('escape at block end exits to the paragraph after', () => {
     const view = makeView(schema.node('doc', null, [schema.node('paragraph')]))
     view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1)))
