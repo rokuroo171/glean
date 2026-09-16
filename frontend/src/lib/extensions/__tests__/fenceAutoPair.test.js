@@ -16,6 +16,7 @@ const schema = new Schema({
       toDOM: () => ['pre', 0],
     },
     text: {},
+    horizontal_rule: { group: 'block', toDOM: () => ['hr'] },
   },
 })
 
@@ -81,6 +82,26 @@ describe('fenceAutoPair', () => {
     for (const ch of '```') typeText(view, ch)
     expect(view.state.doc.firstChild.type.name).toBe('paragraph')
     expect(view.state.doc.textContent).toBe('no```')
+  })
+
+  it('a document ending on a code block gains a trailing paragraph', () => {
+    const view = makeView(schema.node('doc', null, [schema.node('paragraph')]))
+    const block = schema.node('code_block', { language: '' }, [schema.text('x')])
+    view.dispatch(view.state.tr.replaceWith(0, view.state.doc.content.size, block))
+    const children = []
+    view.state.doc.forEach((n) => children.push(n.type.name))
+    expect(children).toEqual(['code_block', 'paragraph'])
+  })
+
+  it('a document ending on a horizontal rule gains a trailing paragraph', () => {
+    const view = makeView(schema.node('doc', null, [
+      schema.node('paragraph'),
+      schema.node('horizontal_rule'),
+    ]))
+    view.dispatch(view.state.tr.insertText('x', 1))
+    const children = []
+    view.state.doc.forEach((n) => children.push(n.type.name))
+    expect(children).toEqual(['paragraph', 'horizontal_rule', 'paragraph'])
   })
 
   it('escape at block end exits to the paragraph after', () => {
