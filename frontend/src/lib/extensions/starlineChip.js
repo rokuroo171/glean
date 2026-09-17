@@ -53,7 +53,8 @@ function decorationsFor(state, refs) {
         decos.push(Decoration.inline(closeEnd - 2, closeEnd, { style: 'opacity:0' }))
         decos.push(Decoration.inline(openStart + 2, closeEnd - 2, {
           class: `glean-starline${exists ? '' : ' missing'}`,
-          title: exists ? `Open ${m[1]}` : `Create ${m[1]}`,
+          // app-wide tooltip layer only; no native title so it never doubles
+          'data-tip': exists ? `Open ${m[1]}` : `Create note ${m[1]}`,
         }))
       }
     }

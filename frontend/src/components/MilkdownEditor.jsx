@@ -24,6 +24,8 @@ import { lineGutter } from '../lib/extensions/lineGutter'
 import { autoPair } from '../lib/extensions/autoPair'
 import { htmlPairs } from '../lib/extensions/htmlPairs'
 import { starlineChip } from '../lib/extensions/starlineChip'
+import { atomicRanges } from '../lib/extensions/atomicRanges'
+import { linkTips } from '../lib/extensions/linkTips'
 import { headingEdit } from '../lib/extensions/headingEdit'
 import { wrapSelection } from '../lib/extensions/wrapSelection'
 import { trailing } from '@milkdown/kit/plugin/trailing'
@@ -604,6 +606,8 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       .use($prose(autoPair))
       .use($prose(htmlPairs))
       .use($prose(() => starlineChip(starlineRefs.current)))
+      .use($prose(atomicRanges))
+      .use($prose(linkTips))
       .use($prose(wrapSelection))
       .use(trailing)
       .use(math)

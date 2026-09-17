@@ -498,9 +498,16 @@ const components = {
     const title = isWiki ? decodeURIComponent(href.slice('wails:wiki:'.length)) : ''
     const resolvedId = isWiki ? (ctx.resolved && ctx.resolved[title]) : null
     const broken = isWiki && !resolvedId
+    // the portal tooltip layer reads data-tip; the read view opens
+    // wikilinks AND external links on plain click, so the tip shows the
+    // target, no modifier hint
+    const tip = isWiki
+      ? (resolvedId ? `Open ${title}` : `Create note ${title}`)
+      : (href || undefined)
     return (
       <a
         href={isWiki ? undefined : href}
+        data-tip={tip}
         onClick={(e) => {
           e.preventDefault()
           if (isWiki) {
