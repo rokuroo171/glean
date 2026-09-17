@@ -15,7 +15,7 @@ import { taskCheckbox } from '../lib/extensions/taskCheckbox'
 import { codeCopyButton } from '../lib/extensions/codeCopyButton'
 import { codeHighlight } from '../lib/extensions/codeHighlight'
 import { linkClick } from '../lib/extensions/linkClick'
-import { rescueSourceBrs, htmlNodeOverride, stripDefensiveTildeEscapes } from '../lib/extensions/hardBrRescue'
+import { rescueSourceBrs, htmlNodeOverride, stripDefensiveEscapes } from '../lib/extensions/hardBrRescue'
 import { footnoteJump } from '../lib/extensions/footnoteJump'
 import { footnoteRename } from '../lib/extensions/footnoteRename'
 import { alerts } from '../lib/extensions/alerts'
@@ -575,7 +575,7 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
         // the nonstandard H~~2~~O
         ctx.set(remarkGFMPlugin.options.key, { singleTilde: false })
         ctx.get(listenerCtx).markdownUpdated((_, md) => {
-          lastEmittedRef.current = stripDefensiveTildeEscapes(md)
+          lastEmittedRef.current = stripDefensiveEscapes(md)
           onMarkdownChange(lastEmittedRef.current)
         })
         ctx.get(listenerCtx).selectionUpdated((ctx, selection) => {

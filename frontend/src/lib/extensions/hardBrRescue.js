@@ -19,11 +19,17 @@ const INLINE_CODE_OR_BR_RE = /(`+)[\s\S]*?\1(?!`)|<br\s*\/?>/gi
 // With singleTilde:false, '~' can never open a delete node in our parse,
 // so every backslash-tilde the serializer emits is defensive over-escaping
 // (H~2~O -> H\~2\~O) that renders identically but pollutes Source view and
-// drifts files away from what the author typed. Stripping is provably safe:
-// the unescaped text re-parses to the identical tree, no delete possible.
-// Fenced blocks are left untouched to keep code samples byte-true
-export function stripDefensiveTildeEscapes(md) {
-  if (!md || md.indexOf('\~') === -1) return md
+// drifts files away from what the author typed. Same story for doubled
+// brackets: [[x]] has no schema node, parses as literal text, yet the
+// serializer escapes to \[\[x]]. Stripping both is provably safe: the
+// unescaped text re-parses to the identical tree (a bare '~' cannot open
+// a delete, a doubled '[' cannot open a link), while single-escapes like
+// \[solo] that guard real link syntax are left alone. Fenced blocks are
+// untouched to keep code samples byte-true
+export function stripDefensiveEscapes(md) {
+  if (!md) return md
+  const BS = String.fromCharCode(92)
+  if (md.indexOf(BS + '~') === -1 && md.indexOf(BS + '[') === -1) return md
   let inFence = false
   return md
     .split('\n')
@@ -33,10 +39,15 @@ export function stripDefensiveTildeEscapes(md) {
         return line
       }
       if (inFence) return line
-      return line.replace(/\\~/g, '~')
+      // \[\[ (each bracket escaped separately) is the doubled-bracket
+      // defensive form; a single \[ guarding link syntax is left alone
+      return line.replace(/\\~/g, '~').replace(/\\\[\\\[/g, '[[')
     })
     .join('\n')
 }
+
+// Backward-compatible alias: the tilde strip predates the bracket strip
+export const stripDefensiveTildeEscapes = stripDefensiveEscapes
 
 export function rescueSourceBrs(md) {
   if (!md || md.indexOf('<br') === -1) return md
