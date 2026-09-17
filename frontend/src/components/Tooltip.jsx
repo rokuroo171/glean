@@ -87,7 +87,7 @@ export default function TooltipLayer() {
       background: colors.bgElevated,
       border: `1px solid ${colors.borderStrong}`,
       color: colors.text,
-      fontSize: 11, lineHeight: 1.3, whiteSpace: 'nowrap',
+      fontSize: 11, lineHeight: 1.3, whiteSpace: 'pre-line',
       borderRadius: 6,
       boxShadow: '0 4px 16px rgba(0, 0, 0, 0.35)',
       animation: 'glean-tip-in 0.16s ease-out',
