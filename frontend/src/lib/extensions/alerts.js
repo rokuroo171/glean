@@ -70,16 +70,20 @@ function markerRange(bqNode, bqPos) {
 
 // Renders > [!NOTE] as a tinted callout with a lucide icon and category
 // label, like the read view and the reference renderers. The marker text
-// stays in the document so saves remain byte-true; it is only hidden
+// stays in the document so saves remain byte-true. It is hidden with
+// opacity (never display:none) so the caret can traverse it, and revealed
+// raw while the caret is inside the marker range; the marker range is
+// re-derived from the doc text on every apply, so edited-away markers stop
+// being alerts in the same transaction
 export const alerts = () => new Plugin({
   key: alertsKey,
   state: {
     init(_, state) {
-      return buildDecos(state.doc)
+      return buildDecos(state)
     },
-    apply(tr, old) {
+    apply(tr, old, _o, newState) {
       if (!tr.docChanged && !tr.selectionSet) return old
-      return buildDecos(tr.doc)
+      return buildDecos(newState)
     }
   },
   props: {
@@ -89,18 +93,20 @@ export const alerts = () => new Plugin({
   }
 })
 
-function buildDecos(doc) {
+function buildDecos(state) {
   const decos = []
-  doc.descendants((node, pos) => {
+  const head = state.selection ? (state.selection.head ?? state.selection.from) : null
+  state.doc.descendants((node, pos) => {
     if (node.type.name !== 'blockquote') return
     const range = markerRange(node, pos)
     if (!range) return
+    const active = head != null && head >= range.from && head <= range.to
     decos.push(Decoration.node(pos, pos + node.nodeSize, {
       class: 'glean-alert',
       'data-kind': range.kind
     }))
-    decos.push(Decoration.inline(range.from, range.to, { class: 'glean-alert-marker' }))
-    decos.push(Decoration.widget(range.to, () => headerDom(range.kind), { side: 1, ignoreEvent: () => false }))
+    decos.push(Decoration.inline(range.from, range.to, { class: active ? 'glean-alert-marker glean-alert-marker-active' : 'glean-alert-marker' }))
+    if (!active) decos.push(Decoration.widget(range.to, () => headerDom(range.kind), { side: 1, ignoreEvent: () => false }))
   })
-  return DecorationSet.create(doc, decos)
+  return DecorationSet.create(state.doc, decos)
 }

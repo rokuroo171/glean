@@ -28,6 +28,35 @@ function markWidget(text, className = 'glean-syntax-mark') {
   }
 }
 
+// Scans a parent textblock for the matching sub/sup chip: forward for the
+// close when fromPair is an open chip, backward for the open otherwise,
+// skipping the inline content between the chips. Returns the chip's doc
+// position, or null when no matching chip exists in the parent, so an
+// unpaired chip reveals nothing
+function findHtmlChip(doc, fromPair, forward) {
+  const $from = doc.resolve(fromPair)
+  if ($from.parent.type.spec.code) return null
+  const tag = tagOfHtml(doc.nodeAt(fromPair))
+  if (!tag) return null
+  let scan = forward ? fromPair + 1 : fromPair - 1
+  const end = forward ? $from.end() : $from.start()
+  while (forward ? scan < end : scan > end) {
+    const node = doc.nodeAt(scan)
+    if (!node) break
+    if (node.type.name === 'html') {
+      return tagOfHtml(node) === tag ? scan : null
+    }
+    scan = forward ? scan + node.nodeSize : scan - 1
+  }
+  return null
+}
+
+function tagOfHtml(node) {
+  if (!node) return null
+  const m = /^<\/?([a-z]+)\s*\/?>$/i.exec((node.attrs.value || '').trim())
+  return m ? m[1].toLowerCase() : null
+}
+
 // The open-fence widget for a code block: ``` plus an editable span bound
 // to the language attribute, Obsidian-style. The widget is not editable so
 // the caret never wanders into it, but the language span is; PM ignores
@@ -162,6 +191,39 @@ function decorationsFor(state) {
   // mark disappears when the selection moves back into text
   if (sel?.node?.type?.name === 'hr') {
     decos.push(Decoration.node(sel.from, sel.to, { class: 'glean-hr-selected' }))
+  }
+
+  // Selecting an image reveals its raw ![alt](src "title") syntax above
+  // it, same node-decoration model as the hr reveal
+  if (sel?.node?.type?.name === 'image') {
+    const n = sel.node
+    const title = n.attrs.title ? ` "${n.attrs.title}"` : ''
+    decos.push(Decoration.node(sel.from, sel.to, { class: 'glean-img-selected', 'data-glean-raw': `![${n.attrs.alt ?? ''}](${n.attrs.src ?? ''}${title})` }))
+  }
+
+  // A sub/sup html pair renders as two atom chips around a text node.
+  // Caret inside the pair (or a chip NodeSelection) tints the whole raw
+  // region so the group reads as one editable unit
+  const htmlPair = (() => {
+    if (sel?.node?.type?.name === 'html') return { pos: sel.from, value: sel.node.attrs.value ?? '' }
+    const chip = state.doc.nodeAt(head - 1)
+    if (chip?.type.name !== 'html') return null
+    return { pos: head - 1, value: chip.attrs.value ?? '' }
+  })()
+  if (htmlPair) {
+    const m = /^<\/?([a-z]+)\s*\/?>$/i.exec(htmlPair.value.trim())
+    if (m && ['sub', 'sup'].includes(m[1].toLowerCase())) {
+      const isOpen = !htmlPair.value.trim().startsWith('</')
+      const openPos = isOpen ? htmlPair.pos : findHtmlChip(state.doc, htmlPair.pos, false)
+      if (openPos != null) {
+        const closePos = findHtmlChip(state.doc, openPos, true)
+        if (closePos != null) {
+          decos.push(Decoration.node(openPos, openPos + 1, { class: 'glean-html-pair-selected' }))
+          decos.push(Decoration.node(closePos, closePos + 1, { class: 'glean-html-pair-selected' }))
+          decos.push(Decoration.inline(openPos + 1, closePos, { class: 'glean-html-pair-selected' }))
+        }
+      }
+    }
   }
 
   // A caret inside a footnote definition reveals its raw [^label]: syntax
