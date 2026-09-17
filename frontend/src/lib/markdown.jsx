@@ -5,6 +5,30 @@ import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import rehypeRaw from 'rehype-raw'
 import { visit, SKIP } from 'unist-util-visit'
+
+// ==mark== support shared with the Milkdown editor's highlightMark plugin:
+// splits the equals pairs into raw <mark> html nodes so rehypeRaw renders
+// them, exactly where the WYSIWYG pane shows its mark decoration
+const CONTAINS_HL = /==([^=]+)==/g
+function remarkHighlightFlat() {
+  return (tree) => {
+    visit(tree, 'text', (node, index, parent) => {
+      if (!parent || !node.value.includes('==')) return
+      const parts = node.value.split(CONTAINS_HL)
+      if (parts.length === 1) return
+      const children = []
+      parts.forEach((part, i) => {
+        if (i % 2 === 0) {
+          if (part) children.push({ type: 'text', value: part })
+        } else {
+          children.push({ type: 'html', value: '<mark>' + part + '</mark>' })
+        }
+      })
+      parent.children.splice(index, 1, ...children)
+      return [SKIP, index + children.length]
+    })
+  }
+}
 import { colors, danger } from './theme'
 import { highlightCode } from './prism-setup'
 import 'katex/dist/katex.min.css'
@@ -645,7 +669,7 @@ export function renderMarkdown(text, opts = {}) {
         // singleTilde:false matches the Milkdown editor's strict GFM: H~2~O
         // and ~x~ stay literal, only ~~x~~ strikes, so Reading view agrees
         // with what the WYSIWYG pane shows for the same file
-        remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkMath, remarkAlert]}
+        remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkMath, remarkAlert, remarkHighlightFlat]}
         rehypePlugins={[rehypeRaw, rehypeKatex]}
         components={components}
       >

@@ -40,3 +40,27 @@ describe('strict GFM tilde (singleTilde:false)', () => {
     expect(out).toBe('~~strike~~ kept')
   })
 })
+
+// Bracket escape strip shares the pipeline: doubled-bracket escapes vanish,
+// single escapes guarding real link syntax stay
+import { stripDefensiveEscapes } from '../hardBrRescue'
+
+describe('stripDefensiveEscapes', () => {
+  it('un-escapes doubled brackets that cannot parse as markup', () => {
+    expect(stripDefensiveEscapes('\\[\\[Page Name]]')).toBe('[[Page Name]]')
+  })
+
+  it('leaves single bracket escapes that guard link syntax', () => {
+    expect(stripDefensiveEscapes('\\[solo] \\[1]')).toBe('\\[solo] \\[1]')
+  })
+
+  it('strips tildes outside fences but not inside', () => {
+    const md = 'H~2~O\n\n```\nraw \\~ stays\n```'
+    expect(stripDefensiveEscapes(md)).toBe('H~2~O\n\n```\nraw \\~ stays\n```')
+  })
+
+  it('is idempotent', () => {
+    const once = stripDefensiveEscapes('\\[\\[x]] H~2~O')
+    expect(stripDefensiveEscapes(once)).toBe(once)
+  })
+})
