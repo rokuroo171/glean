@@ -244,8 +244,8 @@ export default function App() {
     return note
   }, [handleOpenNote])
 
-  const handleNewNote = useCallback(() => {
-    setNewNoteTitle('')
+  const handleNewNote = useCallback((title) => {
+    setNewNoteTitle(typeof title === 'string' ? title : '')
     setShowNewPrompt(true)
   }, [])
 

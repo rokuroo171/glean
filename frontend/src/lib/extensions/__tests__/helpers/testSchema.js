@@ -10,9 +10,10 @@ export const schema = new Schema({
     text: { inline: true, group: 'inline' },
   },
   marks: {
-    strong: {},
-    emphasis: {},
+    strong: { toDOM: () => ['strong', 0] },
+    emphasis: { toDOM: () => ['em', 0] },
     inlineCode: { toDOM: () => ['code', 0] },
     strike_through: { toDOM: () => ['del', 0] },
+    glean_highlight: { toDOM: () => ['mark', 0] },
   },
 })

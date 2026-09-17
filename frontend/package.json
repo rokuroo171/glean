@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "node e2e/autopair.spec.js"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -53,6 +54,7 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.4",
     "jsdom": "^30.0.1",
+    "playwright": "^1.63.0",
     "vite": "^6.0.0",
     "vitest": "^5.0.0"
   }

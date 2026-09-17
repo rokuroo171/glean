@@ -8,6 +8,8 @@ import { gfm, remarkGFMPlugin } from '@milkdown/kit/preset/gfm'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
 import { history } from '@milkdown/kit/plugin/history'
 import { $prose } from '@milkdown/kit/utils'
+import { serializerCtx } from '@milkdown/core'
+import { NodeSelection } from 'prosemirror-state'
 import { syntaxReveal } from '../lib/extensions/syntaxReveal'
 import { taskCheckbox } from '../lib/extensions/taskCheckbox'
 import { codeCopyButton } from '../lib/extensions/codeCopyButton'
@@ -20,6 +22,8 @@ import { alerts } from '../lib/extensions/alerts'
 import { mermaidView } from '../lib/extensions/mermaidView'
 import { lineGutter } from '../lib/extensions/lineGutter'
 import { autoPair } from '../lib/extensions/autoPair'
+import { htmlPairs } from '../lib/extensions/htmlPairs'
+import { starlineChip } from '../lib/extensions/starlineChip'
 import { headingEdit } from '../lib/extensions/headingEdit'
 import { wrapSelection } from '../lib/extensions/wrapSelection'
 import { trailing } from '@milkdown/kit/plugin/trailing'
@@ -217,7 +221,14 @@ const editorStyles = () => `
   .milkdown blockquote.glean-alert[data-kind="warning"] { --alert-color: #d99a3d; }
   .milkdown blockquote.glean-alert[data-kind="caution"] { --alert-color: #db4c40; }
   .milkdown .glean-alert-marker {
-    display: none;
+    /* opacity, not display:none: the caret must traverse the marker text */
+    opacity: 0;
+  }
+  .milkdown .glean-alert-marker-active {
+    opacity: 1;
+    font-family: ui-monospace, monospace;
+    font-size: 0.8em;
+    color: ${colors.textDim};
   }
   .milkdown .glean-alert-head {
     display: block;
@@ -304,21 +315,32 @@ const editorStyles = () => `
   }
   .milkdown a { color: ${colors.accent}; text-decoration: none; cursor: pointer; }
   .milkdown a:hover { text-decoration: underline; }
-  /* html comments collapse to nothing unless the node is selected */
+  /* html comments render as dim inline chips, their raw form is the
+     render; font-size 0 hid them entirely, which made them undiscoverable
+     and impossible to select or delete by sight */
   .milkdown span[data-comment] {
-    font-size: 0;
-    line-height: 0;
-    font-family: ui-monospace, monospace;
-    color: ${colors.textDim};
-  }
-  .milkdown span[data-comment].ProseMirror-selectednode {
     font-size: 0.75em;
     line-height: inherit;
     font-family: ui-monospace, monospace;
-    color: ${colors.textMuted};
+    color: ${colors.textDim};
     background: ${colors.textMuted}2e;
     border-radius: 3px;
     padding: 0 3px;
+    margin: 0 1px;
+  }
+  .milkdown span[data-comment].ProseMirror-selectednode {
+    color: ${colors.text};
+    background: ${colors.accent}2e;
+    outline: 1px solid ${colors.accent};
+  }
+  .milkdown img.glean-img-selected::before {
+    display: block;
+    font-family: ui-monospace, monospace;
+    font-size: 0.75em;
+    color: ${colors.textDim};
+    margin-bottom: 2px;
+    user-select: none;
+    content: attr(data-glean-raw);
   }
   /* A caret inside a footnote definition wraps the dt label in its raw
      syntax; the label itself comes from data-label */
@@ -354,12 +376,46 @@ const editorStyles = () => `
     padding: 0 3px;
     margin: 0 1px;
   }
-  .milkdown span[data-html-open]::before { content: attr(data-html-open); }
-  .milkdown span[data-html-close]::before { content: attr(data-html-close); }
-  .milkdown span[data-html-open="sub"] + span[data-html-close="sub"],
-  .milkdown span[data-html-open="sup"] + span[data-html-close="sup"] { display: inline; }
-  .milkdown span[data-html-open="sub"] ~ sub,
-  .milkdown span[data-html-open="sup"] ~ sup { display: none; }
+  .milkdown span[data-html-open]::before { content: "<" attr(data-html-open) ">"; }
+  .milkdown span[data-html-close]::before { content: "</" attr(data-html-close) ">"; }
+  /* Real element styling for html pair content; the raw chips stay visible
+     around it, and the pairs plugin finds them caret-independently. Mirrors
+     the read view's styling for the same tags */
+  .milkdown .glean-html-sub {
+    vertical-align: sub;
+    font-size: 0.75em;
+  }
+  .milkdown .glean-html-sup {
+    vertical-align: super;
+    font-size: 0.75em;
+  }
+  .milkdown .glean-html-strong { font-weight: 700; }
+  .milkdown .glean-html-em { font-style: italic; }
+  .milkdown .glean-html-ins, .milkdown .glean-html-u { text-decoration: underline; }
+  .milkdown .glean-html-mark {
+    background: ${colors.accentWarm}4d;
+    color: inherit;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  .milkdown .glean-html-kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    font-family: ui-monospace, monospace;
+    font-size: 0.9em;
+    color: ${colors.text};
+    background: ${colors.bgElevated};
+    border: 1px solid ${colors.border};
+    border-radius: 3px;
+    box-shadow: 0 1px 0 ${colors.border};
+  }
+  /* Entering a sub/sup html pair (caret inside, or a chip selected) reveals
+     the whole raw region as one unit; plain when the caret is elsewhere */
+  .milkdown .glean-html-pair-selected {
+    background: ${colors.accent}1a;
+    outline: 1px solid ${colors.accent};
+    border-radius: 3px;
+  }
   .milkdown hr {
     border: none;
     border-top: 1px solid ${colors.borderStrong};
@@ -457,14 +513,43 @@ const editorStyles = () => `
   .milkdown li.glean-list-reveal::before {
     content: none;
   }
+  .milkdown button.glean-starline {
+    font: inherit;
+    color: ${colors.accent};
+    background: ${colors.bgCard};
+    border: 1px solid ${colors.borderStrong};
+    border-radius: 6px;
+    padding: 0 6px;
+    margin: 0 1px;
+    cursor: pointer;
+    line-height: 1.5;
+  }
+  .milkdown button.glean-starline:hover {
+    border-color: ${colors.accent};
+  }
+  .milkdown button.glean-starline.missing {
+    color: ${colors.accentWarm};
+    border-style: dashed;
+  }
+  .milkdown .glean-starline-raw {
+    color: ${colors.textMuted};
+  }
 `
 
-function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInstanceRef }) {
+function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInstanceRef, noteNames, onNoteLink }) {
   const markdownRef = useRef(markdown)
   markdownRef.current = markdown
   const lastEmittedRef = useRef(null)
   const onSelectionChangeRef = useRef(onSelectionChange)
   onSelectionChangeRef.current = onSelectionChange
+  // the editor builds once per note; props reach its plugins through these
+  // refs so a renamed or created note re-renders chips without a rebuild
+  const starlineRefs = useRef(null)
+  if (!starlineRefs.current) {
+    starlineRefs.current = { noteNamesRef: { current: noteNames }, onNoteLinkRef: { current: onNoteLink } }
+  }
+  starlineRefs.current.noteNamesRef.current = noteNames
+  starlineRefs.current.onNoteLinkRef.current = onNoteLink
 
   // Editor-wide prefs: the gutter plugin reads the shared mutable state on
   // every repaint, so toggles never rebuild the editor
@@ -498,7 +583,7 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       // headingEdit before commonmark: its Backspace-at-start demote must win
       // over the stock keymap's joinBackward, which would merge the heading into
       // the block above instead of stepping its level down
-      .use($prose(headingEdit()))
+      .use($prose(headingEdit))
       .use(commonmark)
       .use(gfm)
       .use(listener)
@@ -516,8 +601,10 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       .use(remarkHighlight)
       .use(highlightSchema)
       .use($prose(() => lineGutter({ state: lineGutterState })))
-      .use($prose(autoPair()))
-      .use($prose(wrapSelection()))
+      .use($prose(autoPair))
+      .use($prose(htmlPairs))
+      .use($prose(() => starlineChip(starlineRefs.current)))
+      .use($prose(wrapSelection))
       .use(trailing)
       .use(math)
   }, [])
@@ -536,6 +623,16 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
     if (loading || !get) return
     const editor = get()
     if (!editor) return
+    try {
+      const view = editor.action((ctx) => ctx.get(editorViewCtx))
+      // e2e entry points, dev builds only
+      if (import.meta.env.DEV) {
+        window.__gleanView = view
+        window.__gleanParse = editor.action((ctx) => ctx.get(parserCtx))
+        window.__gleanSerialize = (doc) => editor.action((ctx) => ctx.get(serializerCtx)(doc))
+        window.__gleanNodeSelection = NodeSelection
+      }
+    } catch (_) {}
     if (markdown === lastEmittedRef.current) return
     lastEmittedRef.current = markdown
     try {
@@ -554,7 +651,7 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
   return <Milkdown />
 }
 
-export default function MilkdownEditor({ markdown, onMarkdownChange, onSelectionChange, editorInstanceRef }) {
+export default function MilkdownEditor({ markdown, onMarkdownChange, onSelectionChange, editorInstanceRef, noteNames, onNoteLink }) {
   return (
     <MilkdownProvider>
       <style>{editorStyles()}</style>
@@ -564,6 +661,8 @@ export default function MilkdownEditor({ markdown, onMarkdownChange, onSelection
           onMarkdownChange={onMarkdownChange}
           onSelectionChange={onSelectionChange}
           editorInstanceRef={editorInstanceRef}
+          noteNames={noteNames}
+          onNoteLink={onNoteLink}
         />
       </div>
     </MilkdownProvider>
