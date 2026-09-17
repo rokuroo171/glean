@@ -642,7 +642,10 @@ export function renderMarkdown(text, opts = {}) {
     <div className="glean-markdown">
       <style>{listStyles()}</style>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath, remarkAlert]}
+        // singleTilde:false matches the Milkdown editor's strict GFM: H~2~O
+        // and ~x~ stay literal, only ~~x~~ strikes, so Reading view agrees
+        // with what the WYSIWYG pane shows for the same file
+        remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkMath, remarkAlert]}
         rehypePlugins={[rehypeRaw, rehypeKatex]}
         components={components}
       >
