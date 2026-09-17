@@ -16,6 +16,28 @@ const BR_RE = /<br\s*\/?>/gi
 const FENCE_LINE_RE = /^\s{0,3}(?:>\s?)*(```|~~~)/
 const INLINE_CODE_OR_BR_RE = /(`+)[\s\S]*?\1(?!`)|<br\s*\/?>/gi
 
+// With singleTilde:false, '~' can never open a delete node in our parse,
+// so every backslash-tilde the serializer emits is defensive over-escaping
+// (H~2~O -> H\~2\~O) that renders identically but pollutes Source view and
+// drifts files away from what the author typed. Stripping is provably safe:
+// the unescaped text re-parses to the identical tree, no delete possible.
+// Fenced blocks are left untouched to keep code samples byte-true
+export function stripDefensiveTildeEscapes(md) {
+  if (!md || md.indexOf('\~') === -1) return md
+  let inFence = false
+  return md
+    .split('\n')
+    .map((line) => {
+      if (FENCE_LINE_RE.test(line)) {
+        inFence = !inFence
+        return line
+      }
+      if (inFence) return line
+      return line.replace(/\\~/g, '~')
+    })
+    .join('\n')
+}
+
 export function rescueSourceBrs(md) {
   if (!md || md.indexOf('<br') === -1) return md
   let inFence = false

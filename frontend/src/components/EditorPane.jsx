@@ -12,9 +12,11 @@ import StarIcon from './StarIcon'
 import Icon from './Icon'
 import ContextMenu from './ContextMenu'
 import FindReplace from './FindReplace'
+import { SourceView, ReadingView, getViewMode, setViewMode, subscribeViewMode } from './ViewModes'
 
 const ANIM_SPARKLE_MS = 450
 let _animId = 0
+const VIEW_CYCLE = ['wysiwyg', 'source', 'reading']
 
 // Dead-space strip beside the editor body. Left click toggles centered
 // reading width; right click opens the view menu. The gutters flex-grow
@@ -109,6 +111,8 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const [currentHeading, setCurrentHeading] = useState(0)
   const [showFind, setShowFind] = useState(false)
   const [showReplace, setShowReplace] = useState(false)
+  const [viewMode, setViewModeState] = useState(getViewMode())
+  useEffect(() => subscribeViewMode(setViewModeState), [])
   const [hist, setHist] = useState({ canUndo: false, canRedo: false })
   const animatedEnabled = prefs.editor.animated_text_enabled === true
   const narrowWidth = prefs.editor.narrow_width === true
@@ -295,10 +299,34 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     view.focus()
   }
 
+  // Ctrl+E cycles the view state, Ctrl+Shift+E jumps straight to source.
+  // Bound here rather than in ProseMirror so the shortcuts also work in the
+  // source and reading views, which have no editor to bind to
+  useEffect(() => {
+    const cycle = VIEW_CYCLE.indexOf(viewMode)
+    const onKey = (e) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return
+      const key = e.key.toLowerCase()
+      if (key === 'e' && e.shiftKey) {
+        e.preventDefault()
+        setViewMode('source')
+      } else if (key === 'e') {
+        e.preventDefault()
+        setViewMode(VIEW_CYCLE[(cycle + 1) % VIEW_CYCLE.length])
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [viewMode])
+
   const editorMenuItems = [
     { id: 'add-link', label: 'Add starline', icon: 'link', onSelect: startWikilink },
     { id: 'add-ext-link', label: 'Add external link', icon: 'external-link', onSelect: insertExternalLink },
     { id: 'sep-link', type: 'separator' },
+    { id: 'mode-wysiwyg', label: 'Rich editing', icon: 'pencil', checked: viewMode === 'wysiwyg', onSelect: () => setViewMode('wysiwyg') },
+    { id: 'mode-source', label: 'Source', icon: 'code', shortcut: 'Ctrl+Shift+E', checked: viewMode === 'source', onSelect: () => setViewMode('source') },
+    { id: 'mode-reading', label: 'Reading', icon: 'eye', checked: viewMode === 'reading', onSelect: () => setViewMode('reading') },
+    { id: 'sep-mode', type: 'separator' },
     {
       id: 'format', label: 'Format', icon: 'pencil',
       submenu: [
@@ -419,7 +447,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
         <div ref={editorContainerRef} style={{ flex: 1, minWidth: 0, minHeight: 0, position: 'relative', display: 'flex', flexDirection: 'row' }}>
           <Gutter onToggle={() => updatePrefs({ editor: { narrow_width: !narrowWidth } })} menuItems={viewMenuItems} grow={narrowWidth} />
           <ContextMenu items={editorMenuItems} triggerStyle={{ display: 'contents' }}>
-            <div style={{ flex: narrowWidth ? '0 0 720px' : '1 1 0', minWidth: 0, minHeight: 0, maxWidth: narrowWidth ? 'min(720px, calc(100% - 80px))' : undefined }}>
+            <div style={{ flex: narrowWidth ? '0 0 720px' : '1 1 0', minWidth: 0, minHeight: 0, maxWidth: narrowWidth ? 'min(720px, calc(100% - 80px))' : undefined, display: viewMode === 'wysiwyg' ? undefined : 'none' }}>
               <MilkdownEditor
                 key={note?.id}
                 markdown={body}
@@ -431,6 +459,13 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
               />
             </div>
           </ContextMenu>
+          {viewMode === 'source' && (
+            <SourceView value={body} onChange={handleBodyChange} />
+          )}
+          {viewMode === 'reading' && (
+            <ReadingView body={body} noteNames={noteNames}
+              onToggle={(next) => handleBodyChange(next)} onNoteLink={handleNoteLink} />
+          )}
           <Gutter onToggle={() => updatePrefs({ editor: { narrow_width: !narrowWidth } })} menuItems={viewMenuItems} grow={narrowWidth} />
           {linkPopup && (() => {
             const matches = Object.keys(noteNames).filter(t => t.toLowerCase().includes(linkPopup.query)).slice(0, 8)
