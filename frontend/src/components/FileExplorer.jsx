@@ -4,6 +4,7 @@ import NodeDivider from './NodeDivider'
 import StarIcon from './StarIcon'
 import Icon from './Icon'
 import ContextMenu from './ContextMenu'
+import { toast } from '../lib/toast'
 
 const wails = window.go?.main
 
@@ -417,7 +418,7 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
       .map(f => ({ label: f, onSelect: () => {
         wails.App.MoveNote(note.id, f)
           .then(() => { if (onRefresh) onRefresh() })
-          .catch(err => { if (window.alert) window.alert(String(err)) })
+          .catch(err => toast.error('Could not move note', { description: String(err) }))
       } }))
   }
 
@@ -427,7 +428,7 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
     setDropTarget(null)
     wails.App.MoveNote(noteId, targetFolder)
       .then(() => { if (onRefresh) onRefresh() })
-      .catch(err => { if (window.alert) window.alert(String(err)) })
+      .catch(err => toast.error('Could not move note', { description: String(err) }))
   }
 
   /** Note-level drag-over: show insertion line between notes */
@@ -454,7 +455,7 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
     if (!wails || !newName || newName === path.split('/').pop()) return
     wails.App.RenameFolder(path, newName)
       .then(async () => { await fetchFolders(); if (onRefresh) onRefresh() })
-      .catch((err) => { if (window.confirm && err && err.length) window.alert(String(err)) })
+      .catch(err => toast.error('Could not rename folder', { description: String(err) }))
   }
 
   function handleDeleteFolder(path) {
@@ -468,7 +469,7 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
     if (wails) {
       wails.App.DeleteFolder(path)
         .then(async () => { await fetchFolders(); if (onRefresh) onRefresh() })
-        .catch((err) => { if (window.alert) window.alert(String(err)) })
+        .catch(err => toast.error('Could not delete folder', { description: String(err) }))
     }
   }
 
