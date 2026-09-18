@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { colors, space, radius } from '../lib/theme'
 import { usePreferences } from '../lib/preferences-context'
+import { toast } from '../lib/toast'
 import TabBar from './TabBar'
 import HeaderBar from './HeaderBar'
 import OpenNotesList from './OpenNotesList'
@@ -262,6 +263,27 @@ export default function Workspace({
     setExternalBody(null)
   }
 
+  // keep mine re-saves the in-memory body over the disk version; the body
+  // is guaranteed loaded because a disk diff cannot fire before OpenNote
+  function keepMine() {
+    if (activeId) onSaveNow(activeId)
+    setExternalChanged(false)
+    setExternalBody(null)
+  }
+
+  // The bar this toast replaces pushed layout down whenever it showed; a
+  // toast reports the same conflict without moving the editor
+  useEffect(() => {
+    if (!externalChanged) return
+    toast('File changed on disk', {
+      description: notes.find(n => n.id === activeId)?.title || 'This note was modified outside glean',
+      duration: 12000,
+      action: { label: 'Reload', onClick: reloadFromDisk },
+      cancel: { label: 'Keep mine', onClick: keepMine },
+    })
+    setExternalChanged(false)
+  }, [externalChanged])
+
   const activeNote = notes.find(n => n.id === activeId) || null
   const body = activeNote ? (noteBodies[activeNote.id] || '') : ''
 
@@ -319,19 +341,6 @@ export default function Workspace({
           onSelect={(id) => id === '__night__' ? openNight() : openNote(id)}
           onClose={(id) => id === '__night__' ? closeNight() : closeTab(id)}
           pseudoTab={pseudoTab} onClosePseudo={() => setPseudoTab(null)} />
-      )}
-      {externalChanged && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: space[2], padding: '6px 12px',
-          background: colors.border, borderBottom: `1px solid ${colors.border}`,
-          fontSize: 12, color: colors.text }}>
-          <span style={{ flex: 1 }}>File changed on disk</span>
-          <button type="button" onClick={reloadFromDisk}
-            style={{ background: 'none', border: `1px solid ${colors.border}`, color: colors.text,
-              borderRadius: 4, padding: '3px 10px', cursor: 'pointer' }}>Reload</button>
-          <button type="button" onClick={() => setExternalChanged(false)}
-            style={{ background: 'none', border: 'none', color: colors.textMuted,
-              cursor: 'pointer', fontSize: 12 }}>Keep mine</button>
-        </div>
       )}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         {/* Persistent left icon rail -- always visible, carries app navigation */}

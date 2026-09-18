@@ -5,6 +5,7 @@ import Setup from './components/Setup'
 import Recovery from './components/Recovery'
 import OnboardingTour from './components/OnboardingTour'
 import TooltipLayer from './components/Tooltip.jsx'
+import Toaster from './components/Toaster'
 import { PreferencesProvider } from './lib/preferences-context'
 import { colors } from './lib/theme'
 import { MOCK_STARTERS, MOCK_STARTER_LINKS } from './lib/starters'
@@ -277,6 +278,7 @@ export default function App() {
     <div style={{ width: '100vw', height: '100vh', background: colors.bg, position: 'relative', overflow: 'hidden' }}>
       <WorkspaceBoot />
       <TooltipLayer />
+      <Toaster />
       <Workspace
         notes={notes}
         links={links}
