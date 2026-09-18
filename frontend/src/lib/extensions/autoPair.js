@@ -6,26 +6,28 @@ import { Plugin, PluginKey, TextSelection } from 'prosemirror-state'
 // every decision runs on the pre-insert doc: Chromium inserts shifted
 // characters through a composition path that cannot be prevented, so a
 // handleTextInput-based plugin only ever saw part of the input and fought
-// the browser over the caret. One keystroke for chars that are never valid
-// syntax alone ($ ~ =), two consecutive keystrokes for * and _ where the
-// single char means emphasis (Milkdown's own input rules convert typed
-// *text* and _x_ literals). [[ completes to the starline pair on the second
-// bracket. Typing a close char skips over the tracked close instead of
-// doubling; when the pair holds content and a mark, the skip converts the
-// literals to the real schema mark on the caret exit. Backtick is not a
-// pair: it conflicts with the ``` fence and Milkdown converts `x` natively.
-// [[ ]] and $ $ stay literal on purpose: starline has no schema node and
-// math_inline is an atom that parsing creates on reload
+// the browser over the caret. One keystroke for $ = and the backtick: the
+// backtick has to pair immediately so its second and third keystrokes walk
+// the region outward (skip over, then land) and ``` still forms the fence.
+// Two consecutive keystrokes for * _ ~ where the single char is real
+// content (emphasis markers Milkdown converts natively, or text like
+// H~2~O under strict tildes). [[ completes to the starline pair on the
+// second bracket. Typing a close char skips over the tracked close instead
+// of doubling; when the pair holds content and a mark, the skip converts
+// the literals to the real schema mark on the caret exit. [[ ]] and $ $
+// stay literal on purpose: starline has no schema node and math_inline is
+// an atom that parsing creates on reload
 export const autoPairKey = new PluginKey('glean-auto-pair')
 
 const FENCE = '```'
 
 const PAIRS = [
   { char: '$', open: '$', close: '$', markName: null, tier: 1 },
-  { char: '~', open: '~~', close: '~~', markName: 'strike_through', tier: 1 },
   { char: '=', open: '==', close: '==', markName: 'glean_highlight', tier: 1 },
+  { char: '`', open: '`', close: '`', markName: 'inlineCode', tier: 1 },
   { char: '*', open: '**', close: '**', markName: 'strong', tier: 2 },
   { char: '_', open: '__', close: '__', markName: 'strong', tier: 2 },
+  { char: '~', open: '~~', close: '~~', markName: 'strike_through', tier: 2 },
   { char: '[', open: '[[', close: ']]', markName: null, tier: 2, literal: true },
 ]
 
