@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { colors, space, typography, danger, success } from '../lib/theme'
+import { colors, space, typography, danger } from '../lib/theme'
+import { toast } from '../lib/toast'
 import NodeDivider from './NodeDivider'
 import StarIcon from './StarIcon'
 import Icon from './Icon'
@@ -7,14 +7,12 @@ import Icon from './Icon'
 const STAGE_SCORE = { faintspeck: 1, dimstar: 2, steadystar: 3, brightstar: 4, brilliantstar: 5 }
 
 export default function DetailsPanel({ note, linked, noteBodies, notes, onWish, onDelete, onOpenNote }) {
-  const [wishMsg, setWishMsg] = useState(null)
   const score = STAGE_SCORE[note.stage] || 1
 
   async function wish() {
-    setWishMsg(null)
     const ok = await onWish(note.id)
-    setWishMsg(ok ? 'Wish granted!' : 'Already wished today.')
-    setTimeout(() => setWishMsg(null), 2500)
+    if (ok) toast.success('Wish granted', { description: note.title })
+    else toast.error('Already wished today', { description: note.title })
   }
 
   return (
@@ -42,7 +40,6 @@ export default function DetailsPanel({ note, linked, noteBodies, notes, onWish, 
           style={{ background: 'none', border: `1px solid ${colors.border}`, color: danger,
             borderRadius: 6, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="trash" size={13} /></button>
       </div>
-      {wishMsg && <div style={{ fontSize: 12, color: success, marginBottom: 8 }}>{wishMsg}</div>}
 
       <NodeDivider style={{ margin: `${space[2]}px 0` }} />
       <div style={{ ...typography.sectionLabel, color: colors.textMuted, margin: '0 0 8px' }}>Linked stars</div>
