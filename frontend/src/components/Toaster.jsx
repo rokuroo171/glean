@@ -17,9 +17,8 @@ const VARIANT_ICONS = {
   error: icon('M18 6 6 18M6 6l12 12'),
 }
 
-function ToastRow({ t, index }) {
+function ToastRow({ t }) {
   const variant = TOAST_VARIANTS[t.variant] || TOAST_VARIANTS.info
-  const hidden = index < 0
   return (
     <div
       role="status"
@@ -27,10 +26,9 @@ function ToastRow({ t, index }) {
       onMouseLeave={() => resume(t.id)}
       style={{
         height: ITEM_H, marginBottom: GAP,
-        transform: hidden ? 'translateY(12px)' : 'translateY(0)',
-        opacity: hidden ? 0 : t.leaving ? 0 : 1,
+        opacity: t.leaving ? 0 : 1,
         pointerEvents: t.leaving ? 'none' : 'auto',
-        transition: 'opacity 160ms ease-out, transform 160ms ease-out',
+        transition: 'opacity 160ms ease-out',
         display: 'flex', alignItems: 'stretch',
         background: colors.bgElevated, border: `1px solid ${colors.borderStrong}`,
         borderRadius: 10, boxShadow: colors.shadow, overflow: 'hidden',
@@ -72,17 +70,18 @@ function ToastRow({ t, index }) {
 export default function Toaster() {
   const toasts = useSyncExternalStore(subscribe, getToasts)
   if (!toasts.length) return null
-  // bottom-up stack: newest at the bottom, overflow slides down and fades
+  // bottom-up stack: newest at the bottom; rows animate out in place and
+  // the "more" counter only counts rows the user can still interact with
   const shown = toasts.slice(-3)
-  const hidden = toasts.length - shown.length
+  const moreCount = toasts.filter((t) => !t.leaving).length - shown.filter((t) => !t.leaving).length
   return (
     <div style={{ position: 'fixed', right: 16, bottom: 34, zIndex: 200, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-      {hidden > 0 && (
+      {moreCount > 0 && (
         <div style={{ height: 26, marginBottom: GAP, display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.textMuted, fontSize: 11 }}>
-          {hidden} more
+          {moreCount} more
         </div>
       )}
-      {shown.map((t, i) => <ToastRow key={t.id} t={t} index={i - (3 - shown.length)} />)}
+      {shown.map((t) => <ToastRow key={t.id} t={t} />)}
     </div>
   )
 }
