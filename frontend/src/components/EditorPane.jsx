@@ -116,6 +116,28 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const [animItems, setAnimItems] = useState([])
   const [linkPopup, setLinkPopup] = useState(null)
   const headings = useMemo(() => parseHeadings(body), [body])
+  const popupMatches = useMemo(
+    () => (linkPopup ? Object.keys(noteNames).filter((t) => t.toLowerCase().includes(linkPopup.query)).slice(0, 8) : null),
+    [linkPopup, noteNames]
+  )
+
+  // Capture phase so arrows and Enter never reach the editor while the
+  // picker is open: ArrowDown would otherwise move the caret and reset the
+  // selection listener instead of moving the highlight
+  function handlePopupKeys(e) {
+    if (!linkPopup || !popupMatches?.length) return
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      const dir = e.key === 'ArrowDown' ? 1 : -1
+      setLinkPopup((p) => ({ ...p, index: Math.min(Math.max(p.index + dir, 0), popupMatches.length - 1) }))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      insertWikilink(popupMatches[linkPopup.index])
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      setLinkPopup(null)
+    }
+  }
   const debounceRef = useRef(null)
   const flushRef = useRef(null)
   const { dispatchCommand, getView } = useMilkdownCommands(editorInstanceRef)
@@ -133,8 +155,12 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     const text = view.state.doc.textBetween(0, head)
     const openBracket = text.lastIndexOf('[[')
     if (openBracket < 0) return
+    // the paired close sits ahead of the caret after [[ auto-pairs, so the
+    // replace range must swallow it or the insert doubles the brackets
+    const ahead = view.state.doc.textBetween(head, Math.min(head + 2, view.state.doc.content.size))
+    const closeLen = ahead === ']]' ? 2 : 0
     const link = `[[${title}]]`
-    view.dispatch(view.state.tr.insertText(link, openBracket, head))
+    view.dispatch(view.state.tr.insertText(link, openBracket, head + closeLen))
     setLinkPopup(null)
     view.focus()
   }
@@ -433,7 +459,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
             ))}
           </div>
         )}
-        <div ref={editorContainerRef} style={{ flex: 1, minWidth: 0, minHeight: 0, position: 'relative', display: 'flex', flexDirection: 'row' }}>
+        <div ref={editorContainerRef} onKeyDownCapture={handlePopupKeys} style={{ flex: 1, minWidth: 0, minHeight: 0, position: 'relative', display: 'flex', flexDirection: 'row' }}>
           <Gutter onToggle={() => updatePrefs({ editor: { narrow_width: !narrowWidth } })} menuItems={viewMenuItems} grow={narrowWidth} />
           <ContextMenu items={editorMenuItems} triggerStyle={{ display: 'contents' }}>
             <div style={{ flex: narrowWidth ? '0 0 720px' : '1 1 0', minWidth: 0, minHeight: 0, maxWidth: narrowWidth ? 'min(720px, calc(100% - 80px))' : undefined }}>
@@ -453,9 +479,8 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
               onExit={() => setSourceHatch(false)} />
           )}
           <Gutter onToggle={() => updatePrefs({ editor: { narrow_width: !narrowWidth } })} menuItems={viewMenuItems} grow={narrowWidth} />
-          {linkPopup && (() => {
-            const matches = Object.keys(noteNames).filter(t => t.toLowerCase().includes(linkPopup.query)).slice(0, 8)
-            if (matches.length === 0) return null
+          {linkPopup && popupMatches?.length > 0 && (() => {
+            const matches = popupMatches
             return (
               <div onMouseDown={(e) => e.preventDefault()}
                 style={{ position: 'fixed', left: linkPopup.pos.left, top: linkPopup.pos.top, zIndex: 50, minWidth: 180, maxHeight: 200, overflowY: 'auto', background: colors.bgElevated, border: `1px solid ${colors.borderStrong}`, borderRadius: 8, boxShadow: colors.shadow, padding: 4 }}>

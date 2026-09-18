@@ -48,8 +48,8 @@ describe('autoPair', () => {
   it('pairs one-keystroke chars with the caret inside', () => {
     const cases = [
       ['$', '$$', 2],
-      ['~', '~~~~', 3],
       ['=', '====', 3],
+      ['`', '``', 2],
     ]
     for (const [key, expectText, expectCaret] of cases) {
       const view = makeView(docOf(para('')), 1)
@@ -71,6 +71,25 @@ describe('autoPair', () => {
     view.destroy()
   })
 
+  it('keeps a single ~ literal and completes the strike pair on the second keystroke', () => {
+    const view = makeView(docOf(para('')), 1)
+    typeChar(view, '~')
+    expect(body(view)).toBe('~')
+    expect(view.state.selection.from).toBe(2)
+    typeChar(view, '~')
+    expect(body(view)).toBe('~~~~')
+    expect(view.state.selection.from).toBe(3)
+    view.destroy()
+  })
+
+  it('a lone tilde inside words stays literal like H~2~O', () => {
+    const view = makeView(docOf(para('H2O')), 3)
+    typeChar(view, '~')
+    expect(body(view)).toBe('H2~O')
+    expect(markNames(view)).toEqual([])
+    view.destroy()
+  })
+
   it('completes the starline on the second bracket and feeds the picker text', () => {
     const view = makeView(docOf(para('')), 1)
     typeChar(view, '[')
@@ -84,6 +103,7 @@ describe('autoPair', () => {
 
   it('typing content then the closer converts a marked pair to its mark', () => {
     const view = makeView(docOf(para('')), 1)
+    typeChar(view, '~')
     typeChar(view, '~')
     typeChar(view, 'h')
     typeChar(view, 'i')
@@ -149,14 +169,30 @@ describe('autoPair', () => {
     view.destroy()
   })
 
-  it('backtick is not a pair: one keystroke stays a single literal', () => {
+  it('pairs the backtick and converts typed inline code to the inlineCode mark', () => {
     const view = makeView(docOf(para('')), 1)
     typeChar(view, '`')
-    expect(body(view)).toBe('`')
+    expect(body(view)).toBe('``')
     expect(view.state.selection.from).toBe(2)
+    typeChar(view, 'h')
+    typeChar(view, 'i')
+    expect(body(view)).toBe('`hi`')
+    typeChar(view, '`')
+    expect(body(view)).toBe('hi')
+    expect(view.state.selection.from).toBe(3)
+    expect(markNames(view)).toEqual(['inlineCode'])
+    view.destroy()
+  })
+
+  it('the third backtick after a pair still forms the fence', () => {
+    const view = makeView(docOf(para('')), 1)
     typeChar(view, '`')
     expect(body(view)).toBe('``')
-    expect(view.state.doc.firstChild.type.name).toBe('paragraph')
+    typeChar(view, '`')
+    expect(body(view)).toBe('``')
+    expect(view.state.selection.from).toBe(3)
+    typeChar(view, '`')
+    expect(view.state.doc.firstChild.type.name).toBe('code_block')
     view.destroy()
   })
 
