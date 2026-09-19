@@ -142,6 +142,13 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const flushRef = useRef(null)
   const { dispatchCommand, getView } = useMilkdownCommands(editorInstanceRef)
 
+  function closeFind() {
+    setShowFind(false)
+    setShowReplace(false)
+    getView()?.focus()
+  }
+
+
   flushRef.current = () => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     setDirty(false)
@@ -324,19 +331,41 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
 
   // Source hatch: Ctrl+Shift+E opens raw markdown, Escape or re-press
   // returns to the live editor. Invisible chrome, the WYSIWYG pane IS the
-  // editor; source is a hatch, not a mode
+  // editor; source is a hatch, not a mode. Find shares the same window
+  // listener: Ctrl+F and Ctrl+H work app-wide while a note is open, and
+  // Escape in the editor closes the bar even when focus left the inputs
   const [sourceHatch, setSourceHatch] = useState(false)
   useEffect(() => {
     const onKey = (e) => {
       if (!(e.ctrlKey || e.metaKey) || e.altKey) return
-      if (e.key.toLowerCase() === 'e' && e.shiftKey) {
+      const key = e.key.toLowerCase()
+      if (key === 'e' && e.shiftKey) {
         e.preventDefault()
         setSourceHatch((v) => !v)
+        return
+      }
+      if (sourceHatch) return
+      if (key === 'f') {
+        e.preventDefault()
+        setShowFind(true)
+      } else if (key === 'h') {
+        e.preventDefault()
+        setShowFind(true)
+        setShowReplace(true)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [sourceHatch])
+
+  useEffect(() => {
+    if (!showFind) return
+    const onKey = (e) => {
+      if (e.key === 'Escape') closeFind()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showFind])
 
   const editorMenuItems = [
     { id: 'add-link', label: 'Add starline', icon: 'link', onSelect: startWikilink },
@@ -448,7 +477,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
           ))}
         </div>
       )}
-      {showFind && <FindReplace viewRef={{ current: getView() }} showReplace={showReplace} onClose={() => { setShowFind(false); setShowReplace(false) }} />}
+      {showFind && <FindReplace getView={getView} body={body} showReplace={showReplace} onClose={closeFind} onToggleReplace={() => setShowReplace(v => !v)} />}
       <div style={{ flex: 1, minHeight: 0, minWidth: 0, display: 'flex' }}>
         {showOutline && (
           <div style={{ width: 180, borderRight: `1px solid ${colors.border}`, overflow: 'auto', padding: space[2], flexShrink: 0, background: 'rgba(11, 15, 25, 0.5)', backdropFilter: 'blur(8px)' }}>
