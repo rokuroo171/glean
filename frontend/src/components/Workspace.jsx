@@ -19,6 +19,7 @@ import Icon from './Icon'
 import { wordCount } from '../lib/format'
 import ManageSky from './ManageSky'
 import NewFolderPrompt from './NewFolderPrompt'
+import EmptyState from './EmptyState'
 
 const wails = window.go?.main
 
@@ -446,10 +447,8 @@ export default function Workspace({
                 onOpenStats={() => { setPseudoTab('stats'); onOpenStats() }} onNewNote={onNewNote} />
             </div>
           ) : !activeNote ? (
-            <div style={{ flex: 1, overflow: 'auto' }}>
-              <Home notes={notes} stats={stats} onNoteClick={openNote}
-                onOpenStats={() => { setPseudoTab('stats'); onOpenStats() }} onNewNote={onNewNote} />
-            </div>
+            <EmptyState onNewNote={onNewNote} onNight={openNight}
+              onConstellation={() => setShowConstellation(true)} />
           ) : (
             <div style={{ flex: 1, minHeight: 0, minWidth: 0, display: 'flex' }}>
               <EditorPane

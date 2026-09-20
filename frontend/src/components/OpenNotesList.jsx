@@ -18,6 +18,7 @@ export default function OpenNotesList({ tabs, activeId, onSelect, onClose }) {
         const showX = active || hovered === t.id
         return (
           <div key={t.id} onClick={() => onSelect(t.id)}
+            onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); e.stopPropagation(); onClose(t.id) } }}
             onMouseEnter={() => setHovered(t.id)} onMouseLeave={() => setHovered(null)}
             style={{ display: 'flex', alignItems: 'center', gap: 6, height: 28,
               padding: '0 8px', borderRadius: 6, cursor: 'pointer', position: 'relative',

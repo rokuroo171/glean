@@ -77,6 +77,7 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, pseudoTab, o
                 exit={{ opacity: 0, scaleX: 0.7, width: 0, marginRight: -GAP }}
                 transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                 onClick={() => onSelect(t.id)}
+                onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); e.stopPropagation(); onClose(t.id) } }}
                 onMouseEnter={() => setHovered(t.id)}
                 style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 5,
                   boxSizing: 'border-box', padding: '5px 20px 5px 8px', borderRadius: 6,
