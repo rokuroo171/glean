@@ -463,16 +463,14 @@ export default function Workspace({
               />
             </div>
           )}
-          {prefs.layout.show_status_bar && (
+          {prefs.layout.show_status_bar && activeNote && (
             <StatusBar
               words={wordCount(body)}
               chars={body.length}
               line={cursorPos.line}
               col={cursorPos.col}
               backlinks={backlinks}
-              showCursor={!!activeNote}
-              saveState={dirty[activeNote?.id] ? 'unsaved' : 'saved'}
-              skyName={skyName} version={version} />
+              showCursor={!!activeNote} />
           )}
         </div>
         {detailsOpen && activeNote && (
