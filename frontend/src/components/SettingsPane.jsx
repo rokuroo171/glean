@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { colors, space, typography } from '../lib/theme'
 import Icon from './Icon'
+import LookAndFeel from './LookAndFeel'
 
 const wails = window.go?.main
 const REPO_URL = 'https://github.com/rokuroo171/glean'
@@ -124,6 +125,9 @@ export default function SettingsPane({ skyName, skyPath, version, systemInfo, pr
   return (
     <div style={{ maxWidth: 520, margin: '0 auto', padding: space[5], color: colors.text }}>
       <h2 style={{ margin: '0 0 ' + space[4] + 'px', ...typography.paneTitle, color: colors.text }}>Settings</h2>
+
+      <LookAndFeel />
+
 
       <Section title="About">
         <Row label="Version"><span style={{ color: colors.text }}>{version}</span></Row>

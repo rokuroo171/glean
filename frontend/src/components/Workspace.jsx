@@ -12,7 +12,6 @@ import FileExplorer from './FileExplorer'
 import DetailsPanel from './DetailsPanel'
 import StatsOverlay from './StatsOverlay'
 import SettingsPane from './SettingsPane'
-import CustomizationPane from './CustomizationPane'
 import FullConstellation from './FullConstellation'
 import CommandCenter from './CommandCenter'
 import Icon from './Icon'
@@ -32,7 +31,7 @@ export default function Workspace({
   onWish, onDelete, onReplayTour,
 }) {
   const { prefs, updatePrefs } = usePreferences()
-  const [pseudoTab, setPseudoTab] = useState(null) // null | 'stats' | 'settings' | 'customization'
+  const [pseudoTab, setPseudoTab] = useState(null) // null | 'stats' | 'settings'
   const [nightOpen, setNightOpen] = useState(true)
   const [commandMode, setCommandMode] = useState(null) // null | 'commands' | 'notes'
   const [hatchOpen, setHatchOpen] = useState(false)
@@ -294,8 +293,8 @@ export default function Workspace({
     { id: 'stats', label: 'Sky Overview', group: 'Navigate', icon: 'bar-chart', run: () => { setPseudoTab('stats'); onOpenStats() } },
     { id: 'constellation', label: 'Open Constellation', group: 'Navigate', icon: 'sparkles', run: () => setShowConstellation(true) },
     { id: 'manage-sky', label: 'Manage Sky', group: 'Navigate', icon: 'folder-open', run: () => setShowManageSky(true) },
-    { id: 'customization', label: 'Open Customization', group: 'Navigate', icon: 'palette', run: () => setPseudoTab('customization') },
     { id: 'settings', label: 'Open Settings', group: 'Navigate', icon: 'settings', run: () => setPseudoTab('settings') },
+    { id: 'look-and-feel', label: 'Open Look and Feel', group: 'Navigate', icon: 'palette', keywords: ['theme', 'accent', 'customization', 'appearance'], run: () => setPseudoTab('settings') },
     { id: 'tour', label: 'Replay Onboarding Tour', group: 'App', icon: 'sparkle', run: () => { if (onReplayTour) onReplayTour() } },
     { id: 'refresh-window', label: 'Refresh Window', group: 'App', icon: 'refresh-cw', run: () => window.location.reload() },
   ]
@@ -307,8 +306,6 @@ export default function Workspace({
         wails.App.SetWindowTitle('Sky overview - glean')
       } else if (pseudoTab === 'settings') {
         wails.App.SetWindowTitle('Settings - glean')
-      } else if (pseudoTab === 'customization') {
-        wails.App.SetWindowTitle('Customization - glean')
       } else if (activeId === '__night__') {
         wails.App.SetWindowTitle('Night - glean')
       } else if (activeNote) {
@@ -374,8 +371,8 @@ export default function Workspace({
               cursor: 'pointer', padding: 4, borderRadius: 4 }}>
             <Icon name="sparkles" size={16} />
           </button>
-          <button type="button" data-tour="customize" onClick={() => setPseudoTab(pseudoTab === 'customization' ? null : 'customization')} aria-label="customization" data-tip="Customization"
-            style={{ background: 'none', border: 'none', color: pseudoTab === 'customization' ? colors.accent : colors.textMuted,
+          <button type="button" data-tour="customize" onClick={() => setPseudoTab('settings')} aria-label="customization" data-tip="Look and feel"
+            style={{ background: 'none', border: 'none', color: colors.textMuted,
               cursor: 'pointer', padding: 4, borderRadius: 4 }}>
             <Icon name="palette" size={16} />
           </button>
@@ -434,10 +431,6 @@ export default function Workspace({
           ) : pseudoTab === 'settings' ? (
             <div style={{ flex: 1, overflow: 'auto' }}>
               <SettingsPane skyName={skyName} skyPath={skyPath} version={version} systemInfo={systemInfo} prefs={prefs} onUpdatePrefs={updatePrefs} />
-            </div>
-          ) : pseudoTab === 'customization' ? (
-            <div style={{ flex: 1, overflow: 'auto' }}>
-              <CustomizationPane />
             </div>
           ) : activeId === '__night__' ? (
             // no padding here: Home paints its own full-bleed background, an

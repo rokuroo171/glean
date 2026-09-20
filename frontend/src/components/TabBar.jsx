@@ -13,7 +13,7 @@ const TAB_MIN = 70
 const GAP = 2
 
 export default function TabBar({ tabs, activeId, onSelect, onClose, pseudoTab, onClosePseudo }) {
-  const pseudoLabel = pseudoTab === 'stats' ? 'Sky overview' : pseudoTab === 'customization' ? 'Customization' : 'Settings'
+  const pseudoLabel = pseudoTab === 'stats' ? 'Sky overview' : 'Settings'
   const [hovered, setHovered] = useState(null)
   // While the cursor is in the bar, tab widths are frozen so closing a
   // tab slides the next one under the cursor (spam-close). Released on leave
