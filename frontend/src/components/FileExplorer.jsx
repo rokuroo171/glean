@@ -330,7 +330,7 @@ function NoteRow({ note, depth, activeId, onOpenNote, renaming, onRename, onStar
 // --- FileExplorer ---
 
 export default function FileExplorer({ notes, activeId, onOpenNote, skyName, skyPath,
-  onCreateNote, onCreateFolder, onRefresh, onManageSky, onDelete, folders }) {
+  onCreateNote, onCreateFolder, onRefresh, onManageSky, onDelete, folders, renameApiRef }) {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState('alpha')
   const [collapsed, setCollapsed] = useState({})
@@ -344,18 +344,28 @@ export default function FileExplorer({ notes, activeId, onOpenNote, skyName, sky
   // Prefer the folder list passed from the parent; fall back to our own scan
   const folderList = folders || localFolders
 
+  function startRenameActive() {
+    const note = notes.find(n => n.id === activeId)
+    if (note) setRenaming({ id: note.id, title: note.title, folder: note.folder })
+  }
+
   // F2 key to rename selected note
   useEffect(() => {
     function handleKey(e) {
       if (e.key === 'F2' && activeId && !creating && !renaming) {
         e.preventDefault()
-        const note = notes.find(n => n.id === activeId)
-        if (note) setRenaming({ id: note.id, title: note.title, folder: note.folder })
+        startRenameActive()
       }
     }
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
   }, [activeId, notes, creating, renaming])
+
+  // The command palette renames the active note through this handle; it
+  // re-registers every render so the closure stays fresh
+  useEffect(() => {
+    if (renameApiRef) renameApiRef.current = { startRename: startRenameActive }
+  })
 
   // Fetch folders directly inside this component to bypass stale closures
   const fetchFolders = async () => {

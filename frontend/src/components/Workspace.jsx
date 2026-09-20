@@ -18,6 +18,7 @@ import CommandCenter from './CommandCenter'
 import Icon from './Icon'
 import { wordCount } from '../lib/format'
 import ManageSky from './ManageSky'
+import NewFolderPrompt from './NewFolderPrompt'
 
 const wails = window.go?.main
 
@@ -32,7 +33,10 @@ export default function Workspace({
   const { prefs, updatePrefs } = usePreferences()
   const [pseudoTab, setPseudoTab] = useState(null) // null | 'stats' | 'settings' | 'customization'
   const [nightOpen, setNightOpen] = useState(true)
-  const [commandOpen, setCommandOpen] = useState(false)
+  const [commandMode, setCommandMode] = useState(null) // null | 'commands' | 'notes'
+  const [hatchOpen, setHatchOpen] = useState(false)
+  const [folderPromptOpen, setFolderPromptOpen] = useState(false)
+  const renameApiRef = useRef(null)
   const [showConstellation, setShowConstellation] = useState(false)
   const [skyCollapsed, setSkyCollapsed] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
@@ -173,11 +177,6 @@ export default function Workspace({
     setDirty(prev => { const n = { ...prev }; delete n[id]; return n })
   }
 
-  async function createAndOpen(title) {
-    const note = await onCreateNote(title)
-    if (note) openNote(note.id)
-  }
-
   function openNight() {
     setPseudoTab(null)
     if (nightOpen) {
@@ -196,16 +195,28 @@ export default function Workspace({
     }
   }
 
-  function handleCommandAction(actionId) {
-    if (actionId === 'customize') setPseudoTab('customization')
-    else if (actionId === 'settings') setPseudoTab('settings')
-    else if (actionId === 'stats') { setPseudoTab('stats'); onOpenStats() }
-    else if (actionId === 'new-note') onNewNote()
-    else if (actionId === 'night') openNight()
-    else if (actionId === 'constellation') setShowConstellation(true)
-    else if (actionId === 'refresh-window') window.location.reload()
-    else if (actionId === 'replay-tour') { if (onReplayTour) onReplayTour() }
-  }
+  // The Ctrl+K registry. A plain array rebuilt each render: cheap, and run
+  // closures always see current state
+  const commands = [
+    { id: 'new-note', label: 'New Note', group: 'Notes', icon: 'file-plus', keywords: ['create'], run: () => onNewNote() },
+    { id: 'new-folder', label: 'New Folder', group: 'Notes', icon: 'folder-plus', keywords: ['create'], run: () => setFolderPromptOpen(true) },
+    ...(activeNote ? [
+      { id: 'rename-note', label: `Rename "${activeNote.title}"`, group: 'Notes', icon: 'pencil', run: () => renameApiRef.current?.startRename() },
+      { id: 'delete-note', label: `Delete "${activeNote.title}"`, group: 'Notes', icon: 'trash', run: () => { onDelete(activeNote.id); closeTab(activeNote.id) } },
+    ] : []),
+    { id: 'source-view', label: hatchOpen ? 'Close Source View' : 'Open Source View', group: 'Panes', icon: 'code', keywords: ['markdown', 'raw'], run: () => setHatchOpen(v => !v) },
+    { id: 'outline', label: 'Toggle Outline', group: 'Panes', icon: 'list', run: () => updatePrefs({ editor: { show_outline: prefs.editor.show_outline === false } }) },
+    { id: 'explorer', label: skyCollapsed ? 'Show File Explorer' : 'Hide File Explorer', group: 'Panes', icon: 'columns', run: toggleSky },
+    { id: 'details', label: detailsOpen ? 'Hide Details Panel' : 'Show Details Panel', group: 'Panes', icon: 'panel-right', run: () => setDetailsOpen(v => !v) },
+    { id: 'night', label: 'Go to Night', group: 'Navigate', icon: 'moon', keywords: ['home'], run: openNight },
+    { id: 'stats', label: 'Sky Overview', group: 'Navigate', icon: 'bar-chart', run: () => { setPseudoTab('stats'); onOpenStats() } },
+    { id: 'constellation', label: 'Open Constellation', group: 'Navigate', icon: 'sparkles', run: () => setShowConstellation(true) },
+    { id: 'manage-sky', label: 'Manage Sky', group: 'Navigate', icon: 'folder-open', run: () => setShowManageSky(true) },
+    { id: 'customization', label: 'Open Customization', group: 'Navigate', icon: 'palette', run: () => setPseudoTab('customization') },
+    { id: 'settings', label: 'Open Settings', group: 'Navigate', icon: 'settings', run: () => setPseudoTab('settings') },
+    { id: 'tour', label: 'Replay Onboarding Tour', group: 'App', icon: 'sparkle', run: () => { if (onReplayTour) onReplayTour() } },
+    { id: 'refresh-window', label: 'Refresh Window', group: 'App', icon: 'refresh-cw', run: () => window.location.reload() },
+  ]
 
   function toggleSky() {
     const next = !skyCollapsed
@@ -223,18 +234,18 @@ export default function Workspace({
     onOpenNote(activeId)
   }, [activeId, notes, noteBodies, onOpenNote])
 
-  // The command center opens from the title bar pill, or with the
-  // shortcuts both references use: Ctrl+K and Ctrl+O
+  // Ctrl+K runs commands, Ctrl+O is the files-only quick switcher; the
+  // constellation keeps its own Ctrl+K for graph search
   useEffect(() => {
     const onKey = (e) => {
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K' || e.key === 'o' || e.key === 'O')) {
-        e.preventDefault()
-        setCommandOpen(true)
-      }
+      if (showConstellation) return
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return
+      if (e.key === 'k' || e.key === 'K') { e.preventDefault(); setCommandMode('commands') }
+      else if (e.key === 'o' || e.key === 'O') { e.preventDefault(); setCommandMode('notes') }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [showConstellation])
 
   // When the window regains focus, re-scan the sky folder for new or
   // removed md files and check if the active note changed on disk
@@ -332,7 +343,7 @@ export default function Workspace({
     <div style={{ width: '100vw', height: '100vh', background: colors.bg,
       display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <HeaderBar skyName={skyName}
-        onCommand={() => setCommandOpen(true)}
+        onCommand={() => setCommandMode('commands')}
         onSettings={() => setPseudoTab('settings')}
         onToggleDetails={() => setDetailsOpen(v => !v)}
         detailsOpen={detailsOpen} />
@@ -399,6 +410,7 @@ export default function Workspace({
               }}
               onRefresh={onRescan}
               skyPath={skyPath}
+              renameApiRef={renameApiRef}
               onManageSky={() => setShowManageSky(true)}
               onDelete={onDelete} />
             </div>
@@ -453,6 +465,8 @@ export default function Workspace({
                 onNewNote={onNewNote}
                 skyName={skyName}
                 onCursorChange={setCursorPos}
+                hatchOpen={hatchOpen}
+                onHatchChange={setHatchOpen}
               />
             </div>
           )}
@@ -496,10 +510,31 @@ export default function Workspace({
         />
       )}
 
-      {commandOpen && (
-        <CommandCenter notes={notes} onOpen={openNote} onCreate={createAndOpen}
-          onAction={handleCommandAction}
-          onClose={() => setCommandOpen(false)} />
+      {commandMode && (
+        <CommandCenter mode={commandMode} commands={commands} notes={notes}
+          onOpen={openNote} onClose={() => setCommandMode(null)} />
+      )}
+      {folderPromptOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100 }}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setFolderPromptOpen(false) }}>
+          <div style={{ position: 'fixed', top: 46, left: '50%', transform: 'translateX(-50%)',
+            width: 420, maxWidth: '90vw', background: colors.bgElevated,
+            border: `1px solid ${colors.borderStrong}`, borderRadius: 8,
+            boxShadow: '0 12px 32px rgba(0,0,0,0.5)', padding: '10px 8px' }}>
+            <NewFolderPrompt
+              onSubmit={async (name) => {
+                try {
+                  if (!wails) throw new Error('Backend not available')
+                  await wails.App.CreateFolder(name, '')
+                  onRescan()
+                } catch (err) {
+                  toast.error('Could not create folder', { description: String(err?.message || err) })
+                }
+                setFolderPromptOpen(false)
+              }}
+              onCancel={() => setFolderPromptOpen(false)} />
+          </div>
+        </div>
       )}
     </div>
   )

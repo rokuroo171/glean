@@ -98,7 +98,8 @@ export function parseHeadings(markdown) {
 }
 
 export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty, setDirty,
-  linked, onOpenNote, onNewNote, skyName, onCursorChange, noteNames }) {
+  linked, onOpenNote, onNewNote, skyName, onCursorChange, noteNames,
+  hatchOpen, onHatchChange }) {
   function handleNoteLink(title, id) {
     if (id && onOpenNote) { onOpenNote(id); return }
     if (!id && onNewNote) onNewNote(title)
@@ -331,20 +332,20 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
 
   // Source hatch: Ctrl+Shift+E opens raw markdown, Escape or re-press
   // returns to the live editor. Invisible chrome, the WYSIWYG pane IS the
-  // editor; source is a hatch, not a mode. Find shares the same window
-  // listener: Ctrl+F and Ctrl+H work app-wide while a note is open, and
+  // editor; source is a hatch, not a mode. Hatch state lives in Workspace so
+  // the command palette can toggle the same boolean. Find shares the same
+  // window listener: Ctrl+F and Ctrl+H work app-wide while a note is open, and
   // Escape in the editor closes the bar even when focus left the inputs
-  const [sourceHatch, setSourceHatch] = useState(false)
   useEffect(() => {
     const onKey = (e) => {
       if (!(e.ctrlKey || e.metaKey) || e.altKey) return
       const key = e.key.toLowerCase()
       if (key === 'e' && e.shiftKey) {
         e.preventDefault()
-        setSourceHatch((v) => !v)
+        onHatchChange((v) => !v)
         return
       }
-      if (sourceHatch) return
+      if (hatchOpen) return
       if (key === 'f') {
         e.preventDefault()
         setShowFind(true)
@@ -356,7 +357,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [sourceHatch])
+  }, [hatchOpen])
 
   useEffect(() => {
     if (!showFind) return
@@ -503,9 +504,9 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
               />
             </div>
           </ContextMenu>
-          {sourceHatch && (
+          {hatchOpen && (
             <SourceView value={body} onChange={handleBodyChange}
-              onExit={() => setSourceHatch(false)} />
+              onExit={() => onHatchChange(false)} />
           )}
           <Gutter onToggle={() => updatePrefs({ editor: { narrow_width: !narrowWidth } })} menuItems={viewMenuItems} grow={narrowWidth} />
           {linkPopup && popupMatches?.length > 0 && (() => {
