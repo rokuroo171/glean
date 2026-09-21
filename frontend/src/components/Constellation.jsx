@@ -470,7 +470,7 @@ export default function Constellation({
       return next
     })
   }, [notes, links, sessionPos])
-  // Starfield knobs (from Customization > Constellation). Re-render the
+  // Starfield knobs (from Appearance > Constellation). Re-render the
   // layers when they change so the field responds live
   const starDensity = skyPrefs.density || 'normal'
   const twinkleSpeed = skyPrefs.twinkle_speed || 'normal'
@@ -570,7 +570,7 @@ export default function Constellation({
     let mounted = true
     const fetchPalette = () => {
       if (!wails) return // browser/mock mode: keep hardcoded ambientPalette()
-      // If the user pinned a season in Customization, ask the backend
+      // If the user pinned a season in Appearance settings, ask the backend
       // for that season's palette instead of the current wall-clock one
       GetPalette().then(c => {
         if (mounted) setPalette({
@@ -585,7 +585,7 @@ export default function Constellation({
     }
     fetchPalette()
     // Re-fetch every 30 minutes to catch hour-of-day changes, and
-    // immediately when the user pins a new season in Customization
+    // immediately when the user pins a new season in Appearance settings
     const interval = setInterval(fetchPalette, 30 * 60 * 1000)
     return () => { mounted = false; clearInterval(interval) }
   }, [skyPrefs.season])

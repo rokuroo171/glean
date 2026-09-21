@@ -294,7 +294,7 @@ export default function Workspace({
     { id: 'constellation', label: 'Open Constellation', group: 'Navigate', icon: 'sparkles', run: () => setShowConstellation(true) },
     { id: 'manage-sky', label: 'Manage Sky', group: 'Navigate', icon: 'folder-open', run: () => setShowManageSky(true) },
     { id: 'settings', label: 'Open Settings', group: 'Navigate', icon: 'settings', run: () => setPseudoTab('settings') },
-    { id: 'look-and-feel', label: 'Open Look and Feel', group: 'Navigate', icon: 'palette', keywords: ['theme', 'accent', 'customization', 'appearance'], run: () => setPseudoTab('settings') },
+    { id: 'appearance', label: 'Open Appearance settings', group: 'Navigate', icon: 'palette', keywords: ['theme', 'accent', 'appearance', 'look', 'feel', 'customization'], run: () => setPseudoTab('settings') },
     { id: 'tour', label: 'Replay Onboarding Tour', group: 'App', icon: 'sparkle', run: () => { if (onReplayTour) onReplayTour() } },
     { id: 'refresh-window', label: 'Refresh Window', group: 'App', icon: 'refresh-cw', run: () => window.location.reload() },
   ]
@@ -371,7 +371,7 @@ export default function Workspace({
               cursor: 'pointer', padding: 4, borderRadius: 4 }}>
             <Icon name="sparkles" size={16} />
           </button>
-          <button type="button" data-tour="customize" onClick={() => setPseudoTab('settings')} aria-label="customization" data-tip="Look and feel"
+          <button type="button" data-tour="customize" onClick={() => setPseudoTab('settings')} aria-label="appearance" data-tip="Appearance"
             style={{ background: 'none', border: 'none', color: colors.textMuted,
               cursor: 'pointer', padding: 4, borderRadius: 4 }}>
             <Icon name="palette" size={16} />
