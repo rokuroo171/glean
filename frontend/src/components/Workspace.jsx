@@ -425,7 +425,7 @@ export default function Workspace({
             </div>
           ) : pseudoTab === 'settings' ? (
             <div style={{ flex: 1, overflow: 'auto' }}>
-              <SettingsPane skyName={skyName} skyPath={skyPath} version={version} systemInfo={systemInfo} prefs={prefs} onUpdatePrefs={updatePrefs} />
+              <SettingsPane skyName={skyName} skyPath={skyPath} version={version} systemInfo={systemInfo} />
             </div>
           ) : activeId === '__night__' ? (
             // no padding here: Home paints its own full-bleed background, an

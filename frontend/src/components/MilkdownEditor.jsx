@@ -34,7 +34,7 @@ import { math } from '@milkdown/plugin-math'
 import 'katex/dist/katex.min.css'
 import { colors, danger } from '../lib/theme'
 
-const editorStyles = () => `
+const editorStyles = (fontFamily, fontSize, lineHeight) => `
   [data-milkdown-root] {
     height: 100%;
     width: 100%;
@@ -53,9 +53,9 @@ const editorStyles = () => `
     position: relative;
     padding: 12px 24px;
     color: ${colors.text};
-    font-family: inherit;
-    font-size: 14px;
-    line-height: 1.6;
+    font-family: ${fontFamily || 'inherit'};
+    font-size: ${fontSize || 14}px;
+    line-height: ${lineHeight || 1.6};
     background: transparent !important;
     outline: none;
   }
@@ -562,6 +562,8 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
     lineGutterState.api?.refresh()
   }, [editor.line_numbers, editor.word_wrap])
 
+
+
   const { get, loading } = useEditor((root) => {
     return Editor.make()
       .config((ctx) => {
@@ -613,6 +615,19 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
       .use(math)
   }, [])
 
+  // spellcheck is a DOM attribute, not CSS: flip it on the live ProseMirror
+  // root. Declared after useEditor so its deps can read get; it runs after
+  // editor init (loading flips false) and on every pref change
+  useEffect(() => {
+    if (loading || !get) return
+    const editorInstance = get()
+    if (!editorInstance) return
+    try {
+      const view = editorInstance.action((ctx) => ctx.get(editorViewCtx))
+      if (view?.dom) view.dom.spellcheck = editor.spell_check_enabled !== false
+    } catch (_) {}
+  }, [editor.spell_check_enabled, get, loading])
+
   useEffect(() => {
     if (!get || loading) return
     const ed = get()
@@ -656,9 +671,11 @@ function EditorInner({ markdown, onMarkdownChange, onSelectionChange, editorInst
 }
 
 export default function MilkdownEditor({ markdown, onMarkdownChange, onSelectionChange, editorInstanceRef, noteNames, onNoteLink }) {
+  const { prefs } = usePreferences()
+  const e = prefs.editor
   return (
     <MilkdownProvider>
-      <style>{editorStyles()}</style>
+      <style>{editorStyles(e.font_family, e.font_size, e.line_height)}</style>
       <div style={{ height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <EditorInner
           markdown={markdown}

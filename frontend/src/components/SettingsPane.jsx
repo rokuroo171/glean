@@ -69,7 +69,7 @@ function openLink(url) {
   }
 }
 
-export default function SettingsPane({ skyName, skyPath, version, systemInfo, prefs, onUpdatePrefs }) {
+export default function SettingsPane({ skyName, skyPath, version, systemInfo }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [stars, setStars] = useState(null)
 
@@ -187,19 +187,6 @@ export default function SettingsPane({ skyName, skyPath, version, systemInfo, pr
           </Row>
         )}
         {!systemInfo && <Row label="System" last><span style={{ color: colors.textMuted, fontSize: 12 }}>-</span></Row>}
-      </Section>
-
-      <Section title="Layout">
-        <Row label="Tab style" last>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <ActionButton label="Vertical"
-              color={prefs.layout.tab_mode !== 'horizontal' ? colors.accent : colors.textMuted}
-              onClick={() => onUpdatePrefs({ layout: { ...prefs.layout, tab_mode: 'vertical' } })} />
-            <ActionButton label="Horizontal"
-              color={prefs.layout.tab_mode === 'horizontal' ? colors.accent : colors.textMuted}
-              onClick={() => onUpdatePrefs({ layout: { ...prefs.layout, tab_mode: 'horizontal' } })} />
-          </div>
-        </Row>
       </Section>
 
       <Section title="Sky">
