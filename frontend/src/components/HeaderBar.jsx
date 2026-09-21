@@ -45,7 +45,7 @@ export default function HeaderBar({ skyName, onCommand, onSettings, onToggleDeta
           </span>
         </button>
         <button type="button" onClick={onSettings} aria-label="settings"
-          data-tip="Settings"
+          data-tip="Settings" data-tour="settings"
           style={{ background: 'none', border: 'none', color: colors.textMuted,
             cursor: 'pointer', padding: 4 }}><Icon name="settings" size={15} /></button>
       </div>

@@ -371,11 +371,6 @@ export default function Workspace({
               cursor: 'pointer', padding: 4, borderRadius: 4 }}>
             <Icon name="sparkles" size={16} />
           </button>
-          <button type="button" data-tour="customize" onClick={() => setPseudoTab('settings')} aria-label="appearance" data-tip="Appearance"
-            style={{ background: 'none', border: 'none', color: colors.textMuted,
-              cursor: 'pointer', padding: 4, borderRadius: 4 }}>
-            <Icon name="palette" size={16} />
-          </button>
           <button type="button" onClick={() => { if (pseudoTab === 'stats') setPseudoTab(null); else { setPseudoTab('stats'); onOpenStats() } }} aria-label="stats" data-tip="Sky overview"
             style={{ background: 'none', border: 'none', color: pseudoTab === 'stats' ? colors.accent : colors.textMuted,
               cursor: 'pointer', padding: 4, borderRadius: 4 }}>

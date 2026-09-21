@@ -27,7 +27,7 @@ function WorkspaceBoot() {
 const ONBOARDING_STEPS = [
   { title: 'Your Sky is ready', body: 'A few quick pointers before you make it yours. You can skip this anytime.' },
   { title: 'Start with Welcome', body: 'Your sky begins with four starter notes. Welcome is open now; it starlines into the Getting Started folder. Click the file icon with a plus when you want your own.', target: '[data-tour="new-file"]' },
-  { title: 'Make it yours', body: 'Themes, accent colors, and editor feel all live in Settings, one click from this pane button.', target: '[data-tour="customize"]' },
+  { title: 'Make it yours', body: 'Themes, accent colors, and editor feel all live in Settings, behind the gear in the top bar.', target: '[data-tour="settings"]' },
   { title: 'Manage your Sky', body: 'Your Sky is a folder on disk. Open the explorer footer to switch skies or add more.', target: '[data-tour="manage-sky"]' },
   { title: 'The night is yours', body: 'Start writing. The more you visit a note, the brighter its star grows.' },
 ]
