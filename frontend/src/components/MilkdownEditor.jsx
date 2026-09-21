@@ -163,6 +163,7 @@ const editorStyles = (fontFamily, fontSize, lineHeight) => `
     overflow-x: auto;
     margin: 0.3em 0;
     font-variant-ligatures: none;
+    font-family: 'Fira Code', 'JetBrains Mono', ui-monospace, monospace;
   }
   .milkdown pre[data-language]::after {
     content: attr(data-language);

@@ -32,12 +32,18 @@ const densities = [
 ]
 
 const FONT_OPTIONS = [
-  { value: 'monospace', label: 'Monospace' },
-  { value: 'Consolas, monospace', label: 'Consolas' },
-  { value: '"Fira Code", monospace', label: 'Fira Code' },
-  { value: '"JetBrains Mono", monospace', label: 'JetBrains Mono' },
-  { value: '"Source Code Pro", monospace', label: 'Source Code Pro' },
-  { value: 'ui-monospace, monospace', label: 'System Mono' },
+  { value: 'monospace', label: 'Monospace', group: 'Mono / Code' },
+  { value: '"Fira Code", monospace', label: 'Fira Code', group: 'Mono / Code' },
+  { value: '"JetBrains Mono", monospace', label: 'JetBrains Mono', group: 'Mono / Code' },
+  { value: '"Source Code Pro", monospace', label: 'Source Code Pro', group: 'Mono / Code' },
+  { value: 'ui-monospace, monospace', label: 'System Mono', group: 'Mono / Code' },
+  { value: 'Georgia, serif', label: 'Georgia', group: 'Styled / Literary' },
+  { value: '"EB Garamond", Georgia, serif', label: 'EB Garamond', group: 'Styled / Literary' },
+  { value: '"Cormorant Garamond", Georgia, serif', label: 'Cormorant Garamond', group: 'Styled / Literary' },
+  { value: 'Lora, Georgia, serif', label: 'Lora', group: 'Styled / Literary' },
+  { value: 'Literata, Georgia, serif', label: 'Literata', group: 'Styled / Literary' },
+  { value: '"IM Fell English", Georgia, serif', label: 'IM Fell English', group: 'Styled / Literary' },
+  { value: "'Fraunces Variable', Georgia, serif", label: 'Fraunces', group: 'Styled / Literary' },
 ]
 
 function Card({ children }) {
