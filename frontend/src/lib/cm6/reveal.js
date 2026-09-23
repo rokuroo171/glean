@@ -3,22 +3,40 @@ import { RangeSetBuilder } from '@codemirror/state'
 import { syntaxTree } from '@codemirror/language'
 
 // The caret-gated reveal state, the heart of the live preview contract.
-// Inline syntax (emphasis, strike, code, highlight marks) hides when the
-// caret is away from the range and returns as dimmed real characters when
-// the caret is inside or on either edge. Law 2: hiding is opacity and color
-// only, never geometry. Law 3: this set is recomputed whole from (doc,
-// selection) on every relevant transaction; it is never patched
+// Inline syntax (emphasis, strike, code marks) and block prefixes (heading
+// hashes, quote marks, list marks, task markers) hide when the caret is
+// away from their block unit and return as dimmed real characters when the
+// caret is inside it. Law 2: hiding is opacity and color only, never
+// geometry. Law 3: this set is recomputed whole from (doc, selection) on
+// every relevant transaction; it is never patched
 
 // hiding rides in attributes.style; Decoration.mark has no top-level style
 // field, so a bare { style } spec would be silently ignored
 const HIDDEN = { attributes: { style: 'opacity:0' } }
 const REVEALED_CLASS = 'glean-syntax-revealed'
 
-const PAIRS = new Set([
-  'EmphasisMark', 'StrikethroughMark', 'CodeMark', 'HighlightMark',
+const INLINE_PAIRS = new Set(['EmphasisMark', 'StrikethroughMark', 'CodeMark', 'HighlightMark'])
+
+const BLOCK_PREFIXES = new Set(['HeaderMark', 'QuoteMark', 'ListMark', 'TaskMarker'])
+
+// the block a prefix belongs to: the caret editing anywhere inside this
+// node sees that prefix raw. List and task marks answer to their item,
+// quote marks to their quote (nested quotes are their own unit), heading
+// hashes to the heading
+const BLOCK_UNITS = new Set([
+  'ListItem', 'Blockquote',
+  'ATXHeading1', 'ATXHeading2', 'ATXHeading3', 'ATXHeading4', 'ATXHeading5', 'ATXHeading6',
+  'SetextHeading1', 'SetextHeading2',
 ])
 
-const HEADS = new Set(['HeaderMark'])
+function revealSpan(node) {
+  let cur = node.parent
+  while (cur) {
+    if (BLOCK_UNITS.has(cur.name)) return cur
+    cur = cur.parent
+  }
+  return node
+}
 
 function build(state) {
   const head = state.selection.main.head
@@ -28,32 +46,22 @@ function build(state) {
   tree.iterate({
     enter: (node) => {
       const name = node.name
-      const isPair = PAIRS.has(name)
-      const isHead = HEADS.has(name)
-      if (!isPair && !isHead) return
-
-      // reveal window: the caret sits anywhere in [from, to] of the parent
-      // construct, so walking into a pair shows both halves plus the text
-      const parent = node.node.parent
-      const span = parent && parent.from < parent.to ? parent : node.node
-      const near = head >= span.from && head <= span.to
-
-      if (isHead) {
-        // heading marks: hide when the caret is elsewhere on the line's
-        // construct, reveal dim when the caret is on the heading at all
-        if (near) {
-          marks.push({ from: node.from, to: node.to, spec: { class: REVEALED_CLASS } })
-        } else {
-          marks.push({ from: node.from, to: node.to, spec: HIDDEN })
-        }
+      let span
+      if (INLINE_PAIRS.has(name)) {
+        const parent = node.node.parent
+        // fence marks keep their raw ``` until phase 4 replaces them with
+        // the language chip treatment
+        if (name === 'CodeMark' && parent && (parent.name === 'FencedCode' || parent.name === 'CodeBlock')) return
+        span = parent && parent.from < parent.to ? parent : node.node
+      } else if (BLOCK_PREFIXES.has(name)) {
+        span = revealSpan(node.node)
+      } else {
         return
       }
-
-      if (near) {
-        marks.push({ from: node.from, to: node.to, spec: { class: REVEALED_CLASS } })
-      } else {
-        marks.push({ from: node.from, to: node.to, spec: HIDDEN })
-      }
+      const near = head >= span.from && head <= span.to
+      marks.push(near
+        ? { from: node.from, to: node.to, spec: { class: REVEALED_CLASS } }
+        : { from: node.from, to: node.to, spec: HIDDEN })
     },
   })
 
