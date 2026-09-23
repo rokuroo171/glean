@@ -505,6 +505,8 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
                   onMarkdownChange={handleBodyChange}
                   onSelectionChange={handleSelectionChange}
                   editorInstanceRef={editorInstanceRef}
+                  noteNames={noteNames}
+                  onNoteLink={handleNoteLink}
                 />
               ) : (
                 <MilkdownEditor

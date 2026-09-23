@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { EditorView } from '@codemirror/view'
 import { undo, redo } from '@codemirror/commands'
 import { createEditor, loadMarkdown, histState, emitMarkdown, editorTheme, styleCompartment, wrapCompartment } from '../lib/cm6/editor'
+import { starlineTheme } from '../lib/cm6/starline'
 import { usePreferences } from '../lib/preferences-context'
 import { colors } from '../lib/theme'
 
@@ -13,17 +14,23 @@ export default function CM6Editor({
   onMarkdownChange,
   onSelectionChange,
   editorInstanceRef,
+  noteNames,
+  onNoteLink,
 }) {
   const hostRef = useRef(null)
   const viewRef = useRef(null)
   const emitRef = useRef(onMarkdownChange)
   const selRef = useRef(onSelectionChange)
+  const namesRef = useRef(noteNames)
+  const linkRef = useRef(onNoteLink)
   const loadingRef = useRef(false)
   emitRef.current = onMarkdownChange
   selRef.current = onSelectionChange
 
   const { prefs } = usePreferences()
   const e = prefs.editor || {}
+  namesRef.current = noteNames
+  linkRef.current = onNoteLink
 
   useEffect(() => {
     const view = createEditor({
@@ -35,6 +42,10 @@ export default function CM6Editor({
         if (!loadingRef.current) emitRef.current(md)
       },
       onSelectionChange: (_view, sel) => selRef.current(null, sel),
+      starline: noteNames || onNoteLink ? {
+        getNoteNames: () => namesRef.current,
+        onNoteLink: (title, id) => linkRef.current && linkRef.current(title, id),
+      } : null,
     })
     viewRef.current = view
     if (editorInstanceRef) {
@@ -80,11 +91,6 @@ export default function CM6Editor({
       ref={hostRef}
       data-cm6-root
       style={{ height: '100%', width: '100%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}
-      onClick={(ev) => {
-        // starline navigation placeholder; chips arrive with the reveal pass
-        const star = ev.target.closest?.('[data-starline]')
-        if (star && star.dataset.target) window.dispatchEvent(new CustomEvent('glean:open-note', { detail: star.dataset.target }))
-      }}
     />
   )
 }
