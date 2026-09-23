@@ -60,20 +60,23 @@ describe('blocks pass', () => {
   it('hides heading hash when caret is away and reveals it on the heading', async () => {
     const { view, parent } = mount(DOC)
     await settle()
-    const hidden = () => view.dom.querySelectorAll('[style*="opacity"]').length
-    const away = hidden()
-    // a plain paragraph: every heading and emphasis mark must be hidden here
+    // collapsed replace decorations: a hidden prefix vanishes from the line
+    // text, so the line reads like the rendered output
+    const headingText = () => view.dom.querySelectorAll('.cm-line')[0].textContent
+    const dashText = () => view.dom.querySelectorAll('.cm-line')[2].textContent
+    // initial caret is on the heading: its hash shows, the dashes stay hidden
+    expect(headingText().startsWith('#')).toBe(true)
+    expect(dashText().startsWith('-')).toBe(false)
+    // a plain paragraph: heading hash collapses too
     view.dispatch({ selection: EditorSelection.cursor(DOC.indexOf('plain ') + 1) })
     await settle()
-    const stillAway = hidden()
-    // on the heading: its hash reveals dim, the bold pair stays hidden
+    expect(headingText().startsWith('#')).toBe(false)
+    expect(dashText().startsWith('-')).toBe(false)
+    // back on the heading: the hash returns as real text
     view.dispatch({ selection: EditorSelection.cursor(2) })
     await settle()
-    const near = hidden()
+    expect(headingText().startsWith('#')).toBe(true)
     destroy(view, parent)
-    expect(away).toBeGreaterThan(0)
-    expect(stillAway).toBeGreaterThan(0)
-    expect(near).toBeLessThan(stillAway)
   })
 
   it('reveals emphasis marks when the caret enters the pair', async () => {
@@ -90,35 +93,34 @@ describe('blocks pass', () => {
   it('hides list, quote and task prefixes away and reveals them inside their block', async () => {
     const { view, parent } = mount(DOC)
     await settle()
-    const hidden = () => view.dom.querySelectorAll('[style*="opacity"]').length
-    // caret parked in the plain paragraph: list marks, quote marks, task
-    // markers and heading hashes must all be hidden
+    const dashText = () => view.dom.querySelectorAll('.cm-line')[2].textContent
+    // caret parked in the plain paragraph: list dashes and the heading hash
+    // must all be collapsed
     view.dispatch({ selection: EditorSelection.cursor(DOC.indexOf('plain ') + 1) })
     await settle()
-    const away = hidden()
+    expect(dashText().startsWith('-')).toBe(false)
     // caret inside the quote block: its > marks reveal, list marks stay hidden
     view.dispatch({ selection: EditorSelection.cursor(DOC.indexOf('quoted') + 2) })
     await settle()
     const revealedTexts = [...view.dom.querySelectorAll('.glean-syntax-revealed')].map((e) => e.textContent)
-    const stillAway = hidden()
+    expect(dashText().startsWith('-')).toBe(false)
     destroy(view, parent)
-    expect(away).toBeGreaterThan(0)
     expect(revealedTexts).toContain('>')
-    expect(stillAway).toBeGreaterThan(0)
   })
 
   it('reveals the list dash when the caret edits that item only', async () => {
     const { view, parent } = mount(DOC)
     await settle()
+    const dashText = (idx) => view.dom.querySelectorAll('.cm-line')[idx].textContent
     view.dispatch({ selection: EditorSelection.cursor(DOC.indexOf('one') + 1) })
     await settle()
-    const revealed = [...view.dom.querySelectorAll('.glean-syntax-revealed')].map((e) => e.textContent)
+    expect(dashText(2).startsWith('-')).toBe(true)
+    expect(dashText(3).startsWith('-')).toBe(false)
     view.dispatch({ selection: EditorSelection.cursor(DOC.indexOf('two') + 1) })
     await settle()
-    const revealed2 = [...view.dom.querySelectorAll('.glean-syntax-revealed')].map((e) => e.textContent)
+    expect(dashText(2).startsWith('-')).toBe(false)
+    expect(dashText(3).startsWith('-')).toBe(true)
     destroy(view, parent)
-    expect(revealed).toContain('-')
-    expect(revealed2).toContain('-')
   })
 
   it('keeps the buffer byte-true with live preview on', () => {
