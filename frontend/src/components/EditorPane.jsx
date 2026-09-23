@@ -9,6 +9,7 @@ import { toggleStrongCommand, toggleEmphasisCommand, toggleInlineCodeCommand, wr
 import { toggleStrikethroughCommand } from '@milkdown/kit/preset/gfm'
 import { undoCommand, redoCommand } from '@milkdown/kit/plugin/history'
 import { undoDepth, redoDepth } from '@milkdown/kit/prose/history'
+import { undoDepth as cmUndoDepth, redoDepth as cmRedoDepth } from '@codemirror/commands'
 import StarIcon from './StarIcon'
 import Icon from './Icon'
 
@@ -224,6 +225,16 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     // The listener fires mid-transaction where editorViewCtx is not yet
     // readable; deferring also lets coordsAtPos see the settled DOM
     setTimeout(() => {
+      const cmView = EDITOR_FLAVOR === 'cm6' ? editorInstanceRef.current?.view : null
+      if (cmView) {
+        const cursor = selection.head
+        setHist({ canUndo: cmUndoDepth(cmView.state) > 0, canRedo: cmRedoDepth(cmView.state) > 0 })
+        if (onCursorChange) {
+          const before = cmView.state.doc.sliceString(0, cursor)
+          onCursorChange({ line: before.split('\n').length, col: before.slice(before.lastIndexOf('\n') + 1).length + 1 })
+        }
+        return
+      }
       const view = getView()
       if (!view) return
       const cursor = selection.head
@@ -325,6 +336,28 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
         view.focus()
       })
       .catch(() => view.focus())
+  }
+
+  const undoInEditor = () => {
+    if (EDITOR_FLAVOR === 'cm6') {
+      const inst = editorInstanceRef.current
+      inst?.undo()
+      // undo can restore the exact prior cursor, which fires no selection or
+      // doc listener, so the button states must be refreshed from the history
+      if (inst?.histState) setHist(inst.histState())
+      return
+    }
+    dispatchCommand(undoCommand.key)
+  }
+
+  const redoInEditor = () => {
+    if (EDITOR_FLAVOR === 'cm6') {
+      const inst = editorInstanceRef.current
+      inst?.redo()
+      if (inst?.histState) setHist(inst.histState())
+      return
+    }
+    dispatchCommand(redoCommand.key)
   }
 
   const selectAllInEditor = () => {
@@ -455,10 +488,10 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
           ))}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
-          <button type="button" style={{ ...toolbarBtn, opacity: hist.canUndo ? 1 : 0.3 }} onClick={() => dispatchCommand(undoCommand.key)} title="Undo (Ctrl+Z)">
+          <button type="button" style={{ ...toolbarBtn, opacity: hist.canUndo ? 1 : 0.3 }} onClick={undoInEditor} title="Undo (Ctrl+Z)">
             <Icon name="undo" size={14} />
           </button>
-          <button type="button" style={{ ...toolbarBtn, opacity: hist.canRedo ? 1 : 0.3 }} onClick={() => dispatchCommand(redoCommand.key)} title="Redo (Ctrl+Shift+Z)">
+          <button type="button" style={{ ...toolbarBtn, opacity: hist.canRedo ? 1 : 0.3 }} onClick={redoInEditor} title="Redo (Ctrl+Shift+Z)">
             <Icon name="redo" size={14} />
           </button>
           <div style={{ width: 1, height: 16, background: colors.border, margin: '0 4px' }} />
