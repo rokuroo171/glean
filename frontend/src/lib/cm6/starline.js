@@ -47,8 +47,10 @@ function decorationsFor(view, getNoteNames) {
     }
     const title = m[1]
     const exists = noteNames[title] != null
-    decos.push({ from: openStart, to: openStart + 2, spec: { style: 'opacity:0' } })
-    decos.push({ from: closeEnd - 2, to: closeEnd, spec: { style: 'opacity:0' } })
+    // attributes.style, not a bare style field: mark specs ignore a top-level
+    // style key, which would leave the brackets visibly raw
+    decos.push({ from: openStart, to: openStart + 2, spec: { attributes: { style: 'opacity:0' } } })
+    decos.push({ from: closeEnd - 2, to: closeEnd, spec: { attributes: { style: 'opacity:0' } } })
     decos.push({
       from: openStart + 2,
       to: closeEnd - 2,

@@ -6,6 +6,8 @@ import {
 import { defaultKeymap, history, historyKeymap, undoDepth, redoDepth } from '@codemirror/commands'
 import { markdown, markdownKeymap, markdownLanguage } from '@codemirror/lang-markdown'
 import { starline, starlineTheme } from './starline'
+import { blocks, blocksTheme } from './blocks'
+import { reveal, revealTheme } from './reveal'
 
 // One renderer, one truth: the buffer holds the file's markdown bytes and
 // nothing in this module ever rewrites them outside a dispatched transaction
@@ -52,6 +54,7 @@ export function createEditor({
   wrap = true,
   style = {},
   starline: starlineOpts = null,
+  livePreview = true,
 }) {
   const emit = (view) => {
     if (onMarkdownChange) onMarkdownChange(emitMarkdown(view))
@@ -78,6 +81,7 @@ export function createEditor({
       markdown({ base: markdownLanguage }),
       keymap.of(markdownKeymap),
       keymap.of([...defaultKeymap, ...historyKeymap]),
+      ...(livePreview ? [blocks, blocksTheme, reveal, revealTheme] : []),
       ...(starlineOpts ? [starline(starlineOpts), starlineTheme] : []),
       styleCompartment.of(editorTheme(style.fontFamily, style.fontSize, style.lineHeight)),
       wrapCompartment.of(wrap ? EditorView.lineWrapping : []),
