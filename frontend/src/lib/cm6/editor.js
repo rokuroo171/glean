@@ -8,6 +8,7 @@ import { markdown, markdownKeymap, markdownLanguage } from '@codemirror/lang-mar
 import { starline, starlineTheme } from './starline'
 import { blocks, blocksTheme } from './blocks'
 import { reveal, revealTheme } from './reveal'
+import { gleanKeymap, gleanIndentUnit } from './keymaps'
 
 // One renderer, one truth: the buffer holds the file's markdown bytes and
 // nothing in this module ever rewrites them outside a dispatched transaction
@@ -78,8 +79,9 @@ export function createEditor({
       dropCursor(),
       rectangularSelection(),
       crosshairCursor(),
-      markdown({ base: markdownLanguage }),
+      markdown({ base: markdownLanguage, indentUnit: gleanIndentUnit }),
       keymap.of(markdownKeymap),
+      keymap.of(gleanKeymap),
       keymap.of([...defaultKeymap, ...historyKeymap]),
       ...(livePreview ? [blocks, blocksTheme, reveal, revealTheme] : []),
       ...(starlineOpts ? [starline(starlineOpts), starlineTheme] : []),
