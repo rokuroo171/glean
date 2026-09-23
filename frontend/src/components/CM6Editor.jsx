@@ -1,0 +1,90 @@
+import { useEffect, useRef } from 'react'
+import { EditorView } from '@codemirror/view'
+import { undo, redo } from '@codemirror/commands'
+import { createEditor, loadMarkdown, histState, emitMarkdown, editorTheme, styleCompartment, wrapCompartment } from '../lib/cm6/editor'
+import { usePreferences } from '../lib/preferences-context'
+import { colors } from '../lib/theme'
+
+// Bridge-compatible with MilkdownEditor's contract so EditorPane can swap
+// them without touching consumers: { markdown, onMarkdownChange,
+// onSelectionChange, editorInstanceRef, noteNames, onNoteLink }
+export default function CM6Editor({
+  markdown,
+  onMarkdownChange,
+  onSelectionChange,
+  editorInstanceRef,
+}) {
+  const hostRef = useRef(null)
+  const viewRef = useRef(null)
+  const emitRef = useRef(onMarkdownChange)
+  const selRef = useRef(onSelectionChange)
+  const loadingRef = useRef(false)
+  emitRef.current = onMarkdownChange
+  selRef.current = onSelectionChange
+
+  const { prefs } = usePreferences()
+  const e = prefs.editor || {}
+
+  useEffect(() => {
+    const view = createEditor({
+      parent: hostRef.current,
+      markdown: markdown || '',
+      wrap: e.word_wrap !== false,
+      style: { fontFamily: e.font_family, fontSize: e.font_size, lineHeight: e.line_height },
+      onMarkdownChange: (md) => {
+        if (!loadingRef.current) emitRef.current(md)
+      },
+      onSelectionChange: (_view, sel) => selRef.current(null, sel),
+    })
+    viewRef.current = view
+    if (editorInstanceRef) {
+      editorInstanceRef.current = {
+        get view() { return viewRef.current },
+        undo: () => viewRef.current && undo(viewRef.current),
+        redo: () => viewRef.current && redo(viewRef.current),
+        histState: () => viewRef.current ? histState(viewRef.current) : { canUndo: false, canRedo: false },
+      }
+    }
+    return () => {
+      view.destroy()
+      viewRef.current = null
+      if (editorInstanceRef) editorInstanceRef.current = null
+    }
+    // editor mounts once per note; markdown flows in through the load effect
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // note body changes that come from outside the editor (note switch, external
+  // reload, keep-mine) go through loadMarkdown, outside undo history
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view) return
+    const current = emitMarkdown(view)
+    if ((markdown || '') !== current) loadMarkdown(view, markdown || '')
+  }, [markdown])
+
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view) return
+    view.dispatch({
+      effects: [
+        styleCompartment.reconfigure(editorTheme(e.font_family, e.font_size, e.line_height)),
+        wrapCompartment.reconfigure(e.word_wrap !== false ? EditorView.lineWrapping : []),
+      ],
+    })
+    if (view.dom) view.dom.spellcheck = e.spell_check_enabled !== false
+  }, [e.font_family, e.font_size, e.line_height, e.word_wrap, e.spell_check_enabled])
+
+  return (
+    <div
+      ref={hostRef}
+      data-cm6-root
+      style={{ height: '100%', width: '100%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}
+      onClick={(ev) => {
+        // starline navigation placeholder; chips arrive with the reveal pass
+        const star = ev.target.closest?.('[data-starline]')
+        if (star && star.dataset.target) window.dispatchEvent(new CustomEvent('glean:open-note', { detail: star.dataset.target }))
+      }}
+    />
+  )
+}

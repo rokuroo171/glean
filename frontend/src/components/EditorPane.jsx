@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { colors, space, typography } from '../lib/theme'
 import { usePreferences } from '../lib/preferences-context'
 import MilkdownEditor, { useMilkdownCommands } from './MilkdownEditor'
+import CM6Editor from './CM6Editor'
 import { editorViewCtx } from '@milkdown/core'
 import { TextSelection } from '@milkdown/kit/prose/state'
 import { toggleStrongCommand, toggleEmphasisCommand, toggleInlineCodeCommand, wrapInBlockquoteCommand, wrapInBulletListCommand, wrapInOrderedListCommand, createCodeBlockCommand, wrapInHeadingCommand, turnIntoTextCommand, insertHrCommand } from '@milkdown/kit/preset/commonmark'
@@ -10,6 +11,10 @@ import { undoCommand, redoCommand } from '@milkdown/kit/plugin/history'
 import { undoDepth, redoDepth } from '@milkdown/kit/prose/history'
 import StarIcon from './StarIcon'
 import Icon from './Icon'
+
+// Phase 1: the CM6 buffer editor mounts behind the flag; Milkdown stays the
+// default until phase 5 flips it
+const EDITOR_FLAVOR = import.meta.env.VITE_EDITOR || 'milkdown'
 import ContextMenu from './ContextMenu'
 import FindReplace from './FindReplace'
 import { SourceView } from './ViewModes'
@@ -493,15 +498,25 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
           <Gutter onToggle={() => updatePrefs({ editor: { narrow_width: !narrowWidth } })} menuItems={viewMenuItems} grow={narrowWidth} />
           <ContextMenu items={editorMenuItems} triggerStyle={{ display: 'contents' }}>
             <div style={{ flex: narrowWidth ? '0 0 720px' : '1 1 0', minWidth: 0, minHeight: 0, maxWidth: narrowWidth ? 'min(720px, calc(100% - 80px))' : undefined }}>
-              <MilkdownEditor
-                key={note?.id}
-                markdown={body}
-                onMarkdownChange={handleBodyChange}
-                onSelectionChange={handleSelectionChange}
-                editorInstanceRef={editorInstanceRef}
-                noteNames={noteNames}
-                onNoteLink={handleNoteLink}
-              />
+              {EDITOR_FLAVOR === 'cm6' ? (
+                <CM6Editor
+                  key={note?.id}
+                  markdown={body}
+                  onMarkdownChange={handleBodyChange}
+                  onSelectionChange={handleSelectionChange}
+                  editorInstanceRef={editorInstanceRef}
+                />
+              ) : (
+                <MilkdownEditor
+                  key={note?.id}
+                  markdown={body}
+                  onMarkdownChange={handleBodyChange}
+                  onSelectionChange={handleSelectionChange}
+                  editorInstanceRef={editorInstanceRef}
+                  noteNames={noteNames}
+                  onNoteLink={handleNoteLink}
+                />
+              )}
             </div>
           </ContextMenu>
           {hatchOpen && (
