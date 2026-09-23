@@ -19,7 +19,10 @@ const REVEALED_CLASS = 'glean-syntax-revealed'
 
 const INLINE_PAIRS = new Set(['EmphasisMark', 'StrikethroughMark', 'CodeMark', 'HighlightMark'])
 
-const BLOCK_PREFIXES = new Set(['HeaderMark', 'QuoteMark', 'ListMark', 'TaskMarker'])
+// TaskMarker is absent: widgets.js replaces [x] markers with the checkbox
+// itself, so there is no raw state to reveal and both layers replacing the
+// same range would conflict
+const BLOCK_PREFIXES = new Set(['HeaderMark', 'QuoteMark', 'ListMark'])
 
 // the block a prefix belongs to: the caret editing anywhere inside this
 // node sees that prefix raw. List and task marks answer to their item,

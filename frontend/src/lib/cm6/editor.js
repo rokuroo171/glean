@@ -9,6 +9,7 @@ import { starline, starlineTheme } from './starline'
 import { blocks, blocksTheme } from './blocks'
 import { reveal, revealTheme } from './reveal'
 import { gleanKeymap, gleanIndentUnit } from './keymaps'
+import { widgets, widgetAtomic, blockWidgets, widgetsTheme } from './widgets'
 
 // One renderer, one truth: the buffer holds the file's markdown bytes and
 // nothing in this module ever rewrites them outside a dispatched transaction
@@ -79,11 +80,12 @@ export function createEditor({
       dropCursor(),
       rectangularSelection(),
       crosshairCursor(),
+      blockWidgets,
       markdown({ base: markdownLanguage, indentUnit: gleanIndentUnit }),
       keymap.of(markdownKeymap),
       keymap.of(gleanKeymap),
       keymap.of([...defaultKeymap, ...historyKeymap]),
-      ...(livePreview ? [blocks, blocksTheme, reveal, revealTheme] : []),
+      ...(livePreview ? [blocks, blocksTheme, reveal, revealTheme, widgets, widgetAtomic, widgetsTheme] : []),
       ...(starlineOpts ? [starline(starlineOpts), starlineTheme] : []),
       styleCompartment.of(editorTheme(style.fontFamily, style.fontSize, style.lineHeight)),
       wrapCompartment.of(wrap ? EditorView.lineWrapping : []),
