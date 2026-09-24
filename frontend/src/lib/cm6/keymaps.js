@@ -231,6 +231,148 @@ function pairOrHeadingBackspace(view) {
   return handlePairBackspace(view) || handleHeadingBackspace(view)
 }
 
+// wrap or unwrap the selection in a marker pair; unwrap removes the pair
+// when the selection is already inside one (toggle contract)
+function toggleWrap(view, open, close) {
+  const { state } = view
+  const sel = state.selection.main
+  const doc = state.doc
+  const before = doc.sliceString(Math.max(0, sel.from - open.length), sel.from)
+  const after = doc.sliceString(sel.to, Math.min(doc.length, sel.to + close.length))
+  if (sel.from >= open.length && before === open && after === close) {
+    view.dispatch({
+      changes: [
+        { from: sel.from - open.length, to: sel.from },
+        { from: sel.to, to: sel.to + close.length },
+      ],
+      selection: { anchor: sel.from - open.length, head: sel.to - open.length },
+      userEvent: 'input',
+    })
+    return true
+  }
+  view.dispatch({
+    changes: [
+      { from: sel.from, insert: open },
+      { from: sel.to, insert: close },
+    ],
+    selection: { anchor: sel.from + open.length, head: sel.to + open.length },
+    userEvent: 'input',
+  })
+  return true
+}
+
+function toggleLinePrefix(view, prefix, exclusive) {
+  const { state } = view
+  const range = state.selection.main
+  const first = state.doc.lineAt(range.from).number
+  let last = state.doc.lineAt(range.to).number
+  // a selection ending exactly at a line boundary does not reach into the
+  // next line, so an empty trailing line is left alone
+  if (last > first) {
+    const endLine = state.doc.line(last)
+    if (range.to === endLine.from && endLine.text === '') last -= 1
+  }
+  const allHave = []
+  for (let n = first; n <= last; n++) {
+    const line = state.doc.line(n)
+    allHave.push(line.text.startsWith(prefix) || (exclusive && HASH_LINE.test(line.text) && line.text.startsWith(prefix.replace(/ $/, ''))))
+  }
+  const remove = exclusive ? allHave.every(Boolean) : allHave.every((h) => h)
+  const changes = []
+  for (let n = first; n <= last; n++) {
+    const line = state.doc.line(n)
+    if (remove) {
+      if (line.text.startsWith(prefix)) changes.push({ from: line.from, to: line.from + prefix.length })
+    } else if (!line.text.startsWith(prefix)) {
+      changes.push({ from: line.from, insert: prefix })
+    }
+  }
+  if (changes.length === 0) return false
+  view.dispatch({ changes, userEvent: 'input' })
+  return true
+}
+
+// Ctrl+B/I and friends: markdown toggles over the buffer, matching the
+// toolbar contract. Everything is plain text insertion so saves stay exact
+export const modKeymap = [
+  { key: 'Mod-b', run: (v) => toggleWrap(v, '**', '**') },
+  { key: 'Mod-i', run: (v) => toggleWrap(v, '*', '*') },
+]
+
+export function formatToggle(view, kind, level = 1) {
+  switch (kind) {
+    case 'bold': return toggleWrap(view, '**', '**')
+    case 'italic': return toggleWrap(view, '*', '*')
+    case 'strike': return toggleWrap(view, '~~', '~~')
+    case 'code': return toggleWrap(view, '`', '`')
+    case 'quote': return toggleLinePrefix(view, '> ', false)
+    case 'bullet': return toggleLinePrefix(view, '- ', false)
+    case 'ordered': {
+      const { state } = view
+      const range = state.selection.main
+      const first = state.doc.lineAt(range.from).number
+      const last = state.doc.lineAt(range.to).number
+      const lines = []
+      for (let n = first; n <= last; n++) lines.push(state.doc.line(n))
+      const allNumbered = lines.every((l) => /^\d+\. /.test(l.text))
+      const changes = []
+      lines.forEach((line, i) => {
+        if (allNumbered) {
+          const m = /^\d+\. /.exec(line.text)
+          changes.push({ from: line.from, to: line.from + m[0].length })
+        } else if (!/^\d+\. /.test(line.text)) {
+          changes.push({ from: line.from, insert: `${i + 1}. ` })
+        }
+      })
+      if (changes.length === 0) return false
+      view.dispatch({ changes, userEvent: 'input' })
+      return true
+    }
+    case 'heading': {
+      const { state } = view
+      const line = state.doc.lineAt(state.selection.main.head)
+      const m = /^(#{1,6}) /.exec(line.text)
+      if (level === 0) {
+        // body text: strip the marker entirely
+        if (!m) return false
+        view.dispatch({
+          changes: { from: line.from, to: line.from + m[0].length },
+          selection: { anchor: line.from },
+          userEvent: 'input',
+        })
+        return true
+      }
+      const insert = '#'.repeat(level) + ' '
+      view.dispatch({
+        changes: m ? [{ from: line.from, to: line.from + m[0].length, insert }] : [{ from: line.from, insert }],
+        selection: { anchor: line.from + insert.length },
+        userEvent: 'input',
+      })
+      return true
+    }
+    case 'codeblock': {
+      const { state } = view
+      const line = state.doc.lineAt(state.selection.main.head)
+      view.dispatch({
+        changes: { from: line.from, insert: '```\n\n```\n' },
+        selection: { anchor: line.from + 4 },
+        userEvent: 'input',
+      })
+      return true
+    }
+    case 'hr': {
+      const { state } = view
+      const line = state.doc.lineAt(state.selection.main.head)
+      view.dispatch({
+        changes: { from: line.from, insert: '---\n' },
+        userEvent: 'input',
+      })
+      return true
+    }
+    default: return false
+  }
+}
+
 export const gleanKeymap = [
   { key: '#', run: handleHeadingHash },
   { key: '*', run: (v) => handlePairChar(v, '*') },

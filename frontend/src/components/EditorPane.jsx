@@ -3,6 +3,9 @@ import { colors, space, typography } from '../lib/theme'
 import { usePreferences } from '../lib/preferences-context'
 import MilkdownEditor, { useMilkdownCommands } from './MilkdownEditor'
 import CM6Editor from './CM6Editor'
+import { formatToggle } from '../lib/cm6/keymaps'
+import { openSearchPanel, closeSearchPanel, searchPanelOpen } from '@codemirror/search'
+import { EditorSelection, Text } from '@codemirror/state'
 import { editorViewCtx } from '@milkdown/core'
 import { TextSelection } from '@milkdown/kit/prose/state'
 import { toggleStrongCommand, toggleEmphasisCommand, toggleInlineCodeCommand, wrapInBlockquoteCommand, wrapInBulletListCommand, wrapInOrderedListCommand, createCodeBlockCommand, wrapInHeadingCommand, turnIntoTextCommand, insertHrCommand } from '@milkdown/kit/preset/commonmark'
@@ -15,7 +18,8 @@ import Icon from './Icon'
 
 // Phase 1: the CM6 buffer editor mounts behind the flag; Milkdown stays the
 // default until phase 5 flips it
-const EDITOR_FLAVOR = import.meta.env.VITE_EDITOR || 'milkdown'
+// CM6 is the default editor; VITE_EDITOR=milkdown restores the old stack
+const EDITOR_FLAVOR = import.meta.env.VITE_EDITOR === 'milkdown' ? 'milkdown' : 'cm6'
 import ContextMenu from './ContextMenu'
 import FindReplace from './FindReplace'
 import { SourceView } from './ViewModes'
@@ -147,12 +151,52 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   }
   const debounceRef = useRef(null)
   const flushRef = useRef(null)
-  const { dispatchCommand, getView } = useMilkdownCommands(editorInstanceRef)
+  const { dispatchCommand, getView: getPMView } = useMilkdownCommands(editorInstanceRef)
+
+  // flavor-aware view bridge: under CM6 the instance ref holds the raw
+  // EditorView; under Milkdown it resolves through the PM context
+  const getView = () => {
+    if (EDITOR_FLAVOR === 'cm6') return editorInstanceRef.current?.view || null
+    return getPMView()
+  }
+
+  // Buffer text and extent in whichever flavor is live: CM6 holds the raw
+  // markdown string, PM holds document nodes with its own text API
+  const docText = (view, from, to, sep = '') =>
+    EDITOR_FLAVOR === 'cm6' ? view.state.sliceDoc(from, to) : view.state.doc.textBetween(from, to, sep)
+  const docEnd = (view) =>
+    EDITOR_FLAVOR === 'cm6' ? view.state.doc.length : view.state.doc.content.size
 
   function closeFind() {
     setShowFind(false)
     setShowReplace(false)
     getView()?.focus()
+  }
+
+  // CM6 formatting runs on the buffer through the keymap layer's toggles;
+  // Milkdown keeps its schema commands
+  const formatInEditor = (kind, level) => {
+    if (EDITOR_FLAVOR === 'cm6') {
+      const view = getView()
+      if (view) formatToggle(view, kind, level)
+      return
+    }
+    const cmds = {
+      bold: [toggleStrongCommand.key],
+      italic: [toggleEmphasisCommand.key],
+      strike: [toggleStrikethroughCommand.key],
+      code: [toggleInlineCodeCommand.key],
+      quote: [wrapInBlockquoteCommand.key],
+      bullet: [wrapInBulletListCommand.key],
+      ordered: [wrapInOrderedListCommand.key],
+      hr: [insertHrCommand.key],
+    }
+    if (kind === 'heading') {
+      dispatchCommand(wrapInHeadingCommand.key, level || 1)
+      return
+    }
+    const key = cmds[kind]?.[0]
+    if (key) dispatchCommand(key)
   }
 
 
@@ -166,12 +210,12 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     const view = getView()
     if (!view) return
     const head = view.state.selection.head
-    const text = view.state.doc.textBetween(0, head)
+    const text = docText(view, 0, head)
     const openBracket = text.lastIndexOf('[[')
     if (openBracket < 0) return
     // the paired close sits ahead of the caret after [[ auto-pairs, so the
     // replace range must swallow it or the insert doubles the brackets
-    const ahead = view.state.doc.textBetween(head, Math.min(head + 2, view.state.doc.content.size))
+    const ahead = docText(view, head, Math.min(head + 2, docEnd(view)))
     const closeLen = ahead === ']]' ? 2 : 0
     const link = `[[${title}]]`
     view.dispatch(view.state.tr.insertText(link, openBracket, head + closeLen))
@@ -183,6 +227,17 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     setCurrentHeading(index)
     const view = getView()
     if (!view) return
+    if (EDITOR_FLAVOR === 'cm6') {
+      const h = headings[index]
+      if (!h) return
+      // Land on the heading text, past the hash run, since the buffer is the
+      // markdown itself and parseHeadings offsets are buffer offsets
+      const prefix = body.slice(h.offset, h.offset + 8).match(/^#{1,6} /)
+      const at = h.offset + (prefix ? prefix[0].length : 0)
+      view.dispatch(view.state.tr.setSelection(EditorSelection.cursor(at)).scrollIntoView())
+      view.focus()
+      return
+    }
     // Pick the Nth heading node from the live doc so the jump target can
     // never drift. Skip blockquote subtrees: the outline parser only sees
     // column-0 headings, so quoted headings must not shift the index
@@ -277,7 +332,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const selectionText = () => {
     const view = getView()
     if (!view) return ''
-    return view.state.doc.textBetween(view.state.selection.from, view.state.selection.to, ' ')
+    return docText(view, view.state.selection.from, view.state.selection.to, ' ')
   }
 
   const copySelection = () => {
@@ -291,7 +346,8 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     const text = selectionText()
     if (!text) return
     navigator.clipboard?.writeText(text).catch(() => {})
-    view.dispatch(view.state.tr.deleteSelection())
+    if (EDITOR_FLAVOR === 'cm6') view.dispatch(view.state.replaceSelection(Text.empty))
+    else view.dispatch(view.state.tr.deleteSelection())
     view.focus()
   }
 
@@ -330,7 +386,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     navigator.clipboard?.readText()
       .then((url) => {
         const sel = view.state.selection
-        const label = view.state.doc.textBetween(sel.from, sel.to, ' ') || 'link'
+        const label = docText(view, sel.from, sel.to, ' ') || 'link'
         const safe = /^https?:\/\/|^mailto:/i.test(url.trim()) ? url.trim() : ''
         view.dispatch(view.state.tr.insertText(`[${label}](${safe || 'https://'})`, sel.from, sel.to))
         view.focus()
@@ -363,8 +419,11 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const selectAllInEditor = () => {
     const view = getView()
     if (!view) return
-    const { state } = view
-    view.dispatch(state.tr.setSelection(state.selection.constructor.create(state.doc, 0, state.doc.content.size)))
+    if (EDITOR_FLAVOR === 'cm6') view.dispatch(view.state.tr.setSelection(EditorSelection.range(0, view.state.doc.length)))
+    else {
+      const { state } = view
+      view.dispatch(state.tr.setSelection(state.selection.constructor.create(state.doc, 0, state.doc.content.size)))
+    }
     view.focus()
   }
 
@@ -384,6 +443,27 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
         return
       }
       if (hatchOpen) return
+      if (EDITOR_FLAVOR === 'cm6') {
+        const view = getView()
+        if (!view) return
+        if (key === 'f') {
+          e.preventDefault()
+          if (!searchPanelOpen(view)) openSearchPanel(view)
+          else view.focus()
+        } else if (key === 'h') {
+          e.preventDefault()
+          if (!searchPanelOpen(view)) {
+            openSearchPanel(view)
+            // the replace field is the panel's second input; open then move
+            // focus there on the next frame once the panel DOM exists
+            setTimeout(() => {
+              const inputs = view.dom.querySelectorAll('.cm-panel input')
+              if (inputs[1]) inputs[1].focus()
+            }, 20)
+          } else view.focus()
+        }
+        return
+      }
       if (key === 'f') {
         e.preventDefault()
         setShowFind(true)
@@ -397,7 +477,10 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     return () => window.removeEventListener('keydown', onKey)
   }, [hatchOpen])
 
+  // Milkdown keeps the hand-rolled bar and its Escape closer; CM6's panel
+  // handles its own Escape through searchKeymap
   useEffect(() => {
+    if (EDITOR_FLAVOR === 'cm6') return
     if (!showFind) return
     const onKey = (e) => {
       if (e.key === 'Escape') closeFind()
@@ -413,29 +496,29 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     {
       id: 'format', label: 'Format', icon: 'pencil',
       submenu: [
-        { id: 'fmt-bold', label: 'Bold', icon: 'bold', shortcut: 'Ctrl+B', onSelect: () => dispatchCommand(toggleStrongCommand.key) },
-        { id: 'fmt-italic', label: 'Italic', icon: 'italic', shortcut: 'Ctrl+I', onSelect: () => dispatchCommand(toggleEmphasisCommand.key) },
-        { id: 'fmt-strike', label: 'Strikethrough', icon: 'strikethrough', onSelect: () => dispatchCommand(toggleStrikethroughCommand.key) },
-        { id: 'fmt-code', label: 'Inline code', icon: 'code', onSelect: () => dispatchCommand(toggleInlineCodeCommand.key) },
+        { id: 'fmt-bold', label: 'Bold', icon: 'bold', shortcut: 'Ctrl+B', onSelect: () => formatInEditor('bold') },
+        { id: 'fmt-italic', label: 'Italic', icon: 'italic', shortcut: 'Ctrl+I', onSelect: () => formatInEditor('italic') },
+        { id: 'fmt-strike', label: 'Strikethrough', icon: 'strikethrough', onSelect: () => formatInEditor('strike') },
+        { id: 'fmt-code', label: 'Inline code', icon: 'code', onSelect: () => formatInEditor('code') },
       ],
     },
     {
       id: 'para', label: 'Paragraph', icon: 'layout-list',
       submenu: [
-        { id: 'para-text', label: 'Body text', onSelect: () => dispatchCommand(turnIntoTextCommand.key) },
-        { id: 'para-h1', label: 'Heading 1', onSelect: () => dispatchCommand(wrapInHeadingCommand.key, 1) },
-        { id: 'para-h2', label: 'Heading 2', onSelect: () => dispatchCommand(wrapInHeadingCommand.key, 2) },
-        { id: 'para-h3', label: 'Heading 3', onSelect: () => dispatchCommand(wrapInHeadingCommand.key, 3) },
-        { id: 'para-quote', label: 'Quote', icon: 'quote', onSelect: () => dispatchCommand(wrapInBlockquoteCommand.key) },
-        { id: 'para-codeblock', label: 'Code block', icon: 'braces', onSelect: () => dispatchCommand(createCodeBlockCommand.key) },
+        { id: 'para-text', label: 'Body text', onSelect: () => formatInEditor('heading', 0) },
+        { id: 'para-h1', label: 'Heading 1', onSelect: () => formatInEditor('heading', 1) },
+        { id: 'para-h2', label: 'Heading 2', onSelect: () => formatInEditor('heading', 2) },
+        { id: 'para-h3', label: 'Heading 3', onSelect: () => formatInEditor('heading', 3) },
+        { id: 'para-quote', label: 'Quote', icon: 'quote', onSelect: () => formatInEditor('quote') },
+        { id: 'para-codeblock', label: 'Code block', icon: 'braces', onSelect: () => formatInEditor('codeblock') },
       ],
     },
     {
       id: 'insert', label: 'Insert', icon: 'plus',
       submenu: [
-        { id: 'ins-bullet', label: 'Bullet list', icon: 'list', onSelect: () => dispatchCommand(wrapInBulletListCommand.key) },
-        { id: 'ins-ordered', label: 'Numbered list', icon: 'list-ordered', onSelect: () => dispatchCommand(wrapInOrderedListCommand.key) },
-        { id: 'ins-rule', label: 'Divider', onSelect: () => dispatchCommand(insertHrCommand.key) },
+        { id: 'ins-bullet', label: 'Bullet list', icon: 'list', onSelect: () => formatInEditor('bullet') },
+        { id: 'ins-ordered', label: 'Numbered list', icon: 'list-ordered', onSelect: () => formatInEditor('ordered') },
+        { id: 'ins-rule', label: 'Divider', onSelect: () => formatInEditor('hr') },
         { id: 'ins-image', label: 'Image', icon: 'image', onSelect: () => fileInputRef.current?.click() },
       ],
     },
@@ -495,13 +578,13 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
             <Icon name="redo" size={14} />
           </button>
           <div style={{ width: 1, height: 16, background: colors.border, margin: '0 4px' }} />
-          <button type="button" data-tip="Bold (Ctrl+B)" onClick={() => dispatchCommand(toggleStrongCommand.key)} style={toolbarBtn}><Icon name="bold" size={14} /></button>
-          <button type="button" data-tip="Italic (Ctrl+I)" onClick={() => dispatchCommand(toggleEmphasisCommand.key)} style={toolbarBtn}><Icon name="italic" size={14} /></button>
-          <button type="button" data-tip="Strikethrough" onClick={() => dispatchCommand(toggleStrikethroughCommand.key)} style={toolbarBtn}><Icon name="strikethrough" size={14} /></button>
-          <button type="button" data-tip="Inline code" onClick={() => dispatchCommand(toggleInlineCodeCommand.key)} style={toolbarBtn}><Icon name="code" size={14} /></button>
-          <button type="button" data-tip="Blockquote" onClick={() => dispatchCommand(wrapInBlockquoteCommand.key)} style={toolbarBtn}><Icon name="quote" size={14} /></button>
-          <button type="button" data-tip="Bullet list" onClick={() => dispatchCommand(wrapInBulletListCommand.key)} style={toolbarBtn}><Icon name="list" size={14} /></button>
-          <button type="button" data-tip="Code fence" onClick={() => dispatchCommand(createCodeBlockCommand.key)} style={toolbarBtn}><Icon name="braces" size={14} /></button>
+          <button type="button" data-tip="Bold (Ctrl+B)" onClick={() => formatInEditor('bold')} style={toolbarBtn}><Icon name="bold" size={14} /></button>
+          <button type="button" data-tip="Italic (Ctrl+I)" onClick={() => formatInEditor('italic')} style={toolbarBtn}><Icon name="italic" size={14} /></button>
+          <button type="button" data-tip="Strikethrough" onClick={() => formatInEditor('strike')} style={toolbarBtn}><Icon name="strikethrough" size={14} /></button>
+          <button type="button" data-tip="Inline code" onClick={() => formatInEditor('code')} style={toolbarBtn}><Icon name="code" size={14} /></button>
+          <button type="button" data-tip="Blockquote" onClick={() => formatInEditor('quote')} style={toolbarBtn}><Icon name="quote" size={14} /></button>
+          <button type="button" data-tip="Bullet list" onClick={() => formatInEditor('bullet')} style={toolbarBtn}><Icon name="list" size={14} /></button>
+          <button type="button" data-tip="Code fence" onClick={() => formatInEditor('codeblock')} style={toolbarBtn}><Icon name="braces" size={14} /></button>
         </div>
       </div>
       <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} />
@@ -516,7 +599,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
           ))}
         </div>
       )}
-      {showFind && <FindReplace getView={getView} body={body} showReplace={showReplace} onClose={closeFind} onToggleReplace={() => setShowReplace(v => !v)} />}
+      {EDITOR_FLAVOR !== 'cm6' && showFind && <FindReplace getView={getView} body={body} showReplace={showReplace} onClose={closeFind} onToggleReplace={() => setShowReplace(v => !v)} />}
       <div style={{ flex: 1, minHeight: 0, minWidth: 0, display: 'flex' }}>
         {showOutline && (
           <div style={{ width: 180, borderRight: `1px solid ${colors.border}`, overflow: 'auto', padding: space[2], flexShrink: 0, background: 'rgba(11, 15, 25, 0.5)', backdropFilter: 'blur(8px)' }}>

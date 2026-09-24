@@ -5,10 +5,11 @@ import {
 } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, undoDepth, redoDepth } from '@codemirror/commands'
 import { markdown, markdownKeymap, markdownLanguage } from '@codemirror/lang-markdown'
+import { searchKeymap, highlightSelectionMatches, search } from '@codemirror/search'
 import { starline, starlineTheme } from './starline'
 import { blocks, blocksTheme } from './blocks'
 import { reveal, revealTheme } from './reveal'
-import { gleanKeymap, gleanIndentUnit } from './keymaps'
+import { gleanKeymap, modKeymap, gleanIndentUnit } from './keymaps'
 import { widgets, widgetAtomic, blockWidgets, widgetsTheme } from './widgets'
 
 // One renderer, one truth: the buffer holds the file's markdown bytes and
@@ -81,9 +82,13 @@ export function createEditor({
       rectangularSelection(),
       crosshairCursor(),
       blockWidgets,
+      search({ top: true }),
+      highlightSelectionMatches(),
       markdown({ base: markdownLanguage, indentUnit: gleanIndentUnit }),
       keymap.of(markdownKeymap),
       keymap.of(gleanKeymap),
+      keymap.of(searchKeymap),
+      keymap.of(modKeymap),
       keymap.of([...defaultKeymap, ...historyKeymap]),
       ...(livePreview ? [blocks, blocksTheme, reveal, revealTheme, widgets, widgetAtomic, widgetsTheme] : []),
       ...(starlineOpts ? [starline(starlineOpts), starlineTheme] : []),
