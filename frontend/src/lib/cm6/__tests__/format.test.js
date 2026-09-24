@@ -111,6 +111,24 @@ describe('format toggles', () => {
     expect(two).toBe('alpha\nbeta\n')
   })
 
+  it('code fence wraps selected lines instead of replacing them', () => {
+    const ctx = mount('keep me\nand me\n')
+    range(ctx, 5, 12)
+    formatToggle(ctx.view, 'codeblock')
+    const doc = emitMarkdown(ctx.view)
+    destroy(ctx)
+    expect(doc).toBe('```\nkeep me\nand me\n```\n')
+  })
+
+  it('code fence with a caret inserts an empty block', () => {
+    const ctx = mount('word\n')
+    caret(ctx, 0)
+    formatToggle(ctx.view, 'codeblock')
+    const doc = emitMarkdown(ctx.view)
+    destroy(ctx)
+    expect(doc).toBe('```\n\n```\nword\n')
+  })
+
   it('heading sets the requested level, h2 over h1 rewrites it', () => {
     const ctx = mount('Title\n')
     caret(ctx, 0)

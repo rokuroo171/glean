@@ -352,7 +352,20 @@ export function formatToggle(view, kind, level = 1) {
     }
     case 'codeblock': {
       const { state } = view
-      const line = state.doc.lineAt(state.selection.main.head)
+      const sel = state.selection.main
+      if (!sel.empty) {
+        // wrap the selected lines in a fence instead of replacing them
+        const first = state.doc.lineAt(sel.from)
+        const last = state.doc.lineAt(sel.to)
+        const body = state.sliceDoc(first.from, last.to)
+        view.dispatch({
+          changes: { from: first.from, to: last.to, insert: '```\n' + body + '\n```' },
+          selection: { anchor: first.from + 3 },
+          userEvent: 'input',
+        })
+        return true
+      }
+      const line = state.doc.lineAt(sel.head)
       view.dispatch({
         changes: { from: line.from, insert: '```\n\n```\n' },
         selection: { anchor: line.from + 4 },

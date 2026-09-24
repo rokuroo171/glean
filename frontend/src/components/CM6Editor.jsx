@@ -48,6 +48,8 @@ export default function CM6Editor({
       } : null,
     })
     viewRef.current = view
+    // e2e entry point, dev builds only, same handle MilkdownEditor exposes
+    if (import.meta.env.DEV) window.__gleanView = view
     if (editorInstanceRef) {
       editorInstanceRef.current = {
         get view() { return viewRef.current },
