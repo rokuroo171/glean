@@ -448,11 +448,11 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
         if (!view) return
         if (key === 'f') {
           e.preventDefault()
-          if (!searchPanelOpen(view)) openSearchPanel(view)
+          if (!searchPanelOpen(view.state)) openSearchPanel(view)
           else view.focus()
         } else if (key === 'h') {
           e.preventDefault()
-          if (!searchPanelOpen(view)) {
+          if (!searchPanelOpen(view.state)) {
             openSearchPanel(view)
             // the replace field is the panel's second input; open then move
             // focus there on the next frame once the panel DOM exists
