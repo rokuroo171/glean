@@ -22,7 +22,6 @@ import Icon from './Icon'
 const EDITOR_FLAVOR = import.meta.env.VITE_EDITOR === 'milkdown' ? 'milkdown' : 'cm6'
 import ContextMenu from './ContextMenu'
 import FindReplace from './FindReplace'
-import { SourceView } from './ViewModes'
 
 const ANIM_SPARKLE_MS = 450
 let _animId = 0
@@ -108,8 +107,7 @@ export function parseHeadings(markdown) {
 }
 
 export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty, setDirty,
-  linked, onOpenNote, onNewNote, skyName, onCursorChange, noteNames,
-  hatchOpen, onHatchChange }) {
+  linked, onOpenNote, onNewNote, skyName, onCursorChange, noteNames }) {
   function handleNoteLink(title, id) {
     if (id && onOpenNote) { onOpenNote(id); return }
     if (!id && onNewNote) onNewNote(title)
@@ -427,22 +425,12 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     view.focus()
   }
 
-  // Source hatch: Ctrl+Shift+E opens raw markdown, Escape or re-press
-  // returns to the live editor. Invisible chrome, the WYSIWYG pane IS the
-  // editor; source is a hatch, not a mode. Hatch state lives in Workspace so
-  // the command palette can toggle the same boolean. Find shares the same
-  // window listener: Ctrl+F and Ctrl+H work app-wide while a note is open, and
-  // Escape in the editor closes the bar even when focus left the inputs
+  // Ctrl+F and Ctrl+H work app-wide while a note is open. CM6 runs them
+  // through its search panel; Milkdown gets the hand-rolled bar below
   useEffect(() => {
     const onKey = (e) => {
-      if (!(e.ctrlKey || e.metaKey) || e.altKey) return
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return
       const key = e.key.toLowerCase()
-      if (key === 'e' && e.shiftKey) {
-        e.preventDefault()
-        onHatchChange((v) => !v)
-        return
-      }
-      if (hatchOpen) return
       if (EDITOR_FLAVOR === 'cm6') {
         const view = getView()
         if (!view) return
@@ -475,7 +463,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [hatchOpen])
+  }, [])
 
   // Milkdown keeps the hand-rolled bar and its Escape closer; CM6's panel
   // handles its own Escape through searchKeymap
@@ -637,10 +625,6 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
               )}
             </div>
           </ContextMenu>
-          {hatchOpen && (
-            <SourceView value={body} onChange={handleBodyChange}
-              onExit={() => onHatchChange(false)} />
-          )}
           <Gutter onToggle={() => updatePrefs({ editor: { narrow_width: !narrowWidth } })} menuItems={viewMenuItems} grow={narrowWidth} />
           {linkPopup && popupMatches?.length > 0 && (() => {
             const matches = popupMatches

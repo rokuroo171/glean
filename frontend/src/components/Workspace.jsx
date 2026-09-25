@@ -34,7 +34,6 @@ export default function Workspace({
   const [pseudoTab, setPseudoTab] = useState(null) // null | 'stats' | 'settings'
   const [nightOpen, setNightOpen] = useState(true)
   const [commandMode, setCommandMode] = useState(null) // null | 'commands' | 'notes'
-  const [hatchOpen, setHatchOpen] = useState(false)
   const [folderPromptOpen, setFolderPromptOpen] = useState(false)
   const renameApiRef = useRef(null)
   const [showConstellation, setShowConstellation] = useState(false)
@@ -285,7 +284,6 @@ export default function Workspace({
       { id: 'rename-note', label: `Rename "${activeNote.title}"`, group: 'Notes', icon: 'pencil', run: () => renameApiRef.current?.startRename() },
       { id: 'delete-note', label: `Delete "${activeNote.title}"`, group: 'Notes', icon: 'trash', run: () => { onDelete(activeNote.id); closeTab(activeNote.id) } },
     ] : []),
-    { id: 'source-view', label: hatchOpen ? 'Close Source View' : 'Open Source View', group: 'Panes', icon: 'code', keywords: ['markdown', 'raw'], run: () => setHatchOpen(v => !v) },
     { id: 'outline', label: 'Toggle Outline', group: 'Panes', icon: 'list', run: () => updatePrefs({ editor: { show_outline: prefs.editor.show_outline === false } }) },
     { id: 'explorer', label: skyCollapsed ? 'Show File Explorer' : 'Hide File Explorer', group: 'Panes', icon: 'columns', run: toggleSky },
     { id: 'details', label: detailsOpen ? 'Hide Details Panel' : 'Show Details Panel', group: 'Panes', icon: 'panel-right', run: () => setDetailsOpen(v => !v) },
@@ -453,8 +451,6 @@ export default function Workspace({
                 onNewNote={onNewNote}
                 skyName={skyName}
                 onCursorChange={setCursorPos}
-                hatchOpen={hatchOpen}
-                onHatchChange={setHatchOpen}
               />
             </div>
           )}
