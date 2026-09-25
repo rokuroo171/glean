@@ -34,16 +34,26 @@ export function lineSeparatorFor(md) {
 }
 
 export function editorTheme(fontFamily, fontSize, lineHeight) {
+  // The scroller carries the type prefs, not just the root: the base theme
+  // sets font-family and line-height on .cm-scroller at equal specificity,
+  // and rules mounted later win, so a root-only rule never reached the text
+  const type = {
+    fontFamily: fontFamily || 'inherit',
+    fontSize: `${fontSize || 14}px`,
+    lineHeight: lineHeight || 1.6,
+  }
   return EditorView.theme({
     '&': {
       color: 'inherit',
-      fontFamily: fontFamily || 'inherit',
-      fontSize: `${fontSize || 14}px`,
-      lineHeight: lineHeight || 1.6,
+      ...type,
       height: '100%',
       background: 'transparent',
     },
-    '.cm-scroller': { overflowY: 'auto', overflowX: 'hidden' },
+    '.cm-scroller': {
+      ...type,
+      overflowY: 'auto',
+      overflowX: 'hidden',
+    },
     '.cm-content': { caretColor: 'currentColor', paddingBottom: '30vh' },
     '&.cm-focused': { outline: 'none' },
   })
