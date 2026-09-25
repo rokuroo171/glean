@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { EditorView } from '@codemirror/view'
 import { undo, redo } from '@codemirror/commands'
-import { createEditor, loadMarkdown, histState, emitMarkdown, editorTheme, styleCompartment, wrapCompartment } from '../lib/cm6/editor'
+import { createEditor, loadMarkdown, histState, emitMarkdown, editorTheme, styleCompartment, wrapCompartment, gutterCompartment } from '../lib/cm6/editor'
+import { lineNumbers } from '@codemirror/view'
 import { starlineTheme } from '../lib/cm6/starline'
 import { usePreferences } from '../lib/preferences-context'
 import { colors } from '../lib/theme'
@@ -37,7 +38,7 @@ export default function CM6Editor({
       parent: hostRef.current,
       markdown: markdown || '',
       wrap: e.word_wrap !== false,
-      style: { fontFamily: e.font_family, fontSize: e.font_size, lineHeight: e.line_height },
+      style: { fontFamily: e.font_family, fontSize: e.font_size, lineHeight: e.line_height, line_numbers: e.line_numbers === true },
       onMarkdownChange: (md) => {
         if (!loadingRef.current) emitRef.current(md)
       },
@@ -83,10 +84,11 @@ export default function CM6Editor({
       effects: [
         styleCompartment.reconfigure(editorTheme(e.font_family, e.font_size, e.line_height)),
         wrapCompartment.reconfigure(e.word_wrap !== false ? EditorView.lineWrapping : []),
+        gutterCompartment.reconfigure(e.line_numbers === true ? lineNumbers() : []),
       ],
     })
     if (view.dom) view.dom.spellcheck = e.spell_check_enabled !== false
-  }, [e.font_family, e.font_size, e.line_height, e.word_wrap, e.spell_check_enabled])
+  }, [e.font_family, e.font_size, e.line_height, e.word_wrap, e.spell_check_enabled, e.line_numbers])
 
   return (
     <div

@@ -1,7 +1,7 @@
 import { EditorState, Compartment, Transaction } from '@codemirror/state'
 import {
   EditorView, keymap, drawSelection, dropCursor, rectangularSelection,
-  crosshairCursor, highlightSpecialChars,
+  crosshairCursor, highlightSpecialChars, lineNumbers,
 } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, undoDepth, redoDepth } from '@codemirror/commands'
 import { markdown, markdownKeymap, markdownLanguage } from '@codemirror/lang-markdown'
@@ -19,6 +19,7 @@ import { linkTips, linkHandlers } from './links'
 export const styleCompartment = new Compartment()
 export const wrapCompartment = new Compartment()
 export const sepCompartment = new Compartment()
+export const gutterCompartment = new Compartment()
 
 // The file's bytes, whatever line endings it holds. CRLF documents configure
 // state.lineSeparator so CM6 splits and joins on \r\n throughout; the emit
@@ -34,6 +35,8 @@ export function lineSeparatorFor(md) {
   return md.includes('\r\n') ? EditorState.lineSeparator.of('\r\n') : []
 }
 
+// Visual line numbers: one number per wrapped line, from the view's own
+// layout. The gutter is compartmentalized so the pref toggles it live
 export function editorTheme(fontFamily, fontSize, lineHeight) {
   // The scroller carries the type prefs, not just the root: the base theme
   // sets font-family and line-height on .cm-scroller at equal specificity,
@@ -57,6 +60,13 @@ export function editorTheme(fontFamily, fontSize, lineHeight) {
     },
     '.cm-content': { caretColor: 'currentColor', paddingBottom: '30vh' },
     '&.cm-focused': { outline: 'none' },
+    '.cm-gutters': {
+      background: 'transparent',
+      border: 'none',
+      color: '#4a5a6a',
+      fontSize: '11px',
+      paddingLeft: '2px',
+    },
   })
 }
 
@@ -104,6 +114,7 @@ export function createEditor({
       ...(livePreview ? [blocks, blocksTheme, reveal, revealTheme, widgets, widgetAtomic, widgetsTheme] : []),
       ...(starlineOpts ? [starline(starlineOpts), starlineTheme] : []),
       ...(livePreview ? [linkTips, linkHandlers] : []),
+      gutterCompartment.of(style.line_numbers ? lineNumbers() : []),
       styleCompartment.of(editorTheme(style.fontFamily, style.fontSize, style.lineHeight)),
       wrapCompartment.of(wrap ? EditorView.lineWrapping : []),
       updateListener,
