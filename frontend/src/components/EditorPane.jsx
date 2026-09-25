@@ -23,9 +23,6 @@ const EDITOR_FLAVOR = import.meta.env.VITE_EDITOR === 'milkdown' ? 'milkdown' : 
 import ContextMenu from './ContextMenu'
 import FindReplace from './FindReplace'
 
-const ANIM_SPARKLE_MS = 450
-let _animId = 0
-
 // Dead-space strip beside the editor body. Left click toggles centered
 // reading width; right click opens the view menu. The gutters flex-grow
 // so in centered mode they ARE the empty margins around the text column,
@@ -50,19 +47,6 @@ function Gutter({ onToggle, menuItems, grow }) {
         }}
       />
     </ContextMenu>
-  )
-}
-
-function AnimItem({ a, accent }) {
-  return (
-    <span style={{
-      position: 'absolute', left: a.x, top: a.y,
-      width: 4, height: 4, borderRadius: 2,
-      background: accent || 'currentColor',
-      pointerEvents: 'none', zIndex: 50, opacity: 0,
-      animation: `animSparkle ${ANIM_SPARKLE_MS}ms ease-out forwards`,
-      '--dx': `${a.dx}px`, '--dy': `${a.dy}px`
-    }} />
   )
 }
 
@@ -115,14 +99,11 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const { prefs, updatePrefs } = usePreferences()
   const editorContainerRef = useRef(null)
   const editorInstanceRef = useRef(null)
-  const fileInputRef = useRef(null)
   const [currentHeading, setCurrentHeading] = useState(0)
   const [showFind, setShowFind] = useState(false)
   const [showReplace, setShowReplace] = useState(false)
   const [hist, setHist] = useState({ canUndo: false, canRedo: false })
-  const animatedEnabled = prefs.editor.animated_text_enabled === true
   const narrowWidth = prefs.editor.narrow_width === true
-  const [animItems, setAnimItems] = useState([])
   const [linkPopup, setLinkPopup] = useState(null)
   const headings = useMemo(() => parseHeadings(body), [body])
   const popupMatches = useMemo(
@@ -507,7 +488,6 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
         { id: 'ins-bullet', label: 'Bullet list', icon: 'list', onSelect: () => formatInEditor('bullet') },
         { id: 'ins-ordered', label: 'Numbered list', icon: 'list-ordered', onSelect: () => formatInEditor('ordered') },
         { id: 'ins-rule', label: 'Divider', onSelect: () => formatInEditor('hr') },
-        { id: 'ins-image', label: 'Image', icon: 'image', onSelect: () => fileInputRef.current?.click() },
       ],
     },
     { id: 'sep-clip', type: 'separator' },
@@ -575,7 +555,6 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
           <button type="button" data-tip="Code fence" onClick={() => formatInEditor('codeblock')} style={toolbarBtn}><Icon name="braces" size={14} /></button>
         </div>
       </div>
-      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} />
       {linked && linked.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderBottom: `1px solid ${colors.border}`, fontSize: 12, color: colors.textMuted, flexShrink: 0, overflowX: 'auto' }}>
           <span style={{ ...typography.sectionLabel, color: colors.textMuted, marginRight: 2 }}>Trail</span>
@@ -641,7 +620,6 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
               </div>
             )
           })()}
-          {animatedEnabled && animItems.map(a => <AnimItem key={a.id} a={a} accent={colors.accent} />)}
         </div>
       </div>
     </div>
