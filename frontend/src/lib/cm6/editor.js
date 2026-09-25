@@ -11,6 +11,7 @@ import { blocks, blocksTheme } from './blocks'
 import { reveal, revealTheme } from './reveal'
 import { gleanKeymap, modKeymap, gleanIndentUnit } from './keymaps'
 import { widgets, widgetAtomic, blockWidgets, widgetsTheme } from './widgets'
+import { linkTips, linkHandlers } from './links'
 
 // One renderer, one truth: the buffer holds the file's markdown bytes and
 // nothing in this module ever rewrites them outside a dispatched transaction
@@ -102,6 +103,7 @@ export function createEditor({
       keymap.of([...defaultKeymap, ...historyKeymap]),
       ...(livePreview ? [blocks, blocksTheme, reveal, revealTheme, widgets, widgetAtomic, widgetsTheme] : []),
       ...(starlineOpts ? [starline(starlineOpts), starlineTheme] : []),
+      ...(livePreview ? [linkTips, linkHandlers] : []),
       styleCompartment.of(editorTheme(style.fontFamily, style.fontSize, style.lineHeight)),
       wrapCompartment.of(wrap ? EditorView.lineWrapping : []),
       updateListener,
