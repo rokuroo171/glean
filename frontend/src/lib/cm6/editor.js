@@ -9,7 +9,7 @@ import { searchKeymap, highlightSelectionMatches, search } from '@codemirror/sea
 import { starline, starlineTheme } from './starline'
 import { blocks, blocksTheme } from './blocks'
 import { reveal, revealTheme } from './reveal'
-import { gleanKeymap, modKeymap, gleanIndentUnit } from './keymaps'
+import { gleanKeymap, modKeymap, gleanIndentUnit, fenceKeymap } from './keymaps'
 import { widgets, widgetAtomic, blockWidgets, widgetsTheme } from './widgets'
 import { linkTips, linkHandlers } from './links'
 import { highlight, highlightTheme } from './highlight'
@@ -109,6 +109,7 @@ export function createEditor({
       highlightSelectionMatches(),
       markdown({ base: markdownLanguage, indentUnit: gleanIndentUnit }),
       keymap.of(markdownKeymap),
+      keymap.of(fenceKeymap),
       keymap.of(gleanKeymap),
       keymap.of(searchKeymap),
       keymap.of(modKeymap),

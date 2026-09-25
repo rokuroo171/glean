@@ -213,6 +213,56 @@ export function handlePairBackspace(view) {
 
 const HASH_LINE = /^(#{1,6})( |$)/
 
+function fenceNodeAt(state, pos) {
+  let node = syntaxTree(state).resolveInner(pos, -1)
+  while (node) {
+    if (node.name === 'FencedCode') return node
+    node = node.parent
+  }
+  return null
+}
+
+// Enter-Enter fence exit, ported from the Milkdown autoPair enter flow: on
+// an empty line inside a fence, Enter lands below the closing fence. A
+// fence still open at the doc end is completed on the empty line (the
+// Obsidian contract); the doc never gains content without a keystroke
+const FENCE_CLOSE = /^\s*(`{3,}|~{3,})\s*$/
+
+export function handleEnterInFence(view) {
+  const { state } = view
+  const sel = state.selection.main
+  if (!sel.empty) return false
+  const node = fenceNodeAt(state, sel.head)
+  if (!node) return false
+  const line = state.doc.lineAt(sel.head)
+  if (line.text.trim() !== '') return false
+  if (line.number < state.doc.lines) {
+    const next = state.doc.line(line.number + 1)
+    if (!FENCE_CLOSE.test(next.text)) return false
+    view.dispatch({
+      changes: { from: next.to, insert: '\n' },
+      selection: EditorSelection.cursor(next.to + 1),
+      scrollIntoView: true,
+      userEvent: 'input',
+    })
+    return true
+  }
+  const openLine = state.doc.lineAt(node.from)
+  const marker = (/^\s*(`{3,}|~{3,})/.exec(openLine.text) || ['', '```'])[1]
+  view.dispatch({
+    changes: { from: line.from, insert: `${marker}\n` },
+    selection: EditorSelection.cursor(line.from + marker.length + 1),
+    scrollIntoView: true,
+    userEvent: 'input',
+  })
+  return true
+}
+
+// rides ahead of markdownKeymap so its Enter decision wins inside fences
+export const fenceKeymap = [
+  { key: 'Enter', run: handleEnterInFence },
+]
+
 export function handleHeadingHash(view) {
   const { state } = view
   const sel = state.selection.main
