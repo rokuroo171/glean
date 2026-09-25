@@ -12,7 +12,7 @@ export default function FullConstellation({ notes, links, onNoteClick, onClose }
       </button>
       <Constellation notes={notes} links={links} onNoteClick={onNoteClick}
         selectedNote={null} onCloseNote={() => {}}
-        onSave={async () => {}} onWish={async () => false} onDelete={async () => {}}
+        onWish={async () => false} onDelete={async () => {}}
         onCreate={async () => null}
         showStats={false} stats={null} onCloseStats={() => {}}
         onReturnHome={onClose}

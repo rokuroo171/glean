@@ -2,7 +2,6 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { Stage, Layer, Circle, Line, Text, Group, Path } from 'react-konva'
 import { motion, AnimatePresence } from 'motion/react'
 import NoteOverlay from './NoteOverlay'
-import EditOverlay from './EditOverlay'
 import NewNotePrompt from './NewNotePrompt'
 import HomeIcon from './HomeIcon'
 import { usePreferences, speciesPalette } from '../lib/preferences-context'
@@ -412,7 +411,7 @@ function stepStarSprings(r) {
 // Component
 export default function Constellation({
   notes, links, onNoteClick, selectedNote, onCloseNote,
-  onSave, onWish, onDelete, onCreate,
+  onWish, onDelete, onCreate,
   showStats, onCloseStats, onReturnHome,
   pendingNoteId, onPendingNoteHandled,
   pendingNewNote, onPendingNewNoteHandled,
@@ -494,8 +493,6 @@ export default function Constellation({
   const velocityRef = useRef({ vx: 0, vy: 0, lastX: 0, lastY: 0, lastTime: 0 })
 
   // Overlays
-  const [editingNote, setEditingNote] = useState(null)
-  const [editBody, setEditBody] = useState('')
   const [newNoteTitle, setNewNoteTitle] = useState('')
   const [showNewPrompt, setShowNewPrompt] = useState(false)
 
@@ -772,7 +769,7 @@ export default function Constellation({
   }, [reducedMotion])
 
   // --- Show/hide home button ---
-  const showHomeButton = !hideHomeButton && !selectedNote && !editingNote && !showNewPrompt && !showStats && !searchOpen
+  const showHomeButton = !hideHomeButton && !selectedNote && !showNewPrompt && !showStats && !searchOpen
 
   // Search fly-to (Idea 18). Focus input when search opens
   useEffect(() => {
@@ -1121,6 +1118,20 @@ export default function Constellation({
     return () => window.removeEventListener('mouseup', up)
   }, [])
 
+  // Closing-the-constellation animation (item 14)
+  const handleCloseConstellation = useCallback(() => {
+    if (isClosing || reducedMotion) {
+      clearTimeout(closeTimerRef.current)
+      onReturnHome()
+      return
+    }
+    setIsClosing(true)
+    closeTimerRef.current = setTimeout(() => {
+      setIsClosing(false)
+      onReturnHome()
+    }, 600)
+  }, [isClosing, reducedMotion, onReturnHome])
+
   // Keyboard
   useEffect(() => {
     const handler = (e) => {
@@ -1148,21 +1159,21 @@ export default function Constellation({
       }
       if (e.key === 'Escape') {
         if (showNewPrompt) { setShowNewPrompt(false); return }
-        if (editingNote) { setEditingNote(null); return }
         if (showStats) { onCloseStats(); return }
         if (selectedNote) { onCloseNote(); return }
       }
       if (e.key === 'n' && !selectedNote && !showNewPrompt && !showStats && !searchOpen) {
         setShowNewPrompt(true)
       }
-      if (e.key === 'e' && selectedNote && !editingNote && !showStats && !searchOpen) {
-        setEditingNote(selectedNote)
-        setEditBody(selectedNote.body || '')
+      // Editing happens in the main editor: close the sky and openNote fires
+      // through the star select that set selectedNote
+      if (e.key === 'e' && selectedNote && !showStats && !searchOpen) {
+        handleCloseConstellation()
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [selectedNote, showNewPrompt, editingNote, showStats, searchOpen, onCloseNote, onCloseStats])
+  }, [selectedNote, showNewPrompt, showStats, searchOpen, onCloseNote, onCloseStats, handleCloseConstellation])
 
   // Note actions
   const handleCreateSubmit = useCallback(async () => {
@@ -1185,20 +1196,6 @@ export default function Constellation({
       setShowNewPrompt(false)
     }
   }, [newNoteTitle, selectedNote, onCreate])
-
-  const handleSaveEdit = useCallback(async () => {
-    if (editingNote) {
-      await onSave(editingNote.id, editingNote.title, editBody)
-      setEditingNote(null)
-    }
-  }, [editingNote, editBody, onSave])
-
-  // Auto-save. Saves without closing the editor
-  const handleAutoSave = useCallback(async () => {
-    if (editingNote) {
-      await onSave(editingNote.id, editingNote.title, editBody)
-    }
-  }, [editingNote, editBody, onSave])
 
   // Delete with departure animation (item 5). Star shrinks before removal
   const handleDeleteRequest = useCallback((noteId) => {
@@ -1341,20 +1338,7 @@ export default function Constellation({
 
 
 
-  // Closing-the-constellation animation (item 14)
-  const handleCloseConstellation = useCallback(() => {
-    if (isClosing || reducedMotion) {
-      clearTimeout(closeTimerRef.current)
-      onReturnHome()
-      return
-    }
-    setIsClosing(true)
-    closeTimerRef.current = setTimeout(() => {
-      setIsClosing(false)
-      onReturnHome()
-    }, 600)
-  }, [isClosing, reducedMotion, onReturnHome])
-
+  // Closing-the-constellation animation cleanup
   // Cleanup closing timer on unmount
   useEffect(() => () => clearTimeout(closeTimerRef.current), [])
   // Cleanup inertia on unmount
@@ -2174,27 +2158,14 @@ export default function Constellation({
 
       {/* Overlays */}
       <AnimatePresence>
-        {!editingNote && selectedNote && !showStats && (
+        {selectedNote && !showStats && (
           <NoteOverlay
             key="note-overlay"
             note={selectedNote}
-            onEdit={(note) => { setEditingNote(note); setEditBody(note.body || '') }}
+            onEdit={handleCloseConstellation}
             onWish={onWish}
             onDelete={handleDeleteRequest}
             onClose={onCloseNote}
-          />
-        )}
-
-        {editingNote && (
-          <EditOverlay
-            key="edit-overlay"
-            note={editingNote}
-            body={editBody}
-            onBodyChange={setEditBody}
-            onSave={handleSaveEdit}
-            onAutoSave={handleAutoSave}
-            onCancel={() => setEditingNote(null)}
-            onDelete={(id) => { setEditingNote(null); handleDeleteRequest(id) }}
           />
         )}
 
