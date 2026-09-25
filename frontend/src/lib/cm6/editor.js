@@ -16,6 +16,7 @@ import { highlight, highlightTheme } from './highlight'
 import { images, imagesTheme } from './images'
 import { footnotes, footnoteHandlers, footnotesTheme } from './footnotes'
 import { tableKeymap } from './tables'
+import { htmlPairs, htmlPairsTheme } from './html'
 
 // One renderer, one truth: the buffer holds the file's markdown bytes and
 // nothing in this module ever rewrites them outside a dispatched transaction
@@ -117,7 +118,7 @@ export function createEditor({
       keymap.of(searchKeymap),
       keymap.of(modKeymap),
       keymap.of([...defaultKeymap, ...historyKeymap]),
-      ...(livePreview ? [blocks, blocksTheme, reveal, revealTheme, widgets, widgetAtomic, widgetsTheme, highlight, highlightTheme, images, imagesTheme, footnotes, footnoteHandlers, footnotesTheme] : []),
+      ...(livePreview ? [blocks, blocksTheme, reveal, revealTheme, widgets, widgetAtomic, widgetsTheme, highlight, highlightTheme, images, imagesTheme, footnotes, footnoteHandlers, footnotesTheme, htmlPairs, htmlPairsTheme] : []),
       ...(starlineOpts ? [starline(starlineOpts), starlineTheme] : []),
       ...(livePreview ? [linkTips, linkHandlers] : []),
       gutterCompartment.of(style.line_numbers ? lineNumbers() : []),
