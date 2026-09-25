@@ -22,6 +22,8 @@ import { indentMore, indentLess } from '@codemirror/commands'
 
 const PAIRS = [
   { char: '`', open: '`', close: '`', tier: 1 },
+  { char: '$', open: '$', close: '$', tier: 1 },
+  { char: '=', open: '==', close: '==', tier: 1 },
   { char: '*', open: '**', close: '**', tier: 2 },
   { char: '_', open: '__', close: '__', tier: 2 },
   { char: '~', open: '~~', close: '~~', tier: 2 },
@@ -72,7 +74,13 @@ function insideOpen(prefix, pair) {
   if (pair.char === '[') {
     return exactRuns(prefix, '[', 2).length > exactRuns(prefix, ']', 2).length
   }
-  return exactRuns(prefix, pair.char, pair.open.length).length % 2 === 1
+  if (exactRuns(prefix, pair.char, pair.open.length).length % 2 === 1) return true
+  // a doubled opener that completed in one keystroke leaves a single tail
+  // char while its content is being typed; that tail is the open span
+  if (pair.open.length === 2 && pair.tier === 1 && prefix.endsWith(pair.char)) {
+    return !prefix.endsWith(pair.char.repeat(2))
+  }
+  return false
 }
 
 // True when the tree says a span of this pair's family just closed behind
@@ -107,7 +115,11 @@ export function handlePairChar(view, ch) {
   const doc = state.doc
 
   if (!sel.empty) {
-    const [open, close] = pair.char === '[' ? ['[[', ']]'] : [pair.char, pair.char]
+    // the wrap inserts the delimiter that renders: * and _ stay single and
+    // stack on a retype, the rest take their doubled or signed open/close
+    const single = pair.char === '*' || pair.char === '_'
+    const open = single ? pair.char : pair.open
+    const close = single ? pair.char : pair.close
     view.dispatch({
       changes: [
         { from: sel.from, insert: open },
@@ -168,7 +180,7 @@ export function handlePairChar(view, ch) {
   if (pair.tier === 1 && behind === 0 && !WORD.test(next)) {
     view.dispatch({
       changes: [{ from: pos, insert: pair.open + pair.close }],
-      selection: EditorSelection.cursor(pos + 1),
+      selection: EditorSelection.cursor(pos + pair.open.length),
       scrollIntoView: true,
       userEvent: 'input',
     })
@@ -415,6 +427,8 @@ export const gleanKeymap = [
   { key: '~', run: (v) => handlePairChar(v, '~') },
   { key: '[', run: (v) => handlePairChar(v, '[') },
   { key: '`', run: (v) => handlePairChar(v, '`') },
+  { key: '$', run: (v) => handlePairChar(v, '$') },
+  { key: '=', run: (v) => handlePairChar(v, '=') },
   { key: 'Backspace', run: pairOrHeadingBackspace },
   { key: 'Tab', run: indentMore },
   { key: 'Shift-Tab', run: indentLess },
