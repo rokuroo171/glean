@@ -173,6 +173,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     setTimeout(() => {
       const view = getView()
       if (!view) return
+      setCmView(view)
       const cursor = selection.head
       setHist({ canUndo: undoDepth(view.state) > 0, canRedo: redoDepth(view.state) > 0 })
       if (onCursorChange) {
