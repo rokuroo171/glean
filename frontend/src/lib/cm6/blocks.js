@@ -157,7 +157,7 @@ export const blocksTheme = EditorView.theme({
   '.glean-listmark': { color: colors.accent },
   '.glean-quotemark': { color: colors.accent, opacity: 0.6 },
   '.glean-taskmarker': { color: colors.accent },
-  // inline code keeps the mono face the Milkdown editor gave `code`;
+  // inline code keeps the mono face the PM editor gave `code`;
   // family and tint only, law 2 forbids the em size and padding here
   '.glean-inline-code': {
     fontFamily: "'Fira Code', 'JetBrains Mono', ui-monospace, monospace",

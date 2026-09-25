@@ -6,9 +6,9 @@ import rehypeKatex from 'rehype-katex'
 import rehypeRaw from 'rehype-raw'
 import { visit, SKIP } from 'unist-util-visit'
 
-// ==mark== support shared with the Milkdown editor's highlightMark plugin:
-// splits the equals pairs into raw <mark> html nodes so rehypeRaw renders
-// them, exactly where the WYSIWYG pane shows its mark decoration
+// ==mark== support shared with the editor's highlight layer: splits the
+// equals pairs into raw <mark> html nodes so rehypeRaw renders them,
+// exactly where the live preview shows its mark decoration
 const CONTAINS_HL = /==([^=]+)==/g
 function remarkHighlightFlat() {
   return (tree) => {
@@ -666,9 +666,9 @@ export function renderMarkdown(text, opts = {}) {
     <div className="glean-markdown">
       <style>{listStyles()}</style>
       <ReactMarkdown
-        // singleTilde:false matches the Milkdown editor's strict GFM: H~2~O
-        // and ~x~ stay literal, only ~~x~~ strikes, so Reading view agrees
-        // with what the WYSIWYG pane shows for the same file
+        // singleTilde:false matches the editor's strict GFM: H~2~O and ~x~
+        // stay literal, only ~~x~~ strikes, so Reading view agrees with
+        // what the live preview shows for the same file
         remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkMath, remarkAlert, remarkHighlightFlat]}
         rehypePlugins={[rehypeRaw, rehypeKatex]}
         components={components}

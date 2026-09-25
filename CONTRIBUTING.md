@@ -48,16 +48,44 @@ frontend/src/
   App.jsx        root: tabs, provider wiring, command center
   components/    every view: Home, Constellation, EditorPane,
                  FileExplorer, CustomizationPane, OnboardingTour, ...
-  components/    MilkdownEditor.jsx: the markdown editor (Milkdown on
-                 ProseMirror); EditorPane wraps it with toolbar, outline,
-                 and autosave
+  components/    CM6Editor.jsx: the React bridge to the CodeMirror 6
+                 editor; EditorPane wraps it with toolbar, outline,
+                 find, and autosave
+  lib/cm6/       the editor itself: editor.js (spine: createEditor,
+                 loadMarkdown, emitMarkdown, compartments), blocks.js
+                 (block styling), reveal.js (caret-gated syntax reveal),
+                 keymaps.js (pairs, headings, format toggles),
+                 widgets.js (checkboxes, alerts, fence chips, math,
+                 mermaid), starline.js, links.js, highlight.js,
+                 images.js, footnotes.js, tables.js, html.js
   lib/           theme.js (color tokens), apply-theme.js (presets),
-                 markdown.jsx (react-markdown pipeline for the note
-                 overlay: alerts, KaTeX, mermaid, prism),
+                 markdown.jsx (react-markdown pipeline for the read
+                 view: alerts, KaTeX, mermaid, prism),
                  preferences-context.jsx (prefs store contract)
   hooks/         useReducedMotion, etc.
   wailsjs/       generated bindings, do not hand-edit
 ```
+
+## The editor model
+
+The editor is a CodeMirror 6 text buffer. The buffer is the note's
+markdown, the same string the file on disk holds; there is no schema, no
+serializer, and no raw mode. Everything non-plain-text the user sees is
+decoration over the buffer, recomputed as a pure function of document and
+selection.
+
+- The buffer is the file while editing. Opening a note and closing it
+  without edits must leave the file byte-identical: load paths never
+  normalize line endings, trailing whitespace, list markers, or setext
+  headings.
+- There is no source/raw toggle. Raw markdown is what the buffer already
+  is; rendering hides syntax only away from the caret and reveals it as
+  dimmed real characters near it.
+- Recovery from a bad edit is external: edit the note's .md in any text
+  editor and the app rescans the sky folder on window focus.
+- One writer. Note body strings change only through editor transactions
+  (CM6 dispatch). A feature that rewrites the buffer from outside is a
+  design violation, not a shortcut.
 
 ### Data model
 

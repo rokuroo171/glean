@@ -276,7 +276,7 @@ class MathWidget extends WidgetType {
   }
 }
 
-// lezer-markdown parses no math nodes (Milkdown got them from remark), so
+// lezer-markdown parses no math nodes (the PM stack got them from remark), so
 // math is found by scan like starline: $$ blocks may span lines, $ inline
 // must sit on one line with non-space padding inside so currency text like
 // "5$ and 6$" never renders as a formula. Inline ranges decorate in the

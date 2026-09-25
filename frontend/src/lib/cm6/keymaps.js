@@ -222,7 +222,7 @@ function fenceNodeAt(state, pos) {
   return null
 }
 
-// Enter-Enter fence exit, ported from the Milkdown autoPair enter flow: on
+// Enter-Enter fence exit, ported from the PM autoPair enter flow: on
 // an empty line inside a fence, Enter lands below the closing fence. A
 // fence still open at the doc end is completed on the empty line (the
 // Obsidian contract); the doc never gains content without a keystroke

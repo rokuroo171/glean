@@ -170,7 +170,7 @@ describe('editor laws', () => {  it('law 2: no decoration rule touches geometry 
     expect(offenders).toEqual([])
   })
 
-  it('phase 6.5: per-element faces match the Milkdown render', async () => {
+  it('phase 6.5: per-element faces match the previous render', async () => {
     const { view, parent } = mount(DOC + '\r\ninline `tick` code\r\n')
     await settle()
     const codeSpan = view.dom.querySelector('.glean-inline-code')

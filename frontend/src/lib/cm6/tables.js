@@ -4,7 +4,7 @@ import { syntaxTree } from '@codemirror/language'
 // Table cell navigation over the raw buffer. The pipes and dashes stay
 // real text: nothing here renders a table (blocks.js styles the lines),
 // this layer only moves the caret between cell text ranges the way the
-// Milkdown table editor moved it between cell nodes. Tab lands on the
+// PM table editor moved it between cell nodes. Tab lands on the
 // next cell's text (creating trailing cells is a content edit the author
 // makes by typing pipes), Shift-Tab goes back, and Tab on the last cell
 // of the header falls through so the browser can move focus out.

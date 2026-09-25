@@ -8,9 +8,9 @@ import { colors } from '../theme'
 // tag and its matching close gets the element's styling, caret
 // independent the way alerts tint their boxes. A stack per tag handles
 // nesting (a sub inside a sup); an unpaired or stray chip decorates
-// nothing. The Milkdown Backspace-dissolve has no port: the chips were
+// nothing. The PM Backspace-dissolve has no port: the chips were
 // already literal text here, so dissolution is the native buffer behavior.
-// Law 2: sub and sup lose Milkdown's font-size and baseline shift, a tint
+// Law 2: sub and sup lose the PM font-size and baseline shift, a tint
 // carries the distinction instead. Law 3: recomputed whole on doc change
 
 const PAIR_TAGS = ['sub', 'sup', 'strong', 'em', 'kbd', 'ins', 'u', 'mark']

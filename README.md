@@ -34,9 +34,11 @@ is something you set up; it's something that accumulates.
 - **Constellation** - notes rendered as stars you can pan and zoom, drag
   into place with spring physics, and open from a full-sky view; linked
   notes form lines and hubs
-- **Editor** - WYSIWYG markdown editing (Milkdown on ProseMirror):
-  headings, lists, tables, task checkboxes, code blocks, quotes, and
-  links render as you write
+- **Editor** - live preview markdown editing on a CodeMirror 6 text
+  buffer, the file's own bytes with rendering as decoration:
+  headings, lists, tables, task checkboxes, code blocks, quotes, math,
+  and links render as you write, and the buffer is always byte-identical
+  to what saves
 - **Note overlay** - rendered preview of a note with GFM alerts,
   syntax-highlighted code, KaTeX math, and mermaid diagrams
 - **Customization pane** - theme presets, accent colors, layout density,
