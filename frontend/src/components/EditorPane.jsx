@@ -1,28 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { colors, space, typography } from '../lib/theme'
 import { usePreferences } from '../lib/preferences-context'
-import MilkdownEditor, { useMilkdownCommands } from './MilkdownEditor'
 import CM6Editor from './CM6Editor'
 import CursorTrail from './CursorTrail'
 import { formatToggle } from '../lib/cm6/keymaps'
-import { openSearchPanel, closeSearchPanel, searchPanelOpen } from '@codemirror/search'
+import { openSearchPanel, searchPanelOpen } from '@codemirror/search'
 import { EditorSelection, Text } from '@codemirror/state'
-import { editorViewCtx } from '@milkdown/core'
-import { TextSelection } from '@milkdown/kit/prose/state'
-import { toggleStrongCommand, toggleEmphasisCommand, toggleInlineCodeCommand, wrapInBlockquoteCommand, wrapInBulletListCommand, wrapInOrderedListCommand, createCodeBlockCommand, wrapInHeadingCommand, turnIntoTextCommand, insertHrCommand } from '@milkdown/kit/preset/commonmark'
-import { toggleStrikethroughCommand } from '@milkdown/kit/preset/gfm'
-import { undoCommand, redoCommand } from '@milkdown/kit/plugin/history'
-import { undoDepth, redoDepth } from '@milkdown/kit/prose/history'
-import { undoDepth as cmUndoDepth, redoDepth as cmRedoDepth } from '@codemirror/commands'
+import { undoDepth, redoDepth } from '@codemirror/commands'
 import StarIcon from './StarIcon'
 import Icon from './Icon'
-
-// Phase 1: the CM6 buffer editor mounts behind the flag; Milkdown stays the
-// default until phase 5 flips it
-// CM6 is the default editor; VITE_EDITOR=milkdown restores the old stack
-const EDITOR_FLAVOR = import.meta.env.VITE_EDITOR === 'milkdown' ? 'milkdown' : 'cm6'
 import ContextMenu from './ContextMenu'
-import FindReplace from './FindReplace'
 
 // Dead-space strip beside the editor body. Left click toggles centered
 // reading width; right click opens the view menu. The gutters flex-grow
@@ -101,8 +88,6 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const editorContainerRef = useRef(null)
   const editorInstanceRef = useRef(null)
   const [currentHeading, setCurrentHeading] = useState(0)
-  const [showFind, setShowFind] = useState(false)
-  const [showReplace, setShowReplace] = useState(false)
   const [hist, setHist] = useState({ canUndo: false, canRedo: false })
   const [cmView, setCmView] = useState(null)
   const narrowWidth = prefs.editor.narrow_width === true
@@ -132,52 +117,17 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   }
   const debounceRef = useRef(null)
   const flushRef = useRef(null)
-  const { dispatchCommand, getView: getPMView } = useMilkdownCommands(editorInstanceRef)
 
-  // flavor-aware view bridge: under CM6 the instance ref holds the raw
-  // EditorView; under Milkdown it resolves through the PM context
-  const getView = () => {
-    if (EDITOR_FLAVOR === 'cm6') return editorInstanceRef.current?.view || null
-    return getPMView()
-  }
+  // the instance ref holds the live EditorView
+  const getView = () => editorInstanceRef.current?.view || null
 
-  // Buffer text and extent in whichever flavor is live: CM6 holds the raw
-  // markdown string, PM holds document nodes with its own text API
-  const docText = (view, from, to, sep = '') =>
-    EDITOR_FLAVOR === 'cm6' ? view.state.sliceDoc(from, to) : view.state.doc.textBetween(from, to, sep)
-  const docEnd = (view) =>
-    EDITOR_FLAVOR === 'cm6' ? view.state.doc.length : view.state.doc.content.size
+  const docText = (view, from, to) => view.state.sliceDoc(from, to)
+  const docEnd = (view) => view.state.doc.length
 
-  function closeFind() {
-    setShowFind(false)
-    setShowReplace(false)
-    getView()?.focus()
-  }
-
-  // CM6 formatting runs on the buffer through the keymap layer's toggles;
-  // Milkdown keeps its schema commands
+  // formatting runs on the buffer through the keymap layer's toggles
   const formatInEditor = (kind, level) => {
-    if (EDITOR_FLAVOR === 'cm6') {
-      const view = getView()
-      if (view) formatToggle(view, kind, level)
-      return
-    }
-    const cmds = {
-      bold: [toggleStrongCommand.key],
-      italic: [toggleEmphasisCommand.key],
-      strike: [toggleStrikethroughCommand.key],
-      code: [toggleInlineCodeCommand.key],
-      quote: [wrapInBlockquoteCommand.key],
-      bullet: [wrapInBulletListCommand.key],
-      ordered: [wrapInOrderedListCommand.key],
-      hr: [insertHrCommand.key],
-    }
-    if (kind === 'heading') {
-      dispatchCommand(wrapInHeadingCommand.key, level || 1)
-      return
-    }
-    const key = cmds[kind]?.[0]
-    if (key) dispatchCommand(key)
+    const view = getView()
+    if (view) formatToggle(view, kind, level)
   }
 
 
@@ -208,87 +158,35 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     setCurrentHeading(index)
     const view = getView()
     if (!view) return
-    if (EDITOR_FLAVOR === 'cm6') {
-      const h = headings[index]
-      if (!h) return
-      // Land on the heading text, past the hash run, since the buffer is the
-      // markdown itself and parseHeadings offsets are buffer offsets
-      const prefix = body.slice(h.offset, h.offset + 8).match(/^#{1,6} /)
-      const at = h.offset + (prefix ? prefix[0].length : 0)
-      view.dispatch(view.state.tr.setSelection(EditorSelection.cursor(at)).scrollIntoView())
-      view.focus()
-      return
-    }
-    // Pick the Nth heading node from the live doc so the jump target can
-    // never drift. Skip blockquote subtrees: the outline parser only sees
-    // column-0 headings, so quoted headings must not shift the index
-    let count = -1
-    let target = null
-    view.state.doc.descendants((node, pos) => {
-      if (target != null) return false
-      if (node.type.name === 'blockquote') return false
-      if (node.type.name !== 'heading') return true
-      count++
-      if (count === index) { target = pos + 1; return false }
-      return true
-    })
-    if (target == null) return
-    view.dispatch(view.state.tr.setSelection(TextSelection.near(view.state.doc.resolve(target), 1)))
+    const h = headings[index]
+    if (!h) return
+    // Land on the heading text, past the hash run, since the buffer is the
+    // markdown itself and parseHeadings offsets are buffer offsets
+    const prefix = body.slice(h.offset, h.offset + 8).match(/^#{1,6} /)
+    const at = h.offset + (prefix ? prefix[0].length : 0)
+    view.dispatch(view.state.tr.setSelection(EditorSelection.cursor(at)).scrollIntoView())
     view.focus()
-    // Selection, focus, and ProseMirror each emit their own caret-into-view
-    // passes that race an immediate scroll, so correct from the settled DOM
-    // instead. Two passes keep it idempotent against stragglers
-    const alignHeading = () => {
-      const el = [...view.dom.querySelectorAll('h1, h2, h3, h4, h5, h6')]
-        .filter((h) => !h.closest('blockquote'))[index]
-      if (!el || !el.isConnected) return
-      let scroller = null
-      let n = el.parentElement
-      while (n) {
-        const oy = getComputedStyle(n).overflowY
-        if (oy === 'auto' || oy === 'scroll') { scroller = n; break }
-        n = n.parentElement
-      }
-      if (!scroller) return
-      const top = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - 12
-      scroller.scrollTo({ top: Math.max(0, top), behavior: 'auto' })
-    }
-    setTimeout(alignHeading, 16)
-    setTimeout(alignHeading, 90)
   }
 
   function handleSelectionChange(_ctx, selection) {
-    // The listener fires mid-transaction where editorViewCtx is not yet
-    // readable; deferring also lets coordsAtPos see the settled DOM
+    // Deferring lets coordsAtPos see the settled DOM
     setTimeout(() => {
-      const cmView = EDITOR_FLAVOR === 'cm6' ? editorInstanceRef.current?.view : null
-      if (cmView) {
-        setCmView(cmView)
-        const cursor = selection.head
-        setHist({ canUndo: cmUndoDepth(cmView.state) > 0, canRedo: cmRedoDepth(cmView.state) > 0 })
-        if (onCursorChange) {
-          const before = cmView.state.doc.sliceString(0, cursor)
-          onCursorChange({ line: before.split('\n').length, col: before.slice(before.lastIndexOf('\n') + 1).length + 1 })
-        }
-        return
-      }
       const view = getView()
       if (!view) return
       const cursor = selection.head
-      const text = view.state.doc.textContent
       setHist({ canUndo: undoDepth(view.state) > 0, canRedo: redoDepth(view.state) > 0 })
       if (onCursorChange) {
-        const before = text.slice(0, cursor)
+        const before = view.state.sliceDoc(0, cursor)
         onCursorChange({ line: before.split('\n').length, col: before.slice(before.lastIndexOf('\n') + 1).length + 1 })
       }
       if (!noteNames || Object.keys(noteNames).length === 0) { setLinkPopup(null); return }
-      const before = text.slice(0, cursor)
+      const before = view.state.sliceDoc(0, cursor)
       const openBracket = before.lastIndexOf('[[')
       if (openBracket < 0) { setLinkPopup(null); return }
       const afterOpen = before.slice(openBracket + 2)
       if (afterOpen.includes(']]') || afterOpen.includes('\n')) { setLinkPopup(null); return }
       const query = afterOpen.toLowerCase()
-      const typed = text.slice(openBracket + 2, cursor).toLowerCase()
+      const typed = before.slice(openBracket + 2, cursor).toLowerCase()
       const matches = Object.keys(noteNames).filter(t => t.toLowerCase().includes(query) && t.toLowerCase() !== typed).slice(0, 8)
       if (matches.length === 0) { setLinkPopup(null); return }
       const coords = view.coordsAtPos(cursor)
@@ -308,13 +206,12 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
 
   const toolbarBtn = { background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', padding: '4px 6px', borderRadius: 4, fontSize: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }
 
-  // Selection helpers for the editor context menu. Commands need a
-  // non-collapsed selection; the menu itself runs with focus on the menu,
-  // so the ProseMirror selection survives
+  // Selection helpers for the editor context menu. The menu itself runs
+  // with focus on the menu, so the editor selection survives
   const selectionText = () => {
     const view = getView()
     if (!view) return ''
-    return docText(view, view.state.selection.from, view.state.selection.to, ' ')
+    return docText(view, view.state.selection.main.from, view.state.selection.main.to)
   }
 
   const copySelection = () => {
@@ -328,8 +225,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     const text = selectionText()
     if (!text) return
     navigator.clipboard?.writeText(text).catch(() => {})
-    if (EDITOR_FLAVOR === 'cm6') view.dispatch(view.state.replaceSelection(Text.empty))
-    else view.dispatch(view.state.tr.deleteSelection())
+    view.dispatch(view.state.replaceSelection(Text.empty))
     view.focus()
   }
 
@@ -377,89 +273,54 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   }
 
   const undoInEditor = () => {
-    if (EDITOR_FLAVOR === 'cm6') {
-      const inst = editorInstanceRef.current
-      inst?.undo()
-      // undo can restore the exact prior cursor, which fires no selection or
-      // doc listener, so the button states must be refreshed from the history
-      if (inst?.histState) setHist(inst.histState())
-      return
-    }
-    dispatchCommand(undoCommand.key)
+    const inst = editorInstanceRef.current
+    inst?.undo()
+    // undo can restore the exact prior cursor, which fires no selection or
+    // doc listener, so the button states must be refreshed from the history
+    if (inst?.histState) setHist(inst.histState())
   }
 
   const redoInEditor = () => {
-    if (EDITOR_FLAVOR === 'cm6') {
-      const inst = editorInstanceRef.current
-      inst?.redo()
-      if (inst?.histState) setHist(inst.histState())
-      return
-    }
-    dispatchCommand(redoCommand.key)
+    const inst = editorInstanceRef.current
+    inst?.redo()
+    if (inst?.histState) setHist(inst.histState())
   }
 
   const selectAllInEditor = () => {
     const view = getView()
     if (!view) return
-    if (EDITOR_FLAVOR === 'cm6') view.dispatch(view.state.tr.setSelection(EditorSelection.range(0, view.state.doc.length)))
-    else {
-      const { state } = view
-      view.dispatch(state.tr.setSelection(state.selection.constructor.create(state.doc, 0, state.doc.content.size)))
-    }
+    view.dispatch(view.state.tr.setSelection(EditorSelection.range(0, view.state.doc.length)))
     view.focus()
   }
 
-  // Ctrl+F and Ctrl+H work app-wide while a note is open. CM6 runs them
-  // through its search panel; Milkdown gets the hand-rolled bar below
+  // Ctrl+F and Ctrl+H work app-wide while a note is open, through the
+  // CM6 search panel
   useEffect(() => {
     const onKey = (e) => {
       if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return
       const key = e.key.toLowerCase()
-      if (EDITOR_FLAVOR === 'cm6') {
-        const view = getView()
-        if (!view) return
-        if (key === 'f') {
-          e.preventDefault()
-          if (!searchPanelOpen(view.state)) openSearchPanel(view)
-          else view.focus()
-        } else if (key === 'h') {
-          e.preventDefault()
-          if (!searchPanelOpen(view.state)) {
-            openSearchPanel(view)
-            // the replace field is the panel's second input; open then move
-            // focus there on the next frame once the panel DOM exists
-            setTimeout(() => {
-              const inputs = view.dom.querySelectorAll('.cm-panel input')
-              if (inputs[1]) inputs[1].focus()
-            }, 20)
-          } else view.focus()
-        }
-        return
-      }
+      const view = getView()
+      if (!view) return
       if (key === 'f') {
         e.preventDefault()
-        setShowFind(true)
+        if (!searchPanelOpen(view.state)) openSearchPanel(view)
+        else view.focus()
       } else if (key === 'h') {
         e.preventDefault()
-        setShowFind(true)
-        setShowReplace(true)
+        if (!searchPanelOpen(view.state)) {
+          openSearchPanel(view)
+          // the replace field is the panel's second input; open then move
+          // focus there on the next frame once the panel DOM exists
+          setTimeout(() => {
+            const inputs = view.dom.querySelectorAll('.cm-panel input')
+            if (inputs[1]) inputs[1].focus()
+          }, 20)
+        } else view.focus()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
-
-  // Milkdown keeps the hand-rolled bar and its Escape closer; CM6's panel
-  // handles its own Escape through searchKeymap
-  useEffect(() => {
-    if (EDITOR_FLAVOR === 'cm6') return
-    if (!showFind) return
-    const onKey = (e) => {
-      if (e.key === 'Escape') closeFind()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [showFind])
 
   const editorMenuItems = [
     { id: 'add-link', label: 'Add starline', icon: 'link', onSelect: startWikilink },
@@ -569,7 +430,6 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
           ))}
         </div>
       )}
-      {EDITOR_FLAVOR !== 'cm6' && showFind && <FindReplace getView={getView} body={body} showReplace={showReplace} onClose={closeFind} onToggleReplace={() => setShowReplace(v => !v)} />}
       <div style={{ flex: 1, minHeight: 0, minWidth: 0, display: 'flex' }}>
         {showOutline && (
           <div style={{ width: 180, borderRight: `1px solid ${colors.border}`, overflow: 'auto', padding: space[2], flexShrink: 0, background: 'rgba(11, 15, 25, 0.5)', backdropFilter: 'blur(8px)' }}>
@@ -584,31 +444,19 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
           <Gutter onToggle={() => updatePrefs({ editor: { narrow_width: !narrowWidth } })} menuItems={viewMenuItems} grow={narrowWidth} />
           <ContextMenu items={editorMenuItems} triggerStyle={{ display: 'contents' }}>
             <div style={{ flex: narrowWidth ? '0 0 720px' : '1 1 0', minWidth: 0, minHeight: 0, maxWidth: narrowWidth ? 'min(720px, calc(100% - 80px))' : undefined }}>
-              {EDITOR_FLAVOR === 'cm6' ? (
-                <CM6Editor
-                  key={note?.id}
-                  markdown={body}
-                  onMarkdownChange={handleBodyChange}
-                  onSelectionChange={handleSelectionChange}
-                  editorInstanceRef={editorInstanceRef}
-                  noteNames={noteNames}
-                  onNoteLink={handleNoteLink}
-                />
-              ) : (
-                <MilkdownEditor
-                  key={note?.id}
-                  markdown={body}
-                  onMarkdownChange={handleBodyChange}
-                  onSelectionChange={handleSelectionChange}
-                  editorInstanceRef={editorInstanceRef}
-                  noteNames={noteNames}
-                  onNoteLink={handleNoteLink}
-                />
-              )}
+              <CM6Editor
+                key={note?.id}
+                markdown={body}
+                onMarkdownChange={handleBodyChange}
+                onSelectionChange={handleSelectionChange}
+                editorInstanceRef={editorInstanceRef}
+                noteNames={noteNames}
+                onNoteLink={handleNoteLink}
+              />
             </div>
           </ContextMenu>
           <Gutter onToggle={() => updatePrefs({ editor: { narrow_width: !narrowWidth } })} menuItems={viewMenuItems} grow={narrowWidth} />
-          {EDITOR_FLAVOR === 'cm6' && cmView && <CursorTrail view={cmView} containerRef={editorContainerRef} />}
+          {cmView && <CursorTrail view={cmView} containerRef={editorContainerRef} />}
           {linkPopup && popupMatches?.length > 0 && (() => {
             const matches = popupMatches
             return (
