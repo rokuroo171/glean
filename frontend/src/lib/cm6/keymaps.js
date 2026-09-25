@@ -65,9 +65,29 @@ function exactRuns(text, ch, len) {
 
 // True when the line prefix before the caret ends inside an open span:
 // an odd count of exactly-sized runs. Single tildes in H~2~O are runs of
-// the wrong size and never count, so subscript text stays literal
-function insideOpen(prefix, ch, len) {
-  return exactRuns(prefix, ch, len).length % 2 === 1
+// the wrong size and never count, so subscript text stays literal. The
+// bracket pair subtracts closers instead, since a finished [[starline]]
+// holds one opener and one closer and parity alone would read it open
+function insideOpen(prefix, pair) {
+  if (pair.char === '[') {
+    return exactRuns(prefix, '[', 2).length > exactRuns(prefix, ']', 2).length
+  }
+  return exactRuns(prefix, pair.char, pair.open.length).length % 2 === 1
+}
+
+// True when the tree says a span of this pair's family just closed behind
+// the caret: the run behind is a closer, not a fresh opener, so the
+// completion keystroke flows literal instead of stacking another pair
+function justClosed(state, pos, ch) {
+  const names = ch === '[' ? ['Link']
+    : ch === '~' ? ['Strikethrough']
+      : ['Emphasis', 'StrongEmphasis']
+  let node = syntaxTree(state).resolveInner(pos, -1)
+  while (node) {
+    if (names.includes(node.name)) return true
+    node = node.parent
+  }
+  return false
 }
 
 function inCode(state, pos) {
@@ -110,7 +130,7 @@ export function handlePairChar(view, ch) {
   // inside an open span: the keystroke skips over the close run when one
   // sits ahead, otherwise it completes the pair. Closing works inside
   // inline code too, which is how `spans` finish
-  if (insideOpen(prefix, pair.char, pair.open.length)) {
+  if (insideOpen(prefix, pair)) {
     if (closeAhead) {
       view.dispatch({ selection: EditorSelection.cursor(pos + ahead), scrollIntoView: true })
     } else {
@@ -129,8 +149,9 @@ export function handlePairChar(view, ch) {
   const behind = runBehind(doc, pos, pair.char)
   const next = charAt(doc, pos)
 
-  // tier 2 second keystroke completes the doubled pair
-  if (pair.tier === 2 && behind === 1 && !WORD.test(next)) {
+  // tier 2 second keystroke completes the doubled pair, unless the tree
+  // says the run behind is a span closer: after *bold* a third * is content
+  if (pair.tier === 2 && behind === 1 && !WORD.test(next) && !justClosed(state, pos, pair.char)) {
     view.dispatch({
       changes: [{ from: pos, insert: pair.char + pair.close }],
       selection: EditorSelection.cursor(pos + 1),

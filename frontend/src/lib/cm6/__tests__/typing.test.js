@@ -150,6 +150,56 @@ describe('pair typing', () => {
     expect(pos2).toBe(2)
   })
 
+  it('a pair keystroke right after a closed span flows literal', () => {
+    const ctx = mount('*bold*')
+    caret(ctx, 6)
+    type(ctx, '*')
+    const doc = emitMarkdown(ctx.view)
+    destroy(ctx)
+    expect(doc).toBe('*bold**')
+  })
+
+  it('underscore after a closed span flows literal too', () => {
+    const ctx = mount('_ital_')
+    caret(ctx, 6)
+    type(ctx, '_')
+    const doc = emitMarkdown(ctx.view)
+    destroy(ctx)
+    expect(doc).toBe('_ital__')
+  })
+
+  it('tilde after a closed strike flows literal', () => {
+    const ctx = mount('~~x~~')
+    caret(ctx, 5)
+    type(ctx, '~')
+    const doc = emitMarkdown(ctx.view)
+    destroy(ctx)
+    expect(doc).toBe('~~x~~~')
+  })
+
+  it('a backtick after closed inline code stays literal', () => {
+    const ctx = mount('`code`')
+    caret(ctx, 6)
+    type(ctx, '`')
+    const doc = emitMarkdown(ctx.view)
+    destroy(ctx)
+    expect(doc).toBe('`code``')
+  })
+
+  it('a bracket after a finished starline does not feed the old span', () => {
+    const ctx = mount('[[note]]')
+    caret(ctx, 8)
+    type(ctx, '[')
+    const one = emitMarkdown(ctx.view)
+    type(ctx, '[')
+    const two = emitMarkdown(ctx.view)
+    const pos = ctx.view.state.selection.main.head
+    destroy(ctx)
+    expect(one).toBe('[[note]][')
+    expect(two).toBe('[[note]][[]]')
+    expect(pos).toBe(10)
+  })
+
   it('pair chars are inert inside fenced code', async () => {
     const ctx = mount('```\n\n```\n')
     await settle()
