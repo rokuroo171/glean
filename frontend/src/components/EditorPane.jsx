@@ -3,6 +3,7 @@ import { colors, space, typography } from '../lib/theme'
 import { usePreferences } from '../lib/preferences-context'
 import MilkdownEditor, { useMilkdownCommands } from './MilkdownEditor'
 import CM6Editor from './CM6Editor'
+import CursorTrail from './CursorTrail'
 import { formatToggle } from '../lib/cm6/keymaps'
 import { openSearchPanel, closeSearchPanel, searchPanelOpen } from '@codemirror/search'
 import { EditorSelection, Text } from '@codemirror/state'
@@ -103,6 +104,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
   const [showFind, setShowFind] = useState(false)
   const [showReplace, setShowReplace] = useState(false)
   const [hist, setHist] = useState({ canUndo: false, canRedo: false })
+  const [cmView, setCmView] = useState(null)
   const narrowWidth = prefs.editor.narrow_width === true
   const [linkPopup, setLinkPopup] = useState(null)
   const headings = useMemo(() => parseHeadings(body), [body])
@@ -261,6 +263,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
     setTimeout(() => {
       const cmView = EDITOR_FLAVOR === 'cm6' ? editorInstanceRef.current?.view : null
       if (cmView) {
+        setCmView(cmView)
         const cursor = selection.head
         setHist({ canUndo: cmUndoDepth(cmView.state) > 0, canRedo: cmRedoDepth(cmView.state) > 0 })
         if (onCursorChange) {
@@ -605,6 +608,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
             </div>
           </ContextMenu>
           <Gutter onToggle={() => updatePrefs({ editor: { narrow_width: !narrowWidth } })} menuItems={viewMenuItems} grow={narrowWidth} />
+          {EDITOR_FLAVOR === 'cm6' && cmView && <CursorTrail view={cmView} containerRef={editorContainerRef} />}
           {linkPopup && popupMatches?.length > 0 && (() => {
             const matches = popupMatches
             return (
