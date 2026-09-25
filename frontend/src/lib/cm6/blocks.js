@@ -97,6 +97,10 @@ function build(view) {
         markDecos.push({ from: node.from, to: node.to, spec: { class: 'glean-taskmarker' } })
         return
       }
+      if (name === 'InlineCode') {
+        markDecos.push({ from: node.from, to: node.to, spec: { class: 'glean-inline-code' } })
+        return
+      }
     },
   })
 
@@ -136,7 +140,6 @@ export const blocks = ViewPlugin.fromClass(
 )
 
 export const blocksTheme = EditorView.theme({
-  '&': { fontFamily: 'inherit' },
   '.glean-h1': { fontSize: '2em', fontWeight: 700, lineHeight: 1.3, color: colors.text },
   '.glean-h2': { fontSize: '1.6em', fontWeight: 700, lineHeight: 1.3, color: colors.text },
   '.glean-h3': { fontSize: '1.35em', fontWeight: 600, lineHeight: 1.3, color: colors.text },
@@ -148,11 +151,19 @@ export const blocksTheme = EditorView.theme({
   '.glean-fence-line': {
     background: 'rgba(106, 170, 255, 0.06)',
     fontFamily: "'Fira Code', 'JetBrains Mono', ui-monospace, monospace",
+    fontVariantLigatures: 'none',
   },
   '.glean-codeinfo': { color: colors.textMuted, fontStyle: 'italic' },
   '.glean-listmark': { color: colors.accent },
   '.glean-quotemark': { color: colors.accent, opacity: 0.6 },
   '.glean-taskmarker': { color: colors.accent },
+  // inline code keeps the mono face the Milkdown editor gave `code`;
+  // family and tint only, law 2 forbids the em size and padding here
+  '.glean-inline-code': {
+    fontFamily: "'Fira Code', 'JetBrains Mono', ui-monospace, monospace",
+    background: 'rgba(106, 122, 138, 0.18)',
+    borderRadius: '4px',
+  },
   '.glean-table-line': { fontFamily: 'ui-monospace, monospace' },
   '.glean-table-delim': { color: colors.textDim, opacity: 0.7 },
   '.glean-hr-line': {},

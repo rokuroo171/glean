@@ -4,6 +4,38 @@ import { EditorSelection } from '@codemirror/state'
 import { createEditor, emitMarkdown } from '../editor'
 import { blocksTheme } from '../blocks'
 import { revealTheme } from '../reveal'
+import { editorTheme } from '../editor'
+import { widgetsTheme } from '../widgets'
+
+function themeCss(theme) {
+  // EditorView.theme returns an extension whose [1] slot carries the
+  // StyleModule spec; jsdom does not cascade it into getComputedStyle
+  return theme[1].value.rules
+}
+
+// mark classes that style real revealed characters; geometry on these
+// shifts glyph layout. Line classes, the editor root, and replacement
+// widgets may size freely per law 2
+const INLINE_MARK_CLASSES = [
+  'glean-syntax-revealed', 'glean-inline-code', 'glean-listmark',
+  'glean-quotemark', 'glean-taskmarker', 'glean-table-delim',
+  'glean-codeinfo', 'glean-hr',
+]
+
+function inlineGeometryOffenders(rules, banned) {
+  const offenders = []
+  for (const rule of rules) {
+    const brace = rule.indexOf('{')
+    if (brace < 0) continue
+    const sel = rule.slice(0, brace)
+    if (!INLINE_MARK_CLASSES.some((c) => sel.includes(c))) continue
+    const body = rule.slice(brace)
+    for (const b of banned) {
+      if (body.includes(b)) offenders.push(`${sel.trim()}: ${b}`)
+    }
+  }
+  return offenders
+}
 
 function mount(initial) {
   const parent = document.createElement('div')
@@ -131,20 +163,29 @@ describe('blocks pass', () => {
   })
 })
 
-describe('editor laws', () => {
-  it('law 2: no decoration rule touches geometry on inline spans', () => {
-    const themes = [blocksTheme, revealTheme]
+describe('editor laws', () => {  it('law 2: no decoration rule touches geometry on inline spans', () => {
+    const themes = [blocksTheme, revealTheme, editorTheme('Georgia, serif', 14, 1.6), widgetsTheme]
     const banned = ['font-size', 'margin', 'padding', 'line-height', 'width']
-    const offenders = []
-    for (const theme of themes) {
-      const css = theme[Symbol.for('cm6.theme')] || ''
-      for (const b of banned) {
-        if (css.includes(b)) offenders.push(b)
-      }
-    }
-    // the theme module holds class rules only; the check asserts the
-    // generated module source has no inline geometry rules
+    const offenders = themes.flatMap((t) => inlineGeometryOffenders(themeCss(t), banned))
     expect(offenders).toEqual([])
+  })
+
+  it('phase 6.5: per-element faces match the Milkdown render', async () => {
+    const { view, parent } = mount(DOC + '\r\ninline `tick` code\r\n')
+    await settle()
+    const codeSpan = view.dom.querySelector('.glean-inline-code')
+    const chip = view.dom.querySelector('.glean-fence-chip')
+    destroy(view, parent)
+    const root = themeCss(editorTheme('Lora, Georgia, serif', 14, 1.6)).join(' ')
+    expect(root).toContain('font-family: Lora, Georgia, serif')
+    expect(root).toContain('.cm-scroller')
+    expect(codeSpan).not.toBeNull()
+    const blocksCss = themeCss(blocksTheme).join(' ')
+    expect(blocksCss).toContain('Fira Code')
+    expect(blocksCss).toContain('.glean-inline-code')
+    expect(blocksCss).toContain('font-variant-ligatures: none')
+    const widgetsCss = themeCss(widgetsTheme).join(' ')
+    expect(widgetsCss).toContain('ui-monospace')
   })
 
   it('law 3: reveal set is a pure function of doc and selection', async () => {
