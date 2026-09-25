@@ -241,6 +241,17 @@ describe('heading editing', () => {
     expect(doc).toBe('# Title\n')
   })
 
+  it('hash on a level-6 heading is content, not a seventh level', () => {
+    const ctx = mount('###### Six\n')
+    caret(ctx, 7)
+    type(ctx, '#')
+    const doc = emitMarkdown(ctx.view)
+    const pos = ctx.view.state.selection.main.head
+    destroy(ctx)
+    expect(doc).toBe('###### #Six\n')
+    expect(pos).toBe(8)
+  })
+
   it('backspace on a level-1 heading drops to a paragraph', () => {
     const ctx = mount('# Title\n')
     caret(ctx, 2)

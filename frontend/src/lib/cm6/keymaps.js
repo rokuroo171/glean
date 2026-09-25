@@ -211,6 +211,7 @@ export function handleHeadingHash(view) {
   const afterMark = line.from + m[1].length + (m[2] ? 1 : 0)
   // the caret must sit right after the mark: typing # inside the heading
   // text is content, not a level change
+  if (m[1].length >= 6) return false // ATX caps at six; a further # is content
   if (sel.head !== afterMark) return false
   view.dispatch({
     changes: [{ from: line.from, insert: '#' }],
