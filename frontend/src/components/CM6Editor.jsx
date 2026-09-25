@@ -7,8 +7,8 @@ import { starlineTheme } from '../lib/cm6/starline'
 import { usePreferences } from '../lib/preferences-context'
 import { colors } from '../lib/theme'
 
-// Bridge-compatible with MilkdownEditor's contract so EditorPane can swap
-// them without touching consumers: { markdown, onMarkdownChange,
+// Bridge-compatible with the read view's props so consumers need no
+// editor-specific branching: { markdown, onMarkdownChange,
 // onSelectionChange, editorInstanceRef, noteNames, onNoteLink }
 export default function CM6Editor({
   markdown,
@@ -49,7 +49,7 @@ export default function CM6Editor({
       } : null,
     })
     viewRef.current = view
-    // e2e entry point, dev builds only, same handle MilkdownEditor exposes
+    // e2e entry point, dev builds only
     if (import.meta.env.DEV) window.__gleanView = view
     if (editorInstanceRef) {
       editorInstanceRef.current = {
