@@ -15,6 +15,7 @@ import { linkTips, linkHandlers } from './links'
 import { highlight, highlightTheme } from './highlight'
 import { images, imagesTheme } from './images'
 import { footnotes, footnoteHandlers, footnotesTheme } from './footnotes'
+import { tableKeymap } from './tables'
 
 // One renderer, one truth: the buffer holds the file's markdown bytes and
 // nothing in this module ever rewrites them outside a dispatched transaction
@@ -111,6 +112,7 @@ export function createEditor({
       markdown({ base: markdownLanguage, indentUnit: gleanIndentUnit }),
       keymap.of(markdownKeymap),
       keymap.of(fenceKeymap),
+      keymap.of(tableKeymap),
       keymap.of(gleanKeymap),
       keymap.of(searchKeymap),
       keymap.of(modKeymap),
