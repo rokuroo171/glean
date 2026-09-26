@@ -18,6 +18,7 @@ import { images, imagesTheme } from './images'
 import { footnotes, footnoteHandlers, footnotesTheme } from './footnotes'
 import { tableKeymap } from './tables'
 import { htmlPairs, htmlPairsTheme } from './html'
+import { colors } from '../theme'
 
 // One renderer, one truth: the buffer holds the file's markdown bytes and
 // nothing in this module ever rewrites them outside a dispatched transaction
@@ -65,6 +66,9 @@ export function editorTheme(fontFamily, fontSize, lineHeight) {
       overflowX: 'hidden',
     },
     '.cm-content': { caretColor: 'currentColor', paddingBottom: '30vh' },
+    // the drawn cursor defaults to black, invisible on the dark theme
+    '.cm-cursor': { borderLeftColor: colors.text },
+    '.cm-dropCursor': { borderLeftColor: colors.accent },
     '&.cm-focused': { outline: 'none' },
     '.cm-gutters': {
       background: 'transparent',
