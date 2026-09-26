@@ -95,7 +95,7 @@ func DefaultPreferences() Preferences {
 			ShowStatusBar:   &showStatus,
 		},
 		Editor: EditorPrefs{
-			FontFamily:                "monospace",
+			FontFamily:                "Lora, Georgia, serif",
 			FontSize:                  14,
 			LineHeight:                1.6,
 			SpellCheckEnabled:         &spell,
