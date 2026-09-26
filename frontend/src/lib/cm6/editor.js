@@ -11,6 +11,7 @@ import { blocks, blocksTheme } from './blocks'
 import { reveal, revealTheme } from './reveal'
 import { gleanKeymap, modKeymap, gleanIndentUnit, fenceKeymap } from './keymaps'
 import { widgets, widgetAtomic, blockWidgets, widgetsTheme } from './widgets'
+import { tableGridTheme } from './tables-grid'
 import { linkTips, linkHandlers, linksTheme } from './links'
 import { highlight, highlightTheme } from './highlight'
 import { images, imagesTheme } from './images'
@@ -118,7 +119,7 @@ export function createEditor({
       keymap.of(searchKeymap),
       keymap.of(modKeymap),
       keymap.of([...defaultKeymap, ...historyKeymap]),
-      ...(livePreview ? [blocks, blocksTheme, reveal, revealTheme, widgets, widgetAtomic, widgetsTheme, highlight, highlightTheme, images, imagesTheme, footnotes, footnoteHandlers, footnotesTheme, htmlPairs, htmlPairsTheme] : []),
+      ...(livePreview ? [blocks, blocksTheme, reveal, revealTheme, widgets, widgetAtomic, widgetsTheme, tableGridTheme, highlight, highlightTheme, images, imagesTheme, footnotes, footnoteHandlers, footnotesTheme, htmlPairs, htmlPairsTheme] : []),
       ...(starlineOpts ? [starline(starlineOpts), starlineTheme] : []),
       ...(livePreview ? [linkTips, linkHandlers, linksTheme] : []),
       gutterCompartment.of(style.line_numbers ? lineNumbers() : []),

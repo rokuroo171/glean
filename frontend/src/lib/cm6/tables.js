@@ -19,13 +19,14 @@ function tableAt(state, pos) {
   return null
 }
 
-function isSeparatorLine(text) {
+export function isSeparatorLine(text) {
   return /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(text)
 }
 
 // cell text ranges of one table row line, in order, trimmed to the cell
-// content the way a cell editor holds no padding whitespace
-function cellsOfLine(line) {
+// content the way a cell editor holds no padding whitespace. An escaped
+// pipe is cell text, not a delimiter
+export function cellsOfLine(line) {
   const text = line.text
   if (isSeparatorLine(text)) return []
   const cells = []
@@ -36,6 +37,7 @@ function cellsOfLine(line) {
   if (raw.startsWith('|')) i = 1
   for (; i <= raw.length; i++) {
     const ch = i < raw.length ? raw[i] : '|'
+    if (ch === '|' && raw[i - 1] === '\\') continue
     if (ch === '|') {
       if (start >= 0) {
         let a = start

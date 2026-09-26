@@ -2,6 +2,7 @@ import { ViewPlugin, Decoration, WidgetType, EditorView } from '@codemirror/view
 import { RangeSetBuilder, StateField } from '@codemirror/state'
 import { syntaxTree } from '@codemirror/language'
 import { colors } from '../theme'
+import { tableBlockRanges } from './tables-grid'
 
 // The structure layer: widgets over the raw buffer for the things markdown
 // renders as chrome rather than text. Every widget paints from the syntax
@@ -388,8 +389,9 @@ class MermaidWidget extends WidgetType {
 // Mermaid and display math render as block widgets, and block decorations
 // are a StateField's job (plugins may not emit them). Both are detected by
 // scan, not the syntax tree, so the field never waits on a parse
-function blockRanges(doc) {
-  const out = []
+function blockRanges(state) {
+  const doc = state.doc
+  const out = tableBlockRanges(state)
   for (const r of inlineMathRanges(doc)) {
     if (!r.display) continue
     const tex = doc.sliceString(r.from + 2, r.to - 2)
@@ -417,17 +419,17 @@ function blockRanges(doc) {
 
 export const blockWidgets = StateField.define({
   create(state) {
-    return buildBlockSet(state.doc)
+    return buildBlockSet(state)
   },
   update(value, tr) {
-    if (tr.docChanged || tr.selection) return buildBlockSet(tr.state.doc)
+    if (tr.docChanged || tr.selection) return buildBlockSet(tr.state)
     return value
   },
   provide: (field) => EditorView.decorations.from(field),
 })
 
-function buildBlockSet(doc) {
-  const ranges = blockRanges(doc)
+function buildBlockSet(state) {
+  const ranges = blockRanges(state)
   const builder = new RangeSetBuilder()
   for (const r of ranges) builder.add(r.from, r.to, r.deco)
   return builder.finish()
