@@ -59,6 +59,29 @@ describe('task checkboxes', () => {
     destroy(ctx)
     expect(out).toBe('- [x] a\n- [ ] b\n')
   })
+
+  it('marks exactly the checked task lines as done', async () => {
+    const ctx = mount('- [x] done\n- [X] capital\n- [ ] open\n  - [x] nested done\n')
+    await settle()
+    // the strike itself is computed-style cascading, which jsdom does not
+    // do for CM6 theme classes; the class carries the style and is what
+    // the live probe measured line-through on
+    const rows = [...ctx.view.dom.querySelectorAll('.cm-line')]
+      .filter((l) => l.querySelector('.glean-taskbox'))
+      .map((l) => l.className.includes('glean-task-done'))
+    destroy(ctx)
+    expect(rows).toEqual([true, true, false, true])
+  })
+
+  it('strikes a checked task inside a blockquote', async () => {
+    const ctx = mount('> - [x] quoted\n> - [ ] open\n')
+    await settle()
+    const rows = [...ctx.view.dom.querySelectorAll('.cm-line')]
+      .filter((l) => l.querySelector('.glean-taskbox'))
+      .map((l) => l.className.includes('glean-task-done'))
+    destroy(ctx)
+    expect(rows).toEqual([true, false])
+  })
 })
 
 describe('alerts', () => {

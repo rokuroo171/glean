@@ -101,8 +101,10 @@ function taskSvg(checked) {
 }
 
 // a checked task reads as finished: the whole item line dims and strikes.
-// Line class only, so law 2's inline-geometry ban is not touched
-const TASK_DONE_RE = /^\s*(?:[-*+]|\d{1,9}[.)])\s+\[[xX]\](\s|$)/
+// Line class only, so law 2's inline-geometry ban is not touched. The
+// marker may sit behind a blockquote marker, so the list bullet is
+// optional when the line starts with quote marks
+const TASK_DONE_RE = /^\s*(?:>\s*)*(?:[-*+]|\d{1,9}[.)])?\s*\[[xX]\](\s|$)/
 
 function taskDecorations(out, tree, state) {
   tree.iterate({
@@ -508,7 +510,7 @@ export const widgetAtomic = ViewPlugin.fromClass(
 
 export const widgetsTheme = EditorView.theme({
   '.glean-taskbox': { cursor: 'pointer', verticalAlign: 'text-bottom', marginRight: '4px' },
-  '.glean-task-done': { textDecoration: 'line-through', color: colors.textDim },
+  '.glean-task-done': { textDecoration: 'line-through', color: colors.textMuted },
   '.glean-alert-line': { color: 'inherit' },
   '.glean-alert-body': { color: 'inherit' },
   '.glean-fence-chip': {
