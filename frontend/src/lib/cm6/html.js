@@ -14,7 +14,10 @@ import { colors } from '../theme'
 // carries the distinction instead. Law 3: recomputed whole on doc change
 
 const PAIR_TAGS = ['sub', 'sup', 'strong', 'em', 'kbd', 'ins', 'u', 'mark']
-const TAG_RE = /<\/?(sub|sup|strong|em|kbd|ins|u|mark)\s*\/?>/gi
+const VOID_TAGS = ['br', 'hr', 'img', 'input']
+// every raw html tag token in the buffer, paired or not, attributes
+// included: the chip treatment applies to all of them alike
+const TAG_RE = /<(\/)?([a-zA-Z][a-zA-Z0-9-]*)((?:\s[^<>]*)?)>/g
 
 function inCodeAt(state, pos) {
   let node = syntaxTree(state).resolveInner(pos, -1)
@@ -36,11 +39,11 @@ function build(state) {
     let m
     TAG_RE.lastIndex = 0
     while ((m = TAG_RE.exec(line.text))) {
-      const tag = m[1].toLowerCase()
+      const tag = m[2].toLowerCase()
       const at = line.from + m.index
-      if (!m[0].startsWith('</')) {
-        stack.push({ tag, contentFrom: at + m[0].length })
-      } else {
+      // every tag token stays raw but reads as chrome: dimmed mono chip
+      decos.push({ from: at, to: at + m[0].length, cls: 'glean-html-chip' })
+      if (m[1]) {
         const idx = stack.map((s) => s.tag).lastIndexOf(tag)
         if (idx !== -1) {
           const open = stack[idx]
@@ -49,6 +52,8 @@ function build(state) {
             decos.push({ from: open.contentFrom, to: at, cls: `glean-html-${tag}` })
           }
         }
+      } else if (PAIR_TAGS.includes(tag) && !m[0].endsWith('/>') && !VOID_TAGS.includes(tag)) {
+        stack.push({ tag, contentFrom: at + m[0].length })
       }
     }
   }
@@ -72,6 +77,11 @@ export const htmlPairs = ViewPlugin.fromClass(
 )
 
 export const htmlPairsTheme = EditorView.theme({
+  '.glean-html-chip': {
+    fontFamily: "'Fira Code', 'JetBrains Mono', ui-monospace, monospace",
+    color: colors.textMuted,
+    opacity: 0.8,
+  },
   '.glean-html-strong': { fontWeight: 700 },
   '.glean-html-em': { fontStyle: 'italic' },
   '.glean-html-u, .glean-html-ins': { textDecoration: 'underline' },

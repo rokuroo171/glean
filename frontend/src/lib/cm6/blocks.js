@@ -35,6 +35,8 @@ function addTablePunct(state, node, out, withHyphens) {
   for (let i = 0; i < text.length; i++) {
     const ch = text[i]
     if (ch !== '|' && !(ch === '-' && withHyphens)) continue
+    // an escaped pipe is literal content in a cell, not a delimiter
+    if (ch === '|' && i > 0 && text[i - 1] === '\\') continue
     const at = node.from + i
     out.push({ from: at, to: at + 1, spec: { class: ch === '|' ? 'glean-table-pipe' : 'glean-table-hyphen' } })
   }
@@ -105,6 +107,21 @@ function build(view) {
         markDecos.push({ from: node.from, to: node.to, spec: { class: 'glean-table-delim' } })
         addTablePunct(view.state, node, markDecos, true)
         return
+      }
+      // lezer gives a definition-list colon no node of its own: a paragraph
+      // line starting with ': ' is its definition mark, dimmed so the term
+      // and definition read as one entry. Colon lines are usually lazy
+      // continuations inside the term's paragraph, so every line of the
+      // paragraph is checked
+      if (name === 'Paragraph') {
+        const first = view.state.doc.lineAt(node.from).number
+        const last = view.state.doc.lineAt(node.to).number
+        for (let l = first; l <= last; l++) {
+          const line = view.state.doc.line(l)
+          if (/^:\s/.test(line.text)) {
+            markDecos.push({ from: line.from, to: line.from + 1, spec: { class: 'glean-defcolon' } })
+          }
+        }
       }
       if (name === 'HorizontalRule') {
         const line = view.state.doc.lineAt(node.from)
@@ -206,6 +223,7 @@ export const blocksTheme = EditorView.theme({
     boxShadow: `inset 3px 0 0 ${colors.border}`,
   },
   '.glean-table-delim': { color: colors.textDim, opacity: 0.7 },
+  '.glean-defcolon': { color: colors.accent, fontWeight: 700 },
   '.glean-hr-line': {},
   '.glean-hr': { color: colors.textDim, letterSpacing: '2px' },
 })
