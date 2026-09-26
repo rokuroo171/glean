@@ -65,7 +65,18 @@ function build(view) {
           // first and last rows carry the panel cap classes so the theme
           // rounds only the block's corners and dims the boundary marks
           const cap = l === first.number ? ' glean-fence-open' : l === last.number ? ' glean-fence-close' : ''
-          lineDecos.push({ from: line.from, to: line.from, spec: { class: 'glean-fence-line' + cap } })
+          // diff body rows get their sign tint (no parser covers diff)
+          let diff = ''
+          if (node.node.name === 'FencedCode') {
+            const infoEl = node.node.getChild('CodeInfo')
+            const lang = infoEl ? view.state.sliceDoc(infoEl.from, infoEl.to).trim().split(/\s+/)[0].toLowerCase() : ''
+            if (lang === 'diff' || lang === 'patch') {
+              const t = line.text.trimStart()
+              if (t.startsWith('+') && !t.startsWith('+++')) diff = ' glean-diff-add'
+              else if (t.startsWith('-') && !t.startsWith('---')) diff = ' glean-diff-del'
+            }
+          }
+          lineDecos.push({ from: line.from, to: line.from, spec: { class: 'glean-fence-line' + cap + diff } })
         }
         if (node.node.firstChild && node.node.firstChild.name === 'CodeInfo' && node.node.firstChild.to > node.node.firstChild.from) {
           markDecos.push({
@@ -271,6 +282,15 @@ export const blocksTheme = EditorView.theme({
   },
   '.glean-fence-open .glean-fence-chip, .glean-fence-close .glean-hr': {
     opacity: 0.4,
+  },
+  // diff fences have no Lezer parser, so they highlight by line: added
+  // rows tint green, removed rows red, hunk headers muted — colored from
+  // the line class, which may carry color freely
+  '.glean-fence-line.glean-diff-add': {
+    background: 'rgba(86, 184, 122, 0.12)',
+  },
+  '.glean-fence-line.glean-diff-del': {
+    background: 'rgba(219, 76, 64, 0.10)',
   },
   '.glean-codeinfo': { color: colors.textMuted, fontStyle: 'italic' },
   // list markers stay visible always (reveal no longer collapses them):

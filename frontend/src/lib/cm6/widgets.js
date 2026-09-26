@@ -652,13 +652,13 @@ export const widgetsTheme = EditorView.theme({
     alignItems: 'center',
     gap: '6px',
     zIndex: 2,
+    // the header floats over code text; only the button takes clicks
+    pointerEvents: 'none',
   },
   '.glean-fence-label': {
     fontFamily: 'ui-monospace, monospace',
-    fontSize: '11px',
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
+    fontSize: '12px',
+    color: colors.text,
     userSelect: 'none',
   },
   '.glean-fence-copy': {
@@ -672,8 +672,14 @@ export const widgetsTheme = EditorView.theme({
     cursor: 'pointer',
     opacity: 0,
     transition: 'opacity 120ms ease-out',
+    pointerEvents: 'auto',
   },
-  '.glean-fence-head:hover .glean-fence-copy': {
+  // hovering anywhere on the block reveals the copy button (:has reaches
+  // the editor root; the button's own hover keeps it visible while clicked)
+  '.cm-editor:has(.glean-fence-line:hover) .glean-fence-copy': {
+    opacity: 1,
+  },
+  '.glean-fence-copy:hover': {
     opacity: 1,
   },
   '.glean-fence-copy:hover': {
