@@ -305,7 +305,7 @@ export default function Appearance() {
 
       <Card>
         <CardTitle>Cursor feedback</CardTitle>
-        <ToggleRow label="Cursor trail" hint="The caret leaves a trail when it jumps."
+        <ToggleRow label="Cursor Animation" hint="The caret leaves a trail when it jumps."
           checked={prefs.editor.cursor_trail_enabled}
           onChange={(v) => updatePrefs({ editor: { cursor_trail_enabled: v } })} />
         {prefs.editor.cursor_trail_enabled && (
@@ -340,7 +340,7 @@ export default function Appearance() {
           </>
         )}
         <div style={{ padding: '6px 14px 10px', fontSize: 11, color: colors.textDim }}>
-          Trail shape lives in the editor pane menu under Cursor trail tuning.
+          Trail shape lives in the editor pane menu under Cursor Animation tuning.
         </div>
       </Card>
 
