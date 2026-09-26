@@ -27,9 +27,9 @@ export function starlineAt(doc, pos) {
   const from = left + open + 2
   const close = doc.indexOf(']]', from)
   if (close < 0 || close > pos + 64) return null
-  const title = doc.slice(from, close)
-  if (!title || title.includes('\n')) return null
-  return title
+  const raw = doc.slice(from, close)
+  if (!raw || raw.includes('\n')) return null
+  return raw.split('|')[0].trim()
 }
 
 function decorationsFor(view, getNoteNames) {
@@ -51,8 +51,8 @@ function decorationsFor(view, getNoteNames) {
       marks.push({ from: closeEnd - 2, to: closeEnd, spec: { class: 'glean-starline-raw' } })
       continue
     }
-    const title = m[1]
-    const exists = noteNames[title] != null
+    const target = m[1].split('|')[0].trim()
+    const exists = noteNames[target] != null
     replaces.push({ from: openStart, to: openStart + 2 })
     replaces.push({ from: closeEnd - 2, to: closeEnd })
     atomic.push({ from: openStart, to: openStart + 2 })
@@ -62,7 +62,7 @@ function decorationsFor(view, getNoteNames) {
       to: closeEnd - 2,
       spec: {
         class: `glean-starline${exists ? '' : ' missing'}`,
-        attributes: { 'data-tip': exists ? `Open ${title}` : `Create note ${title}` },
+        attributes: { 'data-tip': exists ? `Open ${target}` : `Create note ${target}` },
       },
     })
   }
