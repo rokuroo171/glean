@@ -77,8 +77,8 @@ function build(view) {
         const first = view.state.doc.lineAt(node.from)
         const last = view.state.doc.lineAt(node.to)
         // depth = how many ancestors of this node are Blockquotes too; each
-        // level stacks one more bar and one more indent the way Obsidian's
-        // nested callout rails read
+        // level stacks one more bar and one more indent step the way
+        // Obsidian's nested rails read
         let depth = 1
         for (let p = node.node.parent; p; p = p.parent) {
           if (p.name === 'Blockquote') depth++
@@ -218,26 +218,27 @@ export const blocksTheme = EditorView.theme({
   '.glean-h4': { fontSize: '1.15em', fontWeight: 600, lineHeight: 1.35, color: colors.text },
   '.glean-h5': { fontSize: '1em', fontWeight: 600, lineHeight: 1.4, color: colors.text },
   '.glean-h6': { fontSize: '0.9em', fontWeight: 600, lineHeight: 1.4, color: colors.textMuted },
-  // Obsidian-grade quote rails: full-brightness text, a visible accent bar
-  // on every level, each nesting level inset one step further (data-depth
-  // rides the line decoration; the attribute selector stacks the bars via
-  // box-shadow so deeper quotes read as stacked rails, not one bar)
+  // Obsidian-grade quote rails: full-brightness text and one accent bar per
+  // nesting level, each a hard-stop background stripe at a full 16px step
+  // (inset box-shadows cannot paint a mid-line strip: spread shrinks on all
+  // four edges, which smeared a faint wash instead of drawing the nested
+  // rails). Deeper levels keep stepping; 4+ share the deepest pattern
   '.glean-quote-line': { color: colors.text },
   '.glean-quote-line.cm-line': {
-    boxShadow: `inset 3px 0 0 ${colors.accent}`,
-    paddingLeft: '14px',
+    backgroundImage: `linear-gradient(90deg, ${colors.accent} 0 3px, transparent 3px)`,
+    paddingLeft: '12px',
   },
   '.glean-quote-line.cm-line[data-depth="2"]': {
-    boxShadow: `inset 3px 0 0 ${colors.accent}, inset 14px 0 0 -11px ${colors.accent}66`,
-    paddingLeft: '24px',
+    backgroundImage: `linear-gradient(90deg, ${colors.accent} 0 3px, transparent 3px 16px, ${colors.accent} 16px 19px, transparent 19px)`,
+    paddingLeft: '28px',
   },
   '.glean-quote-line.cm-line[data-depth="3"]': {
-    boxShadow: `inset 3px 0 0 ${colors.accent}, inset 14px 0 0 -11px ${colors.accent}66, inset 25px 0 0 -22px ${colors.accent}44`,
-    paddingLeft: '34px',
-  },
-  '.glean-quote-line.cm-line[data-depth="4"]': {
-    boxShadow: `inset 3px 0 0 ${colors.accent}, inset 14px 0 0 -11px ${colors.accent}66, inset 25px 0 0 -22px ${colors.accent}44, inset 36px 0 0 -33px ${colors.accent}33`,
+    backgroundImage: `linear-gradient(90deg, ${colors.accent} 0 3px, transparent 3px 16px, ${colors.accent} 16px 19px, transparent 19px 32px, ${colors.accent} 32px 35px, transparent 35px)`,
     paddingLeft: '44px',
+  },
+  '.glean-quote-line.cm-line[data-depth="4"], .glean-quote-line.cm-line[data-depth="5"], .glean-quote-line.cm-line[data-depth="6"]': {
+    backgroundImage: `linear-gradient(90deg, ${colors.accent} 0 3px, transparent 3px 16px, ${colors.accent} 16px 19px, transparent 19px 32px, ${colors.accent} 32px 35px, transparent 35px 48px, ${colors.accent} 48px 51px, transparent 51px)`,
+    paddingLeft: '60px',
   },
   '.glean-fence-line': {
     background: 'rgba(106, 170, 255, 0.06)',
