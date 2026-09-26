@@ -142,6 +142,24 @@ function build(view) {
         markDecos.push({ from: node.from, to: node.to, spec: { class: 'glean-inline-code' } })
         return
       }
+      // the emphasis semantics themselves: the reveal layer only collapses
+      // the markers, the content between them must carry the style or
+      // **bold** renders as plain prose. Nodes cover marks plus content, so
+      // hidden markers inside are unaffected and nesting (***bold italic***)
+      // stacks through overlapping spans. Paint only — weight, slant, strike
+      // — no geometry, per law 2
+      if (name === 'Emphasis') {
+        markDecos.push({ from: node.from, to: node.to, spec: { class: 'glean-em' } })
+        return
+      }
+      if (name === 'StrongEmphasis') {
+        markDecos.push({ from: node.from, to: node.to, spec: { class: 'glean-strong' } })
+        return
+      }
+      if (name === 'Strikethrough') {
+        markDecos.push({ from: node.from, to: node.to, spec: { class: 'glean-strike' } })
+        return
+      }
     },
   })
 
@@ -230,6 +248,9 @@ export const blocksTheme = EditorView.theme({
   '.glean-table-delim': { color: colors.textDim, opacity: 0.7 },
   '.glean-defcolon': { color: colors.accent, fontWeight: 700 },
   '.glean-linklabel': { color: colors.textMuted },
+  '.glean-em': { fontStyle: 'italic' },
+  '.glean-strong': { fontWeight: 700 },
+  '.glean-strike': { textDecoration: 'line-through' },
   '.glean-hr-line': {},
   '.glean-hr': { color: colors.textDim, letterSpacing: '2px' },
 })
