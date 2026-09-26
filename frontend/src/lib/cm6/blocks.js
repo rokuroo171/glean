@@ -89,6 +89,18 @@ function build(view) {
         }
         return
       }
+      // list geometry: one line class per nesting depth with a hanging
+      // indent (text starts after the marker, wrapped lines align under the
+      // text, not under the marker) plus a faint guide rail per ancestor
+      // level, the way Obsidian's list trees read
+      if (name === 'ListItem') {
+        let depth = 1
+        for (let p = node.node.parent; p; p = p.parent) {
+          if (p.name === 'ListItem') depth++
+        }
+        const line = view.state.doc.lineAt(node.from)
+        lineDecos.push({ from: line.from, to: line.from, spec: { class: 'glean-list-line', attributes: { 'data-depth': String(Math.min(depth, 5)) } } })
+      }
       if (name === 'ListMark') {
         markDecos.push({ from: node.from, to: node.to, spec: { class: 'glean-listmark' } })
         return
@@ -247,8 +259,33 @@ export const blocksTheme = EditorView.theme({
   },
   '.glean-codeinfo': { color: colors.textMuted, fontStyle: 'italic' },
   // list markers stay visible always (reveal no longer collapses them):
-  // structure like bullets and numbers must not vanish away from the caret
+  // structure like bullets and numbers must not vanish away from the caret.
+  // Unordered markers are replaced with a real bullet glyph by widgets.js;
+  // this face styles the ordered numbers that stay as text
   '.glean-listmark': { color: colors.accent, opacity: 0.85 },
+  // hanging indent per depth: marker column at 4 + (depth-1)*22px, text
+  // column 18px later, wrapped lines align under the text. Guide rails ride
+  // as 1px stripes at each ancestor marker column
+  '.glean-list-line.cm-line': {
+    paddingLeft: '22px',
+    textIndent: '-18px',
+  },
+  '.glean-list-line.cm-line[data-depth="2"]': {
+    paddingLeft: '44px',
+    backgroundImage: `linear-gradient(90deg, transparent 13px, ${colors.border} 13px 14px, transparent 14px)`,
+  },
+  '.glean-list-line.cm-line[data-depth="3"]': {
+    paddingLeft: '66px',
+    backgroundImage: `linear-gradient(90deg, transparent 13px, ${colors.border} 13px 14px, transparent 14px 35px, ${colors.border} 35px 36px, transparent 36px)`,
+  },
+  '.glean-list-line.cm-line[data-depth="4"]': {
+    paddingLeft: '88px',
+    backgroundImage: `linear-gradient(90deg, transparent 13px, ${colors.border} 13px 14px, transparent 14px 35px, ${colors.border} 35px 36px, transparent 36px 57px, ${colors.border} 57px 58px, transparent 58px)`,
+  },
+  '.glean-list-line.cm-line[data-depth="5"]': {
+    paddingLeft: '110px',
+    backgroundImage: `linear-gradient(90deg, transparent 13px, ${colors.border} 13px 14px, transparent 14px 35px, ${colors.border} 35px 36px, transparent 36px 57px, ${colors.border} 57px 58px, transparent 58px 79px, ${colors.border} 79px 80px, transparent 80px)`,
+  },
   '.glean-quotemark': { color: colors.accent, opacity: 0.6 },
   '.glean-taskmarker': { color: colors.accent },
   // inline code keeps the mono face the PM editor gave `code`;

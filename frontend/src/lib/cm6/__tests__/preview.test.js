@@ -101,15 +101,15 @@ describe('blocks pass', () => {
     // text, so the line reads like the rendered output
     const headingText = () => view.dom.querySelectorAll('.cm-line')[0].textContent
     const dashText = () => view.dom.querySelectorAll('.cm-line')[2].textContent
-    // initial caret is on the heading: its hash shows; list dashes stay
-    // visible always (they are structure, not caret-gated syntax)
+    // initial caret is on the heading: its hash shows; list dashes render
+    // as bullets (structure, always visible, never caret-gated)
     expect(headingText().startsWith('#')).toBe(true)
-    expect(dashText().startsWith('-')).toBe(true)
-    // a plain paragraph: heading hash collapses too
+    expect(dashText().startsWith('•')).toBe(true)
+    // a plain paragraph: heading hash collapses, bullet stays
     view.dispatch({ selection: EditorSelection.cursor(DOC.indexOf('plain ') + 1) })
     await settle()
     expect(headingText().startsWith('#')).toBe(false)
-    expect(dashText().startsWith('-')).toBe(true)
+    expect(dashText().startsWith('•')).toBe(true)
     // back on the heading: the hash returns as real text
     view.dispatch({ selection: EditorSelection.cursor(2) })
     await settle()
@@ -132,10 +132,10 @@ describe('blocks pass', () => {
     const { view, parent } = mount(DOC)
     await settle()
     const dashText = () => view.dom.querySelectorAll('.cm-line')[2].textContent
-    // list markers are structure: visible even with the caret far away
+    // list markers are structure: rendered even with the caret far away
     view.dispatch({ selection: EditorSelection.cursor(DOC.indexOf('plain ') + 1) })
     await settle()
-    expect(dashText().startsWith('-')).toBe(true)
+    expect(dashText().startsWith('•')).toBe(true)
     // heading hashes still collapse away from the heading
     const hashVisible = view.dom.querySelectorAll('.cm-line')[0].textContent.startsWith('#')
     expect(hashVisible).toBe(false)
@@ -147,18 +147,21 @@ describe('blocks pass', () => {
     expect(revealedTexts).toContain('>')
   })
 
-  it('keeps every list dash visible regardless of caret position', async () => {
+  it('renders every list dash as a bullet regardless of caret position', async () => {
     const { view, parent } = mount(DOC)
     await settle()
     const dashText = (idx) => view.dom.querySelectorAll('.cm-line')[idx].textContent
     view.dispatch({ selection: EditorSelection.cursor(DOC.indexOf('one') + 1) })
     await settle()
+    // the edited item shows the raw dash, the sibling shows the bullet
     expect(dashText(2).startsWith('-')).toBe(true)
-    expect(dashText(3).startsWith('-')).toBe(true)
+    expect(dashText(3).startsWith('•')).toBe(true)
     view.dispatch({ selection: EditorSelection.cursor(DOC.indexOf('two') + 1) })
     await settle()
-    expect(dashText(2).startsWith('-')).toBe(true)
+    expect(dashText(2).startsWith('•')).toBe(true)
     expect(dashText(3).startsWith('-')).toBe(true)
+    // the buffer never changed
+    expect(emitMarkdown(view)).toBe(DOC)
     destroy(view, parent)
   })
 

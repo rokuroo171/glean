@@ -120,6 +120,51 @@ function taskDecorations(out, tree, state) {
   })
 }
 
+// ---- list bullets ----
+
+// unordered markers draw as real bullets away from the caret; the caret on
+// an item reveals the raw - / * / + char the buffer actually holds
+class BulletWidget extends WidgetType {
+  constructor(char) {
+    super()
+    this.char = char
+  }
+  eq(other) {
+    return other.char === this.char
+  }
+  toDOM() {
+    const dot = document.createElement('span')
+    dot.className = 'glean-bullet'
+    dot.textContent = '•'
+    return dot
+  }
+  ignoreEvent() {
+    return false
+  }
+}
+
+function bulletDecorations(out, tree, state, head) {
+  tree.iterate({
+    enter: (node) => {
+      if (node.name !== 'ListMark') return
+      const parent = node.node.parent
+      const ch = state.sliceDoc(node.from, node.to)
+      // ordered numbers stay as text (they carry sequence meaning); only
+      // the -, *, + markers become the dot
+      if (!/^[-*+]$/.test(ch)) return
+      // same block-unit contract as reveal.js: the caret editing anywhere
+      // in the item sees the raw marker character
+      const span = parent && parent.name === 'ListItem' ? parent : node.node
+      const near = head >= span.from && head <= span.to
+      if (near) {
+        out.push({ from: node.from, to: node.to, deco: Decoration.mark({ class: 'glean-syntax-revealed glean-listmark' }) })
+      } else {
+        out.push({ from: node.from, to: node.to, deco: Decoration.replace({ widget: new BulletWidget(ch) }) })
+      }
+    },
+  })
+}
+
 // ---- alerts ----
 
 const ALERT_KINDS = {
@@ -457,6 +502,7 @@ export const widgets = ViewPlugin.fromClass(
       const head = view.state.selection.main.head
       const all = []
       taskDecorations(all, tree, view.state)
+      bulletDecorations(all, tree, view.state, head)
       alertDecorations(all, tree, view.state, head)
       fenceDecorations(all, tree, view.state, head)
       inlineMathDecorations(all, view.state, head)
@@ -515,6 +561,12 @@ export const widgetAtomic = ViewPlugin.fromClass(
 
 export const widgetsTheme = EditorView.theme({
   '.glean-taskbox': { cursor: 'pointer', verticalAlign: 'text-bottom', marginRight: '4px' },
+  '.glean-bullet': {
+    color: colors.accent,
+    display: 'inline-block',
+    width: '18px',
+    textAlign: 'center',
+  },
   '.glean-task-done': { textDecoration: 'line-through', color: colors.textMuted },
   '.glean-alert-line': { color: 'inherit' },
   '.glean-alert-body': { color: 'inherit' },
