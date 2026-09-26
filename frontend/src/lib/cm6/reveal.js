@@ -21,8 +21,10 @@ const INLINE_PAIRS = new Set(['EmphasisMark', 'StrikethroughMark', 'CodeMark', '
 
 // TaskMarker is absent: widgets.js replaces [x] markers with the checkbox
 // itself, so there is no raw state to reveal and both layers replacing the
-// same range would conflict
-const BLOCK_PREFIXES = new Set(['HeaderMark', 'QuoteMark', 'ListMark'])
+// same range would conflict. ListMark is absent too: bullets and numbers
+// are structure, not hidden syntax — they stay visible like Obsidian's,
+// styled accent-dim through blocks.js, and never collapse
+const BLOCK_PREFIXES = new Set(['HeaderMark', 'QuoteMark'])
 
 // the block a prefix belongs to: the caret editing anywhere inside this
 // node sees that prefix raw. List and task marks answer to their item,

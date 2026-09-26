@@ -101,14 +101,15 @@ describe('blocks pass', () => {
     // text, so the line reads like the rendered output
     const headingText = () => view.dom.querySelectorAll('.cm-line')[0].textContent
     const dashText = () => view.dom.querySelectorAll('.cm-line')[2].textContent
-    // initial caret is on the heading: its hash shows, the dashes stay hidden
+    // initial caret is on the heading: its hash shows; list dashes stay
+    // visible always (they are structure, not caret-gated syntax)
     expect(headingText().startsWith('#')).toBe(true)
-    expect(dashText().startsWith('-')).toBe(false)
+    expect(dashText().startsWith('-')).toBe(true)
     // a plain paragraph: heading hash collapses too
     view.dispatch({ selection: EditorSelection.cursor(DOC.indexOf('plain ') + 1) })
     await settle()
     expect(headingText().startsWith('#')).toBe(false)
-    expect(dashText().startsWith('-')).toBe(false)
+    expect(dashText().startsWith('-')).toBe(true)
     // back on the heading: the hash returns as real text
     view.dispatch({ selection: EditorSelection.cursor(2) })
     await settle()
@@ -127,35 +128,36 @@ describe('blocks pass', () => {
     expect(revealed).toBeGreaterThanOrEqual(2)
   })
 
-  it('hides list, quote and task prefixes away and reveals them inside their block', async () => {
+  it('keeps list markers visible, hides heading hashes, reveals quote marks in their block', async () => {
     const { view, parent } = mount(DOC)
     await settle()
     const dashText = () => view.dom.querySelectorAll('.cm-line')[2].textContent
-    // caret parked in the plain paragraph: list dashes and the heading hash
-    // must all be collapsed
+    // list markers are structure: visible even with the caret far away
     view.dispatch({ selection: EditorSelection.cursor(DOC.indexOf('plain ') + 1) })
     await settle()
-    expect(dashText().startsWith('-')).toBe(false)
-    // caret inside the quote block: its > marks reveal, list marks stay hidden
+    expect(dashText().startsWith('-')).toBe(true)
+    // heading hashes still collapse away from the heading
+    const hashVisible = view.dom.querySelectorAll('.cm-line')[0].textContent.startsWith('#')
+    expect(hashVisible).toBe(false)
+    // caret inside the quote block: its > marks reveal raw
     view.dispatch({ selection: EditorSelection.cursor(DOC.indexOf('quoted') + 2) })
     await settle()
     const revealedTexts = [...view.dom.querySelectorAll('.glean-syntax-revealed')].map((e) => e.textContent)
-    expect(dashText().startsWith('-')).toBe(false)
     destroy(view, parent)
     expect(revealedTexts).toContain('>')
   })
 
-  it('reveals the list dash when the caret edits that item only', async () => {
+  it('keeps every list dash visible regardless of caret position', async () => {
     const { view, parent } = mount(DOC)
     await settle()
     const dashText = (idx) => view.dom.querySelectorAll('.cm-line')[idx].textContent
     view.dispatch({ selection: EditorSelection.cursor(DOC.indexOf('one') + 1) })
     await settle()
     expect(dashText(2).startsWith('-')).toBe(true)
-    expect(dashText(3).startsWith('-')).toBe(false)
+    expect(dashText(3).startsWith('-')).toBe(true)
     view.dispatch({ selection: EditorSelection.cursor(DOC.indexOf('two') + 1) })
     await settle()
-    expect(dashText(2).startsWith('-')).toBe(false)
+    expect(dashText(2).startsWith('-')).toBe(true)
     expect(dashText(3).startsWith('-')).toBe(true)
     destroy(view, parent)
   })

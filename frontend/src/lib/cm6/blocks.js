@@ -76,9 +76,16 @@ function build(view) {
       if (name === 'Blockquote') {
         const first = view.state.doc.lineAt(node.from)
         const last = view.state.doc.lineAt(node.to)
+        // depth = how many ancestors of this node are Blockquotes too; each
+        // level stacks one more bar and one more indent the way Obsidian's
+        // nested callout rails read
+        let depth = 1
+        for (let p = node.node.parent; p; p = p.parent) {
+          if (p.name === 'Blockquote') depth++
+        }
         for (let l = first.number; l <= last.number; l++) {
           const line = view.state.doc.line(l)
-          lineDecos.push({ from: line.from, to: line.from, spec: { class: 'glean-quote-line' } })
+          lineDecos.push({ from: line.from, to: line.from, spec: { class: 'glean-quote-line', attributes: { 'data-depth': String(depth) } } })
         }
         return
       }
@@ -211,15 +218,36 @@ export const blocksTheme = EditorView.theme({
   '.glean-h4': { fontSize: '1.15em', fontWeight: 600, lineHeight: 1.35, color: colors.text },
   '.glean-h5': { fontSize: '1em', fontWeight: 600, lineHeight: 1.4, color: colors.text },
   '.glean-h6': { fontSize: '0.9em', fontWeight: 600, lineHeight: 1.4, color: colors.textMuted },
-  '.glean-quote-line': { color: colors.textMuted },
-  '.glean-quote-line.cm-line': { boxShadow: `inset 3px 0 0 ${colors.border}` },
+  // Obsidian-grade quote rails: full-brightness text, a visible accent bar
+  // on every level, each nesting level inset one step further (data-depth
+  // rides the line decoration; the attribute selector stacks the bars via
+  // box-shadow so deeper quotes read as stacked rails, not one bar)
+  '.glean-quote-line': { color: colors.text },
+  '.glean-quote-line.cm-line': {
+    boxShadow: `inset 3px 0 0 ${colors.accent}`,
+    paddingLeft: '14px',
+  },
+  '.glean-quote-line.cm-line[data-depth="2"]': {
+    boxShadow: `inset 3px 0 0 ${colors.accent}, inset 14px 0 0 -11px ${colors.accent}66`,
+    paddingLeft: '24px',
+  },
+  '.glean-quote-line.cm-line[data-depth="3"]': {
+    boxShadow: `inset 3px 0 0 ${colors.accent}, inset 14px 0 0 -11px ${colors.accent}66, inset 25px 0 0 -22px ${colors.accent}44`,
+    paddingLeft: '34px',
+  },
+  '.glean-quote-line.cm-line[data-depth="4"]': {
+    boxShadow: `inset 3px 0 0 ${colors.accent}, inset 14px 0 0 -11px ${colors.accent}66, inset 25px 0 0 -22px ${colors.accent}44, inset 36px 0 0 -33px ${colors.accent}33`,
+    paddingLeft: '44px',
+  },
   '.glean-fence-line': {
     background: 'rgba(106, 170, 255, 0.06)',
     fontFamily: "'Fira Code', ui-monospace, monospace",
     fontVariantLigatures: 'none',
   },
   '.glean-codeinfo': { color: colors.textMuted, fontStyle: 'italic' },
-  '.glean-listmark': { color: colors.accent },
+  // list markers stay visible always (reveal no longer collapses them):
+  // structure like bullets and numbers must not vanish away from the caret
+  '.glean-listmark': { color: colors.accent, opacity: 0.85 },
   '.glean-quotemark': { color: colors.accent, opacity: 0.6 },
   '.glean-taskmarker': { color: colors.accent },
   // inline code keeps the mono face the PM editor gave `code`;
