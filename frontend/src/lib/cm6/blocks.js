@@ -123,6 +123,11 @@ function build(view) {
           }
         }
       }
+      // reference link definitions read as metadata, not body prose
+      if (name === 'LinkLabel') {
+        markDecos.push({ from: node.from, to: node.to, spec: { class: 'glean-linklabel' } })
+        return
+      }
       if (name === 'HorizontalRule') {
         const line = view.state.doc.lineAt(node.from)
         lineDecos.push({ from: line.from, to: line.from, spec: { class: 'glean-hr-line' } })
@@ -224,6 +229,7 @@ export const blocksTheme = EditorView.theme({
   },
   '.glean-table-delim': { color: colors.textDim, opacity: 0.7 },
   '.glean-defcolon': { color: colors.accent, fontWeight: 700 },
+  '.glean-linklabel': { color: colors.textMuted },
   '.glean-hr-line': {},
   '.glean-hr': { color: colors.textDim, letterSpacing: '2px' },
 })
