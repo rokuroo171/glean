@@ -197,7 +197,7 @@ export const blocksTheme = EditorView.theme({
   '.glean-quote-line.cm-line': { boxShadow: `inset 3px 0 0 ${colors.border}` },
   '.glean-fence-line': {
     background: 'rgba(106, 170, 255, 0.06)',
-    fontFamily: "'Fira Code', 'JetBrains Mono', ui-monospace, monospace",
+    fontFamily: "'Fira Code', ui-monospace, monospace",
     fontVariantLigatures: 'none',
   },
   '.glean-codeinfo': { color: colors.textMuted, fontStyle: 'italic' },
@@ -207,7 +207,7 @@ export const blocksTheme = EditorView.theme({
   // inline code keeps the mono face the PM editor gave `code`;
   // family and tint only, law 2 forbids the em size and padding here
   '.glean-inline-code': {
-    fontFamily: "'Fira Code', 'JetBrains Mono', ui-monospace, monospace",
+    fontFamily: "'Fira Code', ui-monospace, monospace",
     background: 'rgba(106, 122, 138, 0.18)',
     borderRadius: '4px',
   },

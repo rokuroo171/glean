@@ -78,7 +78,7 @@ export const htmlPairs = ViewPlugin.fromClass(
 
 export const htmlPairsTheme = EditorView.theme({
   '.glean-html-chip': {
-    fontFamily: "'Fira Code', 'JetBrains Mono', ui-monospace, monospace",
+    fontFamily: "'Fira Code', ui-monospace, monospace",
     color: colors.textMuted,
     opacity: 0.8,
   },
@@ -87,7 +87,7 @@ export const htmlPairsTheme = EditorView.theme({
   '.glean-html-u, .glean-html-ins': { textDecoration: 'underline' },
   '.glean-html-mark': { background: `${colors.accentWarm}47`, borderRadius: '3px' },
   '.glean-html-kbd': {
-    fontFamily: "'Fira Code', 'JetBrains Mono', ui-monospace, monospace",
+    fontFamily: "'Fira Code', ui-monospace, monospace",
     background: 'rgba(106, 122, 138, 0.18)',
     borderRadius: '4px',
   },

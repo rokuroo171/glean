@@ -522,9 +522,9 @@ export const widgetsTheme = EditorView.theme({
   },
   '.glean-math-inline': { display: 'inline-block' },
   '.glean-math-block': { display: 'block', margin: '8px 0' },
-  '.glean-math-error': { color: '#db4c40', fontFamily: "'Fira Code', 'JetBrains Mono', monospace" },
+  '.glean-math-error': { color: '#db4c40', fontFamily: "'Fira Code', ui-monospace, monospace" },
   '.glean-mermaid': { padding: '8px 0' },
   '.glean-mermaid.has-error': {
-    fontFamily: "'Fira Code', 'JetBrains Mono', monospace",
+    fontFamily: "'Fira Code', ui-monospace, monospace",
   },
 })
