@@ -26,6 +26,20 @@ const FENCE_CLASS = {
   CodeBlock: 'glean-fence',
 }
 
+// pipes inside a table are structural punctuation; in the delimiter row the
+// dashes are too. Hyphens elsewhere are cell content and stay untouched.
+// Marked so the theme can sink them toward the background while cell text
+// stays bright
+function addTablePunct(state, node, out, withHyphens) {
+  const text = state.sliceDoc(node.from, node.to)
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (ch !== '|' && !(ch === '-' && withHyphens)) continue
+    const at = node.from + i
+    out.push({ from: at, to: at + 1, spec: { class: ch === '|' ? 'glean-table-pipe' : 'glean-table-hyphen' } })
+  }
+}
+
 function build(view) {
   const builder = new RangeSetBuilder()
   const lineDecos = []
@@ -75,16 +89,21 @@ function build(view) {
         return
       }
       if (name === 'Table') {
+        addTablePunct(view.state, node, markDecos, false)
         const first = view.state.doc.lineAt(node.from)
         const last = view.state.doc.lineAt(node.to)
         for (let l = first.number; l <= last.number; l++) {
           const line = view.state.doc.line(l)
-          lineDecos.push({ from: line.from, to: line.from, spec: { class: 'glean-table-line' } })
+          // header and separator rows get the rail variant so the table
+          // head reads as one bar across both rows
+          const kind = l === first.number || l === first.number + 1 ? ' glean-table-head' : ''
+          lineDecos.push({ from: line.from, to: line.from, spec: { class: 'glean-table-line' + kind } })
         }
         return
       }
       if (name === 'TableDelimiter') {
         markDecos.push({ from: node.from, to: node.to, spec: { class: 'glean-table-delim' } })
+        addTablePunct(view.state, node, markDecos, true)
         return
       }
       if (name === 'HorizontalRule') {
@@ -107,9 +126,15 @@ function build(view) {
   lineDecos.sort((a, b) => a.from - b.from)
   for (const d of lineDecos) builder.add(d.from, d.to, Decoration.line(d.spec))
   const markBuilder = new RangeSetBuilder()
-  markDecos.sort((a, b) => a.from - b.from || a.to - b.to)
+  // the whole-table pipe pass and the delimiter-row pass can hit the same
+  // pipe: identical ranges would trip the builder, so collapse them
+  markDecos.sort((a, b) => a.from - b.from || a.to - b.to || (a.spec.class < b.spec.class ? -1 : 1))
+  let prev = null
   for (const d of markDecos) {
-    if (d.spec) markBuilder.add(d.from, d.to, Decoration.mark(d.spec))
+    if (!d.spec) continue
+    if (prev && prev.from === d.from && prev.to === d.to && prev.spec.class === d.spec.class) continue
+    prev = d
+    markBuilder.add(d.from, d.to, Decoration.mark(d.spec))
   }
   return { lines: builder.finish(), marks: markBuilder.finish() }
 }
@@ -164,7 +189,22 @@ export const blocksTheme = EditorView.theme({
     background: 'rgba(106, 122, 138, 0.18)',
     borderRadius: '4px',
   },
-  '.glean-table-line': { fontFamily: 'ui-monospace, monospace' },
+  // the table reads as a table through a mono face, a left rail that marks
+  // the block, a dimmed header bar, and pipe glyphs sunk to background
+  // punctuation: all line-scoped color/opacity per the stability laws
+  '.glean-table-line': {
+    fontFamily: 'ui-monospace, monospace',
+    color: colors.textDim,
+  },
+  '.glean-table-line .glean-table-pipe': { opacity: 0.3 },
+  '.glean-table-line .glean-table-hyphen': { opacity: 0.3 },
+  '.glean-table-head': {
+    background: 'rgba(106, 122, 138, 0.10)',
+    color: colors.text,
+  },
+  '.glean-table-line.cm-line': {
+    boxShadow: `inset 3px 0 0 ${colors.border}`,
+  },
   '.glean-table-delim': { color: colors.textDim, opacity: 0.7 },
   '.glean-hr-line': {},
   '.glean-hr': { color: colors.textDim, letterSpacing: '2px' },

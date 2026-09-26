@@ -63,11 +63,14 @@ class TaskBox extends WidgetType {
 function taskSvg(checked) {
   const ns = 'http://www.w3.org/2000/svg'
   const svg = document.createElementNS(ns, 'svg')
-  svg.setAttribute('width', '18')
-  svg.setAttribute('height', '18')
   svg.setAttribute('viewBox', '0 0 18 18')
   svg.setAttribute('aria-hidden', 'true')
-  svg.style.display = 'block'
+  // em-sized and inline: a fixed px block svg inside the inline wrap forces
+  // the rest of the line onto its own row
+  svg.style.display = 'inline-block'
+  svg.style.width = '1em'
+  svg.style.height = '1em'
+  svg.style.verticalAlign = 'text-bottom'
   const rect = document.createElementNS(ns, 'rect')
   rect.setAttribute('x', '1.5')
   rect.setAttribute('y', '1.5')
@@ -96,12 +99,20 @@ function taskSvg(checked) {
   return svg
 }
 
+// a checked task reads as finished: the whole item line dims and strikes.
+// Line class only, so law 2's inline-geometry ban is not touched
+const TASK_DONE_RE = /^\s*(?:[-*+]|\d{1,9}[.)])\s+\[[xX]\](\s|$)/
+
 function taskDecorations(out, tree, state) {
   tree.iterate({
     enter: (node) => {
       if (node.name !== 'TaskMarker') return
       const ch = state.sliceDoc(node.from + 1, node.from + 2)
       out.push({ from: node.from, to: node.to, deco: Decoration.replace({ widget: new TaskBox(ch !== ' ') }) })
+      const line = state.doc.lineAt(node.from)
+      if (TASK_DONE_RE.test(line.text)) {
+        out.push({ from: line.from, to: line.from, deco: Decoration.line({ class: 'glean-task-done' }) })
+      }
     },
   })
 }
@@ -495,6 +506,7 @@ export const widgetAtomic = ViewPlugin.fromClass(
 
 export const widgetsTheme = EditorView.theme({
   '.glean-taskbox': { cursor: 'pointer', verticalAlign: 'text-bottom', marginRight: '4px' },
+  '.glean-task-done': { textDecoration: 'line-through', color: colors.textDim },
   '.glean-alert-line': { color: 'inherit' },
   '.glean-alert-body': { color: 'inherit' },
   '.glean-fence-chip': {
