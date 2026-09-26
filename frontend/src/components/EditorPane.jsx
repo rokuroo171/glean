@@ -11,11 +11,13 @@ import StarIcon from './StarIcon'
 import Icon from './Icon'
 import ContextMenu from './ContextMenu'
 
-// Dead-space strip beside the editor body. Left click toggles centered
-// reading width; right click opens the view menu. The gutters flex-grow
-// so in centered mode they ARE the empty margins around the text column,
-// giving the clicks a visible target at any window size
-function Gutter({ onToggle, menuItems, grow }) {
+// Dead-space strip beside the editor body. Left click is inert: clicking
+// empty space must never silently flip a layout pref (it used to toggle
+// centered width, which re-wrapped the document and looked like a word
+// wrap switch). Right click still opens the view menu. The gutters
+// flex-grow so in centered mode they ARE the empty margins around the
+// text column
+function Gutter({ menuItems, grow }) {
   return (
     <ContextMenu
       items={menuItems}
@@ -23,15 +25,11 @@ function Gutter({ onToggle, menuItems, grow }) {
       triggerStyle={{ display: 'contents' }}
     >
       <div
-        onClick={onToggle}
-        title="Click to toggle centered width"
         style={{
           width: grow ? undefined : 20,
           flex: grow ? '1 1 0' : '0 0 20px',
           minWidth: 20,
           flexShrink: 0,
-          cursor: 'pointer',
-          transition: 'flex 0.18s ease',
         }}
       />
     </ContextMenu>
@@ -442,7 +440,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
           </div>
         )}
         <div ref={editorContainerRef} onKeyDownCapture={handlePopupKeys} style={{ flex: 1, minWidth: 0, minHeight: 0, position: 'relative', display: 'flex', flexDirection: 'row' }}>
-          <Gutter onToggle={() => updatePrefs({ editor: { narrow_width: !narrowWidth } })} menuItems={viewMenuItems} grow={narrowWidth} />
+          <Gutter menuItems={viewMenuItems} grow={narrowWidth} />
           <ContextMenu items={editorMenuItems} triggerStyle={{ display: 'contents' }}>
             <div style={{ flex: narrowWidth ? '0 0 720px' : '1 1 0', minWidth: 0, minHeight: 0, maxWidth: narrowWidth ? 'min(720px, calc(100% - 80px))' : undefined }}>
               <CM6Editor
@@ -456,7 +454,7 @@ export default function EditorPane({ note, body, onBodyChange, onSaveNow, dirty,
               />
             </div>
           </ContextMenu>
-          <Gutter onToggle={() => updatePrefs({ editor: { narrow_width: !narrowWidth } })} menuItems={viewMenuItems} grow={narrowWidth} />
+          <Gutter menuItems={viewMenuItems} grow={narrowWidth} />
           {cmView && <CursorTrail view={cmView} containerRef={editorContainerRef} />}
           {linkPopup && popupMatches?.length > 0 && (() => {
             const matches = popupMatches
