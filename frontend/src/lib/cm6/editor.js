@@ -5,6 +5,8 @@ import {
 } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, undoDepth, redoDepth } from '@codemirror/commands'
 import { markdown, markdownKeymap, markdownLanguage } from '@codemirror/lang-markdown'
+import { languages } from '@codemirror/language-data'
+import { gleanSyntaxHighlighting } from './code-highlight'
 import { searchKeymap, highlightSelectionMatches, search } from '@codemirror/search'
 import { starline, starlineTheme } from './starline'
 import { blocks, blocksTheme } from './blocks'
@@ -115,7 +117,7 @@ export function createEditor({
       blockWidgets,
       search({ top: true }),
       highlightSelectionMatches(),
-      markdown({ base: markdownLanguage, indentUnit: gleanIndentUnit }),
+      markdown({ base: markdownLanguage, indentUnit: gleanIndentUnit, codeLanguages: languages }),
       keymap.of(markdownKeymap),
       keymap.of(fenceKeymap),
       keymap.of(tableKeymap),
@@ -123,7 +125,7 @@ export function createEditor({
       keymap.of(searchKeymap),
       keymap.of(modKeymap),
       keymap.of([...defaultKeymap, ...historyKeymap]),
-      ...(livePreview ? [blocks, blocksTheme, reveal, revealTheme, widgets, widgetAtomic, widgetsTheme, tableGridTheme, highlight, highlightTheme, images, imagesTheme, footnotes, footnoteHandlers, footnotesTheme, htmlPairs, htmlPairsTheme] : []),
+      ...(livePreview ? [blocks, blocksTheme, reveal, revealTheme, widgets, widgetAtomic, widgetsTheme, tableGridTheme, gleanSyntaxHighlighting, highlight, highlightTheme, images, imagesTheme, footnotes, footnoteHandlers, footnotesTheme, htmlPairs, htmlPairsTheme] : []),
       ...(starlineOpts ? [starline(starlineOpts), starlineTheme] : []),
       ...(livePreview ? [linkTips, linkHandlers, linksTheme] : []),
       gutterCompartment.of(style.line_numbers ? lineNumbers() : []),

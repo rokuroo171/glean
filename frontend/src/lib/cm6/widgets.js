@@ -3,6 +3,7 @@ import { RangeSetBuilder, StateField } from '@codemirror/state'
 import { syntaxTree } from '@codemirror/language'
 import { colors } from '../theme'
 import { tableBlockRanges } from './tables-grid'
+import { fenceLanguageName } from './code-lang'
 
 // The structure layer: widgets over the raw buffer for the things markdown
 // renders as chrome rather than text. Every widget paints from the syntax
@@ -271,8 +272,62 @@ class FenceChip extends WidgetType {
   }
 }
 
-// the ``` fence marks collapse and the language word rides after the open
-// mark as a chip; the caret inside the info line shows raw text instead
+// the code block header: language name and copy button, absolutely
+// positioned in the block's top right. Lives on the first line so CM6
+// clips it with the block while scrolling; pointer events only on the
+// button itself so clicks never disturb the caret
+class FenceHeader extends WidgetType {
+  constructor(lang, from) {
+    super()
+    this.lang = lang
+    this.from = from
+  }
+  eq(other) {
+    return other.lang === this.lang && other.from === this.from
+  }
+  toDOM(view) {
+    const wrap = document.createElement('span')
+    wrap.className = 'glean-fence-head'
+    if (this.lang) {
+      const label = document.createElement('span')
+      label.className = 'glean-fence-label'
+      label.textContent = this.lang
+      wrap.appendChild(label)
+    }
+    const copy = document.createElement('button')
+    copy.className = 'glean-fence-copy'
+    copy.setAttribute('aria-label', 'copy code')
+    copy.textContent = 'Copy'
+    copy.addEventListener('mousedown', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      const line = view.state.doc.lineAt(this.from)
+      const node = syntaxTree(view.state).resolveInner(this.from, -1)
+      let cur = node
+      while (cur && cur.name !== 'FencedCode' && cur.name !== 'CodeBlock') cur = cur.parent
+      if (!cur) return
+      const first = view.state.doc.lineAt(cur.from).number
+      const last = view.state.doc.lineAt(cur.to).number
+      const body = []
+      for (let n = first + 1; n < last; n++) body.push(view.state.doc.line(n).text)
+      navigator.clipboard?.writeText(body.join('\n')).then(() => {
+        copy.textContent = 'Copied!'
+        setTimeout(() => { copy.textContent = 'Copy' }, 1200)
+      }).catch(() => {})
+    })
+    wrap.appendChild(copy)
+    return wrap
+  }
+  ignoreEvent() {
+    // the button needs its own events; CM6 must not swallow them
+    return false
+  }
+}
+
+// fence marks collapse away from the caret; the info word is replaced by
+// the language chip inline and a header rides on the first line carrying
+// the proper language name and the hover copy button. The caret inside the
+// info line shows the raw text instead
 function fenceDecorations(out, tree, state, head) {
   tree.iterate({
     enter: (node) => {
@@ -287,12 +342,22 @@ function fenceDecorations(out, tree, state, head) {
           }
         }
         const info = node.node.getChild('CodeInfo')
+        const rawLang = info && info.to > info.from ? state.sliceDoc(info.from, info.to) : null
+        const displayLang = fenceLanguageName(rawLang)
         if (info && info.to > info.from) {
-          const lang = state.sliceDoc(info.from, info.to)
           const active = head >= info.from && head <= info.to
           if (!active) {
-            out.push({ from: info.from, to: info.to, deco: Decoration.replace({ widget: new FenceChip(lang) }) })
+            out.push({ from: info.from, to: info.to, deco: Decoration.replace({ widget: new FenceChip(displayLang || '') }) })
           }
+        }
+        const firstLine = state.doc.lineAt(node.from)
+        const headerActive = head >= firstLine.from && head <= firstLine.to
+        if (!headerActive) {
+          out.push({
+            from: firstLine.from,
+            to: firstLine.from,
+            deco: Decoration.widget({ widget: new FenceHeader(displayLang, node.from), side: 10 }),
+          })
         }
         return false
       }
@@ -576,6 +641,44 @@ export const widgetsTheme = EditorView.theme({
     fontSize: '0.85em',
     marginLeft: '4px',
     fontFamily: 'ui-monospace, monospace',
+  },
+  // floating code block header: language name top right, copy button beside
+  // it on hover only. Absolutely positioned inside the first fence line
+  '.glean-fence-head': {
+    position: 'absolute',
+    right: '8px',
+    top: '4px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    zIndex: 2,
+  },
+  '.glean-fence-label': {
+    fontFamily: 'ui-monospace, monospace',
+    fontSize: '11px',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    userSelect: 'none',
+  },
+  '.glean-fence-copy': {
+    fontFamily: 'inherit',
+    fontSize: '11px',
+    padding: '2px 8px',
+    borderRadius: '4px',
+    border: `1px solid ${colors.border}`,
+    background: colors.bgElevated,
+    color: colors.textMuted,
+    cursor: 'pointer',
+    opacity: 0,
+    transition: 'opacity 120ms ease-out',
+  },
+  '.glean-fence-head:hover .glean-fence-copy': {
+    opacity: 1,
+  },
+  '.glean-fence-copy:hover': {
+    color: colors.text,
+    borderColor: colors.borderStrong,
   },
   '.glean-math-inline': { display: 'inline-block' },
   '.glean-math-block': { display: 'block', margin: '8px 0' },

@@ -131,7 +131,8 @@ describe('fence chips', () => {
     const chips = ctx.view.dom.querySelectorAll('.glean-fence-chip')
     destroy(ctx)
     expect(chips.length).toBe(1)
-    expect(chips[0].textContent).toBe('js')
+    // the chip resolves the alias to the proper language name
+    expect(chips[0].textContent).toBe('JavaScript')
   })
 
   it('caret on the info word shows the raw language', async () => {

@@ -62,7 +62,10 @@ function build(view) {
         const last = view.state.doc.lineAt(node.to)
         for (let l = first.number; l <= last.number; l++) {
           const line = view.state.doc.line(l)
-          lineDecos.push({ from: line.from, to: line.from, spec: { class: 'glean-fence-line' } })
+          // first and last rows carry the panel cap classes so the theme
+          // rounds only the block's corners and dims the boundary marks
+          const cap = l === first.number ? ' glean-fence-open' : l === last.number ? ' glean-fence-close' : ''
+          lineDecos.push({ from: line.from, to: line.from, spec: { class: 'glean-fence-line' + cap } })
         }
         if (node.node.firstChild && node.node.firstChild.name === 'CodeInfo' && node.node.firstChild.to > node.node.firstChild.from) {
           markDecos.push({
@@ -252,10 +255,22 @@ export const blocksTheme = EditorView.theme({
     backgroundImage: `linear-gradient(90deg, ${colors.accent} 0 3px, transparent 3px 16px, ${colors.accent} 16px 19px, transparent 19px 32px, ${colors.accent} 32px 35px, transparent 35px 48px, ${colors.accent} 48px 51px, transparent 51px)`,
     paddingLeft: '60px',
   },
+  // the fence reads as one clean panel: quiet uniform background, rounded
+  // corners on the caps, mono face for code rows. The mark row is dimmed so
+  // the collapsed backticks do not fight the header
   '.glean-fence-line': {
-    background: 'rgba(106, 170, 255, 0.06)',
+    background: 'rgba(106, 122, 138, 0.07)',
     fontFamily: "'Fira Code', ui-monospace, monospace",
     fontVariantLigatures: 'none',
+  },
+  '.glean-fence-line.glean-fence-open': {
+    borderRadius: '8px 8px 0 0',
+  },
+  '.glean-fence-line.glean-fence-close': {
+    borderRadius: '0 0 8px 8px',
+  },
+  '.glean-fence-open .glean-fence-chip, .glean-fence-close .glean-hr': {
+    opacity: 0.4,
   },
   '.glean-codeinfo': { color: colors.textMuted, fontStyle: 'italic' },
   // list markers stay visible always (reveal no longer collapses them):
