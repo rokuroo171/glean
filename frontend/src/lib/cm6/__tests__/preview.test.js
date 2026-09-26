@@ -89,8 +89,9 @@ describe('blocks pass', () => {
     // the trailing --- is a caret-distant horizontal rule now: the block
     // field replaces its line with the drawn rule widget, so no line element
     // carries the old dimmed-glyph class
-    expect(classes[13]).toBeUndefined()
-    expect(view.dom.querySelector('.glean-rule')).not.toBeNull()
+    // the rule draws as the line's own background (a block widget over the
+    // rule line removed the line box and the line-number gutter skipped it)
+    expect(classes[13]).toContain('glean-hr-line')
   })
 
   it('hides heading hash when caret is away and reveals it on the heading', async () => {

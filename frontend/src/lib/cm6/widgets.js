@@ -388,62 +388,17 @@ class MermaidWidget extends WidgetType {
   }
 }
 
-// a horizontal rule draws as an actual rule away from the caret; at the
-// caret the raw --- / *** / ___ line is the editable state. Same block
-// widget contract as the table grid
-class HrWidget extends WidgetType {
-  constructor(text, from) {
-    super()
-    this.text = text
-    this.from = from
-  }
-  eq(other) {
-    return other.text === this.text && other.from === this.from
-  }
-  toDOM(view) {
-    const el = document.createElement('div')
-    // not glean-hr-rule: that name substring-matches the glean-hr mark class
-    // in the law 2 scanner, which would read this block widget's margin as
-    // an inline geometry offence
-    el.className = 'glean-rule'
-    el.addEventListener('mousedown', (e) => {
-      e.preventDefault()
-      const line = view.state.doc.lineAt(this.from)
-      view.dispatch({ selection: { anchor: line.from }, scrollIntoView: true })
-    })
-    return el
-  }
-  ignoreEvent() {
-    return false
-  }
-}
-
-function hrRanges(state) {
-  const head = state.selection.main.head
-  const out = []
-  syntaxTree(state).iterate({
-    enter: (node) => {
-      if (node.name !== 'HorizontalRule') return
-      const near = head >= node.from && head <= node.to
-      if (!near) {
-        out.push({
-          from: node.from,
-          to: node.to,
-          deco: Decoration.replace({ widget: new HrWidget(state.sliceDoc(node.from, node.to), node.from), block: true }),
-        })
-      }
-      return false
-    },
-  })
-  return out
-}
+// the horizontal rule draws through the glean-hr-line background in
+// blocks.js. A block widget over the rule line removed the line box and the
+// line-number gutter skipped the row, shifting every number below it; the
+// HrWidget class that did that is gone
 
 // Mermaid and display math render as block widgets, and block decorations
 // are a StateField's job (plugins may not emit them). Both are detected by
 // scan, not the syntax tree, so the field never waits on a parse
 function blockRanges(state) {
   const doc = state.doc
-  const out = [...tableBlockRanges(state), ...hrRanges(state)]
+  const out = tableBlockRanges(state)
   for (const r of inlineMathRanges(doc)) {
     if (!r.display) continue
     const tex = doc.sliceString(r.from + 2, r.to - 2)

@@ -251,6 +251,17 @@ export const blocksTheme = EditorView.theme({
   '.glean-em': { fontStyle: 'italic' },
   '.glean-strong': { fontWeight: 700 },
   '.glean-strike': { textDecoration: 'line-through' },
-  '.glean-hr-line': {},
-  '.glean-hr': { color: colors.textDim, letterSpacing: '2px' },
+  // the rule draws as the line's own centered background: the line box
+  // stays alive so the line-number gutter keeps counting the row (a block
+  // widget over the whole line made the gutter skip it and shifted every
+  // number below). The raw --- / *** glyphs inside are sunk to transparent;
+  // they hold the width and the caret access, the background paints the
+  // line, caret on it shows the raw text dimmed
+  '.glean-hr-line': {
+    background: `linear-gradient(to bottom, transparent calc(50% - 0.5px), ${colors.borderStrong} calc(50% - 0.5px), ${colors.borderStrong} calc(50% + 0.5px), transparent calc(50% + 0.5px)) no-repeat center / 100% 1.5px`,
+  },
+  '.glean-hr-line .glean-hr': {
+    color: 'transparent',
+    letterSpacing: '2px',
+  },
 })
